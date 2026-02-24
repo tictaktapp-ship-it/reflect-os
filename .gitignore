@@ -19,6 +19,9 @@ GoogleService-Info.plist
 # Supabase local
 .supabase/
 
+# IDEs
+.idea/
+
 # OS
 .DS_Store
 Thumbs.db
