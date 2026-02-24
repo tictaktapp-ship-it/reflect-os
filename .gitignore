@@ -1,0 +1,24 @@
+﻿# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Environment and secrets
+.env
+.env.*
+google-services.json
+GoogleService-Info.plist
+
+# VS Code (keep settings.json and launch.json, ignore personal workspace)
+.vscode/*.code-workspace
+
+# Supabase local
+.supabase/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,21 @@
+﻿{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Chrome (release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "args": ["--release"],
+      "deviceId": "chrome"
+    },
+    {
+      "name": "Android device (release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "args": ["--release"],
+      "deviceId": "android"
+    }
+  ]
+}
