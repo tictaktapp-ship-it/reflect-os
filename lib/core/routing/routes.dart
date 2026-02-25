@@ -7,6 +7,9 @@ abstract final class Routes {
   // Home
   static const String home = '/home';
 
+  // Dashboard (shell tab)
+  static const String dashboard = '/dashboard';
+
   // Decisions
   static const String decisionsList = '/decisions/list';
   static const String decisionsDetail = '/decisions/detail/:id';

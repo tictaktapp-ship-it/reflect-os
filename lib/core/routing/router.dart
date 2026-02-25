@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/providers/auth_state_provider.dart';
 import 'package:reflect_os/core/providers/subscription_status_provider.dart';
+import 'package:reflect_os/core/routing/app_shell.dart';
 import 'package:reflect_os/features/auth/screens/forgot_password_screen.dart';
 import 'package:reflect_os/features/auth/screens/home_screen.dart';
 import 'package:reflect_os/features/auth/screens/login_screen.dart';
@@ -19,7 +20,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       subscriptionStatus.valueOrNull == SubscriptionStatus.active;
 
   return GoRouter(
-    initialLocation: Routes.home,
+    initialLocation: Routes.decisionsList,
     redirect: (BuildContext context, GoRouterState state) {
       final isPublicRoute = state.matchedLocation.startsWith('/share/') ||
           state.matchedLocation.startsWith('/auth/');
@@ -29,8 +30,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (isAuthenticated && !isSubscribed) {
-        final isBillingRoute =
-            state.matchedLocation.startsWith('/billing/');
+        final isBillingRoute = state.matchedLocation.startsWith('/billing/');
         if (!isBillingRoute && !isPublicRoute) {
           return Routes.billingSubscribe;
         }
@@ -39,19 +39,67 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      // Auth routes — outside the shell, no navigation chrome
       GoRoute(path: Routes.login, builder: (context, state) => const LoginScreen()),
       GoRoute(path: Routes.register, builder: (context, state) => const RegisterScreen()),
       GoRoute(path: Routes.forgotPassword, builder: (context, state) => const ForgotPasswordScreen()),
+
+      // Legacy home placeholder — outside the shell
       GoRoute(path: Routes.home, builder: (context, state) => const HomeScreen()),
-      GoRoute(path: Routes.decisionsList, builder: (context, state) => const DecisionsListScreen()),
+
+      // Detail / create routes — push above the shell (no nav chrome)
       GoRoute(path: Routes.decisionsDetail, builder: (context, state) => const _Placeholder('Decision Detail')),
       GoRoute(path: Routes.decisionsCreate, builder: (context, state) => const _Placeholder('Create Decision')),
       GoRoute(path: Routes.outcomesCreate, builder: (context, state) => const _Placeholder('Create Outcome')),
-      GoRoute(path: Routes.search, builder: (context, state) => const _Placeholder('Search')),
-      GoRoute(path: Routes.settings, builder: (context, state) => const _Placeholder('Settings')),
-      GoRoute(path: Routes.settingsPrivacy, builder: (context, state) => const _Placeholder('Privacy Settings')),
-      GoRoute(path: Routes.billingSubscribe, builder: (context, state) => const BillingSubscribeScreen()),
+
+      // Public share entry — outside the shell, no auth required
       GoRoute(path: Routes.share, builder: (context, state) => const _Placeholder('Share')),
+
+      // Billing gate — outside the shell
+      GoRoute(path: Routes.billingSubscribe, builder: (context, state) => const BillingSubscribeScreen()),
+
+      // Main app shell — wraps the four primary destinations
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            AppShell(navigationShell: navigationShell),
+        branches: [
+          // 0 — Decisions
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.decisionsList,
+              builder: (context, state) => const DecisionsListScreen(),
+            ),
+          ]),
+          // 1 — Search
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.search,
+              builder: (context, state) => const _Placeholder('Search'),
+            ),
+          ]),
+          // 2 — Dashboard
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.dashboard,
+              builder: (context, state) => const _Placeholder('Dashboard'),
+            ),
+          ]),
+          // 3 — Settings (privacy is a nested sub-route within this branch)
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.settings,
+              builder: (context, state) => const _Placeholder('Settings'),
+              routes: [
+                GoRoute(
+                  path: 'privacy',
+                  builder: (context, state) =>
+                      const _Placeholder('Privacy Settings'),
+                ),
+              ],
+            ),
+          ]),
+        ],
+      ),
     ],
   );
 });
