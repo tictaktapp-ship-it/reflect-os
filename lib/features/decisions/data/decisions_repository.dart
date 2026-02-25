@@ -28,12 +28,20 @@ class DecisionsRepository {
 
   /// Exception to the no-raw-tables rule: decisions table is written to
   /// directly. There is no RPC for creating decisions in the current schema.
-  /// RLS on the decisions table ensures users can only insert into their
-  /// own workspace.
+  /// RLS INSERT policy requires created_by_user_id = auth.uid(),
+  /// owner_user_id = auth.uid(), and state = 'Draft'.
   Future<String> createDecision(CreateDecisionInput input) async {
+    final userId = supabase.auth.currentUser!.id;
+    final payload = {
+      ...input.toJson(),
+      'created_by_user_id': userId,
+      'owner_user_id': userId,
+      'state': 'Draft',
+    };
+
     final response = await supabase
         .from('decisions')
-        .insert(input.toJson())
+        .insert(payload)
         .select('id')
         .single();
 
