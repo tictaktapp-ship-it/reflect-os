@@ -72,6 +72,27 @@ class InitiativesRepository {
     return rows.map((row) => Decision.fromJson(row)).toList();
   }
 
+  /// Exception to the no-raw-tables rule: no RPC exists for linking initiatives.
+  /// No RLS on decision_initiatives — both ids must be provided explicitly.
+  Future<void> linkInitiativeToDecision(
+      String decisionId, String initiativeId) async {
+    await supabase.from('decision_initiatives').insert({
+      'decision_id': decisionId,
+      'initiative_id': initiativeId,
+    });
+  }
+
+  /// Soft-delete: sets deleted_at = now() on the matching active row.
+  Future<void> unlinkInitiativeFromDecision(
+      String decisionId, String initiativeId) async {
+    await supabase
+        .from('decision_initiatives')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('decision_id', decisionId)
+        .eq('initiative_id', initiativeId)
+        .isFilter('deleted_at', null);
+  }
+
   Future<List<Initiative>> getInitiativesForDecision(
       String decisionId) async {
     // Step 1: get initiative_ids for this decision from the join view.

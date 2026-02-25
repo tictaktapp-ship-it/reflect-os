@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+import 'package:reflect_os/features/initiatives/providers/initiatives_provider.dart';
 import 'package:reflect_os/features/outcomes/data/models/outcome_update.dart';
 import 'package:reflect_os/features/outcomes/providers/outcomes_provider.dart';
 
@@ -193,6 +194,9 @@ class _DecisionDetail extends ConsumerWidget {
                   .toList();
             },
           ),
+
+          // ── Initiatives ───────────────────────────────────────
+          _InitiativesSection(decisionId: decision.id),
 
           const SizedBox(height: 80), // clear the FAB
         ],
@@ -593,6 +597,192 @@ class _HealthBadge extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
       ),
+    );
+  }
+}
+
+// ── Initiatives section ────────────────────────────────────────────────────────
+
+class _InitiativesSection extends ConsumerStatefulWidget {
+  const _InitiativesSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  ConsumerState<_InitiativesSection> createState() =>
+      _InitiativesSectionState();
+}
+
+class _InitiativesSectionState extends ConsumerState<_InitiativesSection> {
+  bool _isLoading = false;
+
+  Future<void> _link(String initiativeId) async {
+    setState(() => _isLoading = true);
+    try {
+      await ref
+          .read(initiativesRepositoryProvider)
+          .linkInitiativeToDecision(widget.decisionId, initiativeId);
+      ref.invalidate(initiativesForDecisionProvider(widget.decisionId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to link: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _unlink(String initiativeId) async {
+    setState(() => _isLoading = true);
+    try {
+      await ref
+          .read(initiativesRepositoryProvider)
+          .unlinkInitiativeFromDecision(widget.decisionId, initiativeId);
+      ref.invalidate(initiativesForDecisionProvider(widget.decisionId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to unlink: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _showAddSheet() async {
+    // Await all-initiatives load (triggers fetch if not yet cached).
+    final all = await ref.read(initiativesProvider.future);
+    if (!mounted) return;
+
+    final linked = ref
+            .read(initiativesForDecisionProvider(widget.decisionId))
+            .valueOrNull ??
+        [];
+    final linkedIds = linked.map((i) => i.id).toSet();
+    final available =
+        all.where((i) => !linkedIds.contains(i.id)).toList();
+
+    if (available.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('All initiatives are already linked.')),
+      );
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+              child: Text(
+                'Link an Initiative',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            ...available.map(
+              (initiative) => ListTile(
+                title: Text(initiative.name),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _link(initiative.id);
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final initiativesAsync =
+        ref.watch(initiativesForDecisionProvider(widget.decisionId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section header
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Initiatives',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+              ),
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: _isLoading
+                    ? const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : IconButton(
+                        icon: const Icon(Icons.add, size: 18),
+                        padding: EdgeInsets.zero,
+                        tooltip: 'Link initiative',
+                        onPressed: _showAddSheet,
+                      ),
+              ),
+            ],
+          ),
+        ),
+
+        // Content
+        _SectionCard(
+          children: [
+            initiativesAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Text(
+                'Failed to load initiatives.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: AppColors.textMuted),
+              ),
+              data: (initiatives) {
+                if (initiatives.isEmpty) {
+                  return Text(
+                    'No initiatives linked.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: AppColors.textMuted),
+                  );
+                }
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: initiatives
+                      .map(
+                        (i) => Chip(
+                          label: Text(i.name),
+                          deleteIcon: const Icon(Icons.close, size: 16),
+                          onDeleted:
+                              _isLoading ? null : () => _unlink(i.id),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
