@@ -10,6 +10,8 @@ build/
 # Environment and secrets
 .env
 .env.*
+!.env.example
+dart_defines.json
 google-services.json
 GoogleService-Info.plist
 

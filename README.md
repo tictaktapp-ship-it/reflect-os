@@ -6,6 +6,19 @@ Flutter application — decision logging and reflection platform.
 v1.0: Web (Chrome/Edge), Android, iOS
 v1.1: Windows, macOS
 
+## Environment variables
+
+Supabase credentials are injected at build time via `--dart-define`. Never commit real values.
+
+```
+flutter run -d chrome --release \
+  --dart-define=SUPABASE_URL=https://your-project-ref.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+Or use a `dart_defines.json` file (also gitignored) with `--dart-define-from-file=dart_defines.json`.
+See `.env.example` for required variable names.
+
 ## Running the app
 
 Always run in release mode:
