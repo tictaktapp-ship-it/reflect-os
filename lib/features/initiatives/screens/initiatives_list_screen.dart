@@ -64,9 +64,9 @@ class _InitiativeTile extends StatelessWidget {
       color: AppColors.backgroundSurface,
       clipBehavior: Clip.hardEdge,
       child: InkWell(
-        onTap: () {
-          // Detail screen — placeholder for now.
-        },
+        onTap: () => context.push(
+          '/initiatives/detail/${initiative.id}',
+        ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(

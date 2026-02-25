@@ -1,4 +1,5 @@
 import 'package:reflect_os/core/supabase/supabase_client.dart';
+import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/initiatives/data/models/initiative.dart';
 
 class InitiativesRepository {
@@ -34,6 +35,41 @@ class InitiativesRepository {
         .single();
 
     return response['id'] as String;
+  }
+
+  Future<Initiative?> getInitiativeById(String id) async {
+    final row = await supabase
+        .from('user_visible_initiatives')
+        .select()
+        .eq('id', id)
+        .maybeSingle();
+
+    if (row == null) return null;
+    return Initiative.fromJson(row);
+  }
+
+  Future<List<Decision>> getDecisionsForInitiative(
+      String initiativeId) async {
+    // Step 1: get decision_ids linked to this initiative from the join view.
+    final joinRows = await supabase
+        .from('user_visible_decision_initiatives')
+        .select('decision_id')
+        .eq('initiative_id', initiativeId)
+        .isFilter('deleted_at', null);
+
+    if (joinRows.isEmpty) return [];
+
+    final ids =
+        joinRows.map((r) => r['decision_id'] as String).toList();
+
+    // Step 2: fetch full decision rows ordered by created_at desc.
+    final rows = await supabase
+        .from('user_visible_decisions')
+        .select()
+        .inFilter('id', ids)
+        .order('created_at', ascending: false);
+
+    return rows.map((row) => Decision.fromJson(row)).toList();
   }
 
   Future<List<Initiative>> getInitiativesForDecision(

@@ -16,6 +16,7 @@ import 'package:reflect_os/features/decisions/screens/decisions_list_screen.dart
 import 'package:reflect_os/features/search/screens/search_screen.dart';
 import 'package:reflect_os/features/dashboard/screens/dashboard_screen.dart';
 import 'package:reflect_os/features/initiatives/screens/create_initiative_screen.dart';
+import 'package:reflect_os/features/initiatives/screens/initiative_detail_screen.dart';
 import 'package:reflect_os/features/initiatives/screens/initiatives_list_screen.dart';
 import 'package:reflect_os/features/notifications/screens/notifications_screen.dart';
 import 'package:reflect_os/features/settings/screens/settings_screen.dart';
@@ -65,6 +66,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: Routes.decisionsCreate, builder: (context, state) => const CreateDecisionScreen()),
       GoRoute(path: Routes.initiativesCreate, builder: (context, state) => const CreateInitiativeScreen()),
+      GoRoute(
+        path: Routes.initiativesDetail,
+        builder: (context, state) => InitiativeDetailScreen(
+          id: state.pathParameters['id']!,
+        ),
+      ),
       GoRoute(path: Routes.notifications, builder: (context, state) => const NotificationsScreen()),
       GoRoute(
         path: Routes.outcomesCreate,

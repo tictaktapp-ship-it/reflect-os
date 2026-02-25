@@ -26,6 +26,7 @@ abstract final class Routes {
 
   // Initiatives
   static const String initiativesList = '/initiatives/list';
+  static const String initiativesDetail = '/initiatives/detail/:id';
   static const String initiativesCreate = '/initiatives/create';
 
   // Settings
