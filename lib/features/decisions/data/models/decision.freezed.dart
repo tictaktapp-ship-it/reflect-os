@@ -15,7 +15,10 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Decision {
 
- String get id; String get title; String get status; DateTime? get decisionDate; DateTime get createdAt; DateTime get updatedAt;
+ String get id; String get title; String get state;// ignore: invalid_annotation_target
+@JsonKey(name: 'decision_deadline') DateTime? get decisionDeadline;// ignore: invalid_annotation_target
+@JsonKey(name: 'created_at') DateTime get createdAt;// ignore: invalid_annotation_target
+@JsonKey(name: 'updated_at') DateTime get updatedAt;
 /// Create a copy of Decision
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +31,16 @@ $DecisionCopyWith<Decision> get copyWith => _$DecisionCopyWithImpl<Decision>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Decision&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.status, status) || other.status == status)&&(identical(other.decisionDate, decisionDate) || other.decisionDate == decisionDate)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Decision&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.state, state) || other.state == state)&&(identical(other.decisionDeadline, decisionDeadline) || other.decisionDeadline == decisionDeadline)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,status,decisionDate,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,title,state,decisionDeadline,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'Decision(id: $id, title: $title, status: $status, decisionDate: $decisionDate, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Decision(id: $id, title: $title, state: $state, decisionDeadline: $decisionDeadline, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -48,7 +51,7 @@ abstract mixin class $DecisionCopyWith<$Res>  {
   factory $DecisionCopyWith(Decision value, $Res Function(Decision) _then) = _$DecisionCopyWithImpl;
 @useResult
 $Res call({
- String id, String title, String status, DateTime? decisionDate, DateTime createdAt, DateTime updatedAt
+ String id, String title, String state,@JsonKey(name: 'decision_deadline') DateTime? decisionDeadline,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt
 });
 
 
@@ -65,12 +68,12 @@ class _$DecisionCopyWithImpl<$Res>
 
 /// Create a copy of Decision
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? status = null,Object? decisionDate = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? state = null,Object? decisionDeadline = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
-as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as String,decisionDate: freezed == decisionDate ? _self.decisionDate : decisionDate // ignore: cast_nullable_to_non_nullable
+as String,state: null == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
+as String,decisionDeadline: freezed == decisionDeadline ? _self.decisionDeadline : decisionDeadline // ignore: cast_nullable_to_non_nullable
 as DateTime?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,
@@ -158,10 +161,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String status,  DateTime? decisionDate,  DateTime createdAt,  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String state, @JsonKey(name: 'decision_deadline')  DateTime? decisionDeadline, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Decision() when $default != null:
-return $default(_that.id,_that.title,_that.status,_that.decisionDate,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.title,_that.state,_that.decisionDeadline,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -179,10 +182,10 @@ return $default(_that.id,_that.title,_that.status,_that.decisionDate,_that.creat
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String status,  DateTime? decisionDate,  DateTime createdAt,  DateTime updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String state, @JsonKey(name: 'decision_deadline')  DateTime? decisionDeadline, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _Decision():
-return $default(_that.id,_that.title,_that.status,_that.decisionDate,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.title,_that.state,_that.decisionDeadline,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -199,10 +202,10 @@ return $default(_that.id,_that.title,_that.status,_that.decisionDate,_that.creat
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String status,  DateTime? decisionDate,  DateTime createdAt,  DateTime updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String state, @JsonKey(name: 'decision_deadline')  DateTime? decisionDeadline, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Decision() when $default != null:
-return $default(_that.id,_that.title,_that.status,_that.decisionDate,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.title,_that.state,_that.decisionDeadline,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -214,15 +217,18 @@ return $default(_that.id,_that.title,_that.status,_that.decisionDate,_that.creat
 @JsonSerializable()
 
 class _Decision implements Decision {
-  const _Decision({required this.id, required this.title, required this.status, this.decisionDate, required this.createdAt, required this.updatedAt});
+  const _Decision({required this.id, required this.title, required this.state, @JsonKey(name: 'decision_deadline') this.decisionDeadline, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') required this.updatedAt});
   factory _Decision.fromJson(Map<String, dynamic> json) => _$DecisionFromJson(json);
 
 @override final  String id;
 @override final  String title;
-@override final  String status;
-@override final  DateTime? decisionDate;
-@override final  DateTime createdAt;
-@override final  DateTime updatedAt;
+@override final  String state;
+// ignore: invalid_annotation_target
+@override@JsonKey(name: 'decision_deadline') final  DateTime? decisionDeadline;
+// ignore: invalid_annotation_target
+@override@JsonKey(name: 'created_at') final  DateTime createdAt;
+// ignore: invalid_annotation_target
+@override@JsonKey(name: 'updated_at') final  DateTime updatedAt;
 
 /// Create a copy of Decision
 /// with the given fields replaced by the non-null parameter values.
@@ -237,16 +243,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Decision&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.status, status) || other.status == status)&&(identical(other.decisionDate, decisionDate) || other.decisionDate == decisionDate)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Decision&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.state, state) || other.state == state)&&(identical(other.decisionDeadline, decisionDeadline) || other.decisionDeadline == decisionDeadline)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,status,decisionDate,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,title,state,decisionDeadline,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'Decision(id: $id, title: $title, status: $status, decisionDate: $decisionDate, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Decision(id: $id, title: $title, state: $state, decisionDeadline: $decisionDeadline, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -257,7 +263,7 @@ abstract mixin class _$DecisionCopyWith<$Res> implements $DecisionCopyWith<$Res>
   factory _$DecisionCopyWith(_Decision value, $Res Function(_Decision) _then) = __$DecisionCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String title, String status, DateTime? decisionDate, DateTime createdAt, DateTime updatedAt
+ String id, String title, String state,@JsonKey(name: 'decision_deadline') DateTime? decisionDeadline,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt
 });
 
 
@@ -274,12 +280,12 @@ class __$DecisionCopyWithImpl<$Res>
 
 /// Create a copy of Decision
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? status = null,Object? decisionDate = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? state = null,Object? decisionDeadline = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_Decision(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
-as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as String,decisionDate: freezed == decisionDate ? _self.decisionDate : decisionDate // ignore: cast_nullable_to_non_nullable
+as String,state: null == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
+as String,decisionDeadline: freezed == decisionDeadline ? _self.decisionDeadline : decisionDeadline // ignore: cast_nullable_to_non_nullable
 as DateTime?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,

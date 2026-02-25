@@ -63,7 +63,7 @@ class _DecisionTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            _StatusBadge(status: decision.status),
+            _StatusBadge(status: decision.state),
           ],
         ),
       ),
