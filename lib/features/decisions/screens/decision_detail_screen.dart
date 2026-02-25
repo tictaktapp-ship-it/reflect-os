@@ -86,7 +86,7 @@ class _DecisionDetail extends StatelessWidget {
               if (decision.initialConfidence != null)
                 _DetailRow(
                   label: 'Initial confidence',
-                  value: '${decision.initialConfidence}%',
+                  value: '${decision.initialConfidence} / 10',
                 ),
             ],
           ),
