@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/providers/auth_state_provider.dart';
 import 'package:reflect_os/core/providers/subscription_status_provider.dart';
 import 'package:reflect_os/features/auth/screens/forgot_password_screen.dart';
+import 'package:reflect_os/features/auth/screens/home_screen.dart';
 import 'package:reflect_os/features/auth/screens/login_screen.dart';
 import 'package:reflect_os/features/auth/screens/register_screen.dart';
+import 'package:reflect_os/features/decisions/screens/decisions_list_screen.dart';
 import 'routes.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -39,8 +41,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.login, builder: (context, state) => const LoginScreen()),
       GoRoute(path: Routes.register, builder: (context, state) => const RegisterScreen()),
       GoRoute(path: Routes.forgotPassword, builder: (context, state) => const ForgotPasswordScreen()),
-      GoRoute(path: Routes.home, builder: (context, state) => const _Placeholder('Home')),
-      GoRoute(path: Routes.decisionsList, builder: (context, state) => const _Placeholder('Decisions')),
+      GoRoute(path: Routes.home, builder: (context, state) => const HomeScreen()),
+      GoRoute(path: Routes.decisionsList, builder: (context, state) => const DecisionsListScreen()),
       GoRoute(path: Routes.decisionsDetail, builder: (context, state) => const _Placeholder('Decision Detail')),
       GoRoute(path: Routes.decisionsCreate, builder: (context, state) => const _Placeholder('Create Decision')),
       GoRoute(path: Routes.outcomesCreate, builder: (context, state) => const _Placeholder('Create Outcome')),
