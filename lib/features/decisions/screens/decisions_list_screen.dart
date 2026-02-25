@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
@@ -50,7 +51,10 @@ class _DecisionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
+      clipBehavior: Clip.hardEdge,
+      child: InkWell(
+        onTap: () => context.push('/decisions/detail/${decision.id}'),
+        child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
@@ -66,6 +70,7 @@ class _DecisionTile extends StatelessWidget {
             _StatusBadge(status: decision.state),
           ],
         ),
+      ),
       ),
     );
   }

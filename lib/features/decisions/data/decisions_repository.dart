@@ -12,4 +12,15 @@ class DecisionsRepository {
 
     return rows.map((row) => Decision.fromJson(row)).toList();
   }
+
+  Future<Decision?> getDecisionById(String id) async {
+    final row = await supabase
+        .from('user_visible_decisions')
+        .select()
+        .eq('id', id)
+        .maybeSingle();
+
+    if (row == null) return null;
+    return Decision.fromJson(row);
+  }
 }

@@ -9,3 +9,8 @@ final decisionsRepositoryProvider = Provider<DecisionsRepository>(
 final decisionsProvider = FutureProvider<List<Decision>>((ref) {
   return ref.read(decisionsRepositoryProvider).getDecisions();
 });
+
+final decisionDetailProvider =
+    FutureProvider.family<Decision?, String>((ref, id) {
+  return ref.read(decisionsRepositoryProvider).getDecisionById(id);
+});
