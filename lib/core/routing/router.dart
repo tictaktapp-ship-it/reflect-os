@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/providers/auth_state_provider.dart';
 import 'package:reflect_os/core/providers/subscription_status_provider.dart';
+import 'package:reflect_os/features/auth/screens/login_screen.dart';
 import 'routes.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -33,7 +34,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: Routes.login, builder: (context, state) => const _Placeholder('Login')),
+      GoRoute(path: Routes.login, builder: (context, state) => const LoginScreen()),
       GoRoute(path: Routes.register, builder: (context, state) => const _Placeholder('Register')),
       GoRoute(path: Routes.forgotPassword, builder: (context, state) => const _Placeholder('Forgot Password')),
       GoRoute(path: Routes.home, builder: (context, state) => const _Placeholder('Home')),
