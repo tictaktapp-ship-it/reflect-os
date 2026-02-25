@@ -21,6 +21,8 @@ final subscriptionStatusProvider =
   //
   // Current implementation reads from user_visible_subscriptions.
   // If the view does not exist this will throw; update the query accordingly.
+  // Valid tier values from the schema: 'individual', 'team', 'coach'.
+  // The status column (not tier) drives the gate — valid values: 'active', 'inactive'.
   final response = await supabase
       .from('user_visible_subscriptions')
       .select('status')
