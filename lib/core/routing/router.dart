@@ -2,18 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/providers/auth_state_provider.dart';
+import 'package:reflect_os/core/providers/subscription_status_provider.dart';
 import 'routes.dart';
-
-// TODO: replace with real provider once implemented.
-// import 'package:reflect_os/core/providers/subscription_status_provider.dart';
-
-/// Placeholder subscription state — replace with subscriptionStatusProvider.
-final _subscriptionStatusProvider = Provider<bool>((ref) => false);
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authStatus = ref.watch(authStateProvider);
   final isAuthenticated = authStatus.valueOrNull is AuthAuthenticated;
-  final isSubscribed = ref.watch(_subscriptionStatusProvider);
+  final subscriptionStatus = ref.watch(subscriptionStatusProvider);
+  final isSubscribed =
+      subscriptionStatus.valueOrNull == SubscriptionStatus.active;
 
   return GoRouter(
     initialLocation: Routes.home,
