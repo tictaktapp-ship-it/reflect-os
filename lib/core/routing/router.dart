@@ -13,6 +13,7 @@ import 'package:reflect_os/features/decisions/screens/create_decision_screen.dar
 import 'package:reflect_os/features/outcomes/screens/create_outcome_screen.dart';
 import 'package:reflect_os/features/decisions/screens/decision_detail_screen.dart';
 import 'package:reflect_os/features/decisions/screens/decisions_list_screen.dart';
+import 'package:reflect_os/features/search/screens/search_screen.dart';
 import 'routes.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -87,7 +88,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: [
             GoRoute(
               path: Routes.search,
-              builder: (context, state) => const _Placeholder('Search'),
+              builder: (context, state) => const SearchScreen(),
             ),
           ]),
           // 2 — Dashboard
