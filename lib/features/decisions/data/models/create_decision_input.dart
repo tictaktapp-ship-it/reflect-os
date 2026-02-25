@@ -34,7 +34,7 @@ class CreateDecisionInput {
           'description_encrypted': descriptionEncrypted,
         if (decisionDeadline != null)
           'decision_deadline': decisionDeadline!.toIso8601String(),
-        'is_continuous': isContinuous,
-        'visibility': visibility,
+        'continuous': isContinuous,
+        'visibility_mode': visibility,
       };
 }
