@@ -21,6 +21,9 @@ abstract final class Routes {
   // Search
   static const String search = '/search';
 
+  // Notifications
+  static const String notifications = '/notifications';
+
   // Initiatives
   static const String initiativesList = '/initiatives/list';
   static const String initiativesCreate = '/initiatives/create';
