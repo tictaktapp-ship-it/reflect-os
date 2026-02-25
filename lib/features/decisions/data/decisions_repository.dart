@@ -90,6 +90,29 @@ class DecisionsRepository {
     return ids.where(byId.containsKey).map((id) => byId[id]!).toList();
   }
 
+  Future<void> activateDecision(String id) async {
+    await supabase.rpc('activate_decision', params: {'p_decision_id': id});
+  }
+
+  Future<void> closeDecision(String id) async {
+    await supabase.rpc('close_decision', params: {'p_decision_id': id});
+  }
+
+  Future<void> reopenDecision(String id) async {
+    await supabase.rpc('reopen_decision', params: {'p_decision_id': id});
+  }
+
+  Future<void> archiveDecision(String id) async {
+    await supabase.rpc('archive_decision', params: {'p_decision_id': id});
+  }
+
+  Future<void> unarchiveDecision(String id, String newState) async {
+    await supabase.rpc('unarchive_decision', params: {
+      'p_decision_id': id,
+      'p_new_state': newState,
+    });
+  }
+
   /// Exception to the no-raw-tables rule: there is no user_visible_categories
   /// view in the schema. The categories table is queried directly here.
   /// RLS ensures users can only read categories belonging to their workspace.

@@ -75,6 +75,9 @@ class _DecisionDetail extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // ── State transitions ─────────────────────────────────────
+          _StateTransitionBar(decision: decision),
+
           // ── State & health ────────────────────────────────────────
           _SectionCard(
             children: [
@@ -354,6 +357,159 @@ class _DetailRow extends StatelessWidget {
                 valueMaxLines != null ? TextOverflow.ellipsis : TextOverflow.clip,
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── State transition bar ──────────────────────────────────────────────────────
+
+class _StateTransitionBar extends ConsumerStatefulWidget {
+  const _StateTransitionBar({required this.decision});
+
+  final Decision decision;
+
+  @override
+  ConsumerState<_StateTransitionBar> createState() =>
+      _StateTransitionBarState();
+}
+
+class _StateTransitionBarState extends ConsumerState<_StateTransitionBar> {
+  bool _isLoading = false;
+
+  Future<void> _run(Future<void> Function() action) async {
+    setState(() => _isLoading = true);
+    try {
+      await action();
+      ref.invalidate(decisionDetailProvider(widget.decision.id));
+      ref.invalidate(decisionsProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _showUnarchiveSheet() async {
+    final newState = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+              child: Text(
+                'Restore to which state?',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.play_circle_outline),
+              title: const Text('Active'),
+              onTap: () => Navigator.of(context).pop('Active'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.check_circle_outline),
+              title: const Text('Closed'),
+              onTap: () => Navigator.of(context).pop('Closed'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (newState != null) {
+      await _run(() => ref
+          .read(decisionsRepositoryProvider)
+          .unarchiveDecision(widget.decision.id, newState));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final repo = ref.read(decisionsRepositoryProvider);
+    final id = widget.decision.id;
+    final state = widget.decision.state;
+
+    final buttons = switch (state) {
+      'Draft' => <Widget>[
+          OutlinedButton(
+            onPressed:
+                _isLoading ? null : () => _run(() => repo.activateDecision(id)),
+            style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.accentHover),
+            child: const Text('Activate'),
+          ),
+        ],
+      'Active' => <Widget>[
+          OutlinedButton(
+            onPressed:
+                _isLoading ? null : () => _run(() => repo.closeDecision(id)),
+            style:
+                OutlinedButton.styleFrom(foregroundColor: AppColors.success),
+            child: const Text('Close'),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed:
+                _isLoading ? null : () => _run(() => repo.archiveDecision(id)),
+            style: TextButton.styleFrom(foregroundColor: AppColors.textMuted),
+            child: const Text('Archive'),
+          ),
+        ],
+      'Closed' => <Widget>[
+          OutlinedButton(
+            onPressed:
+                _isLoading ? null : () => _run(() => repo.reopenDecision(id)),
+            style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.accentHover),
+            child: const Text('Reopen'),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed:
+                _isLoading ? null : () => _run(() => repo.archiveDecision(id)),
+            style: TextButton.styleFrom(foregroundColor: AppColors.textMuted),
+            child: const Text('Archive'),
+          ),
+        ],
+      'Archived' => <Widget>[
+          OutlinedButton(
+            onPressed: _isLoading ? null : _showUnarchiveSheet,
+            style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.accentHover),
+            child: const Text('Unarchive'),
+          ),
+        ],
+      _ => <Widget>[],
+    };
+
+    if (buttons.isEmpty) return const SizedBox.shrink();
+
+    return Card(
+      color: AppColors.backgroundSurface,
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            if (_isLoading) ...[
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 12),
+            ],
+            ...buttons,
+          ],
+        ),
       ),
     );
   }
