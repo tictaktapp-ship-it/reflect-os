@@ -60,14 +60,15 @@ class DecisionsRepository {
         .from('subscriptions')
         .select('workspace_id')
         .eq('user_id', userId)
-        .single();
-    final workspaceId = subRow['workspace_id'] as String;
+        .maybeSingle();
+    final workspaceId = subRow?['workspace_id'] as String?;
+    if (workspaceId == null) return [];
 
     // Step 1: RPC returns [{decision_id, rank}, …] ordered by rank desc.
     final rpcRows = await supabase.rpc('search_decisions', params: {
       'query_text': query,
       'workspace_id': workspaceId,
-      'filters_json': <String, dynamic>{},
+      'filters_json': '{}',
     }) as List<dynamic>;
 
     if (rpcRows.isEmpty) return [];
