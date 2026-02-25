@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/routing/router.dart';
 import 'core/supabase/supabase_client.dart';
 
 Future<void> main() async {
@@ -8,16 +9,15 @@ Future<void> main() async {
   runApp(const ProviderScope(child: ReflectApp()));
 }
 
-class ReflectApp extends StatelessWidget {
+class ReflectApp extends ConsumerWidget {
   const ReflectApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+    return MaterialApp.router(
       title: 'Reflect OS',
-      home: Scaffold(
-        body: Center(child: Text('Reflect OS')),
-      ),
+      routerConfig: router,
     );
   }
 }
