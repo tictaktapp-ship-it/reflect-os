@@ -17,6 +17,11 @@ final decisionDetailProvider =
   return ref.read(decisionsRepositoryProvider).getDecisionById(id);
 });
 
+final searchProvider =
+    FutureProvider.family<List<Decision>, String>((ref, query) {
+  return ref.read(decisionsRepositoryProvider).searchDecisions(query);
+});
+
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   final workspaceId = await ref.watch(currentWorkspaceProvider.future);
   if (workspaceId == null) return [];

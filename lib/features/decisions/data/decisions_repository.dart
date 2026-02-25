@@ -48,6 +48,47 @@ class DecisionsRepository {
     return response['id'] as String;
   }
 
+  /// Two-step search: calls search_decisions RPC (returns ranked decision_ids),
+  /// then fetches full rows from user_visible_decisions and reorders by rank.
+  /// workspace_id is read from the subscriptions table (same RLS exception as
+  /// createDecision). Returns empty list for blank queries.
+  Future<List<Decision>> searchDecisions(String query) async {
+    if (query.trim().isEmpty) return [];
+
+    final userId = supabase.auth.currentUser!.id;
+    final subRow = await supabase
+        .from('subscriptions')
+        .select('workspace_id')
+        .eq('user_id', userId)
+        .single();
+    final workspaceId = subRow['workspace_id'] as String;
+
+    // Step 1: RPC returns [{decision_id, rank}, …] ordered by rank desc.
+    final rpcRows = await supabase.rpc('search_decisions', params: {
+      'query_text': query,
+      'workspace_id': workspaceId,
+      'filters_json': <String, dynamic>{},
+    }) as List<dynamic>;
+
+    if (rpcRows.isEmpty) return [];
+
+    final ranked = rpcRows.cast<Map<String, dynamic>>();
+    final ids = ranked.map((r) => r['decision_id'] as String).toList();
+
+    // Step 2: Fetch full decision rows for those ids.
+    final rows = await supabase
+        .from('user_visible_decisions')
+        .select()
+        .inFilter('id', ids);
+
+    // Step 3: Reorder by rank (preserve RPC order).
+    final byId = <String, Decision>{
+      for (final row in rows)
+        row['id'] as String: Decision.fromJson(row),
+    };
+    return ids.where(byId.containsKey).map((id) => byId[id]!).toList();
+  }
+
   /// Exception to the no-raw-tables rule: there is no user_visible_categories
   /// view in the schema. The categories table is queried directly here.
   /// RLS ensures users can only read categories belonging to their workspace.
