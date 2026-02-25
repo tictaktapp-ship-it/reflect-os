@@ -22,6 +22,9 @@ abstract final class Routes {
   static const String settings = '/settings';
   static const String settingsPrivacy = '/settings/privacy';
 
+  // Billing
+  static const String billingSubscribe = '/billing/subscribe';
+
   // Share
   // Must work without authentication — this is the public share link entry point.
   static const String share = '/share/:token';

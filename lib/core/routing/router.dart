@@ -7,6 +7,7 @@ import 'package:reflect_os/features/auth/screens/forgot_password_screen.dart';
 import 'package:reflect_os/features/auth/screens/home_screen.dart';
 import 'package:reflect_os/features/auth/screens/login_screen.dart';
 import 'package:reflect_os/features/auth/screens/register_screen.dart';
+import 'package:reflect_os/features/billing/screens/billing_subscribe_screen.dart';
 import 'package:reflect_os/features/decisions/screens/decisions_list_screen.dart';
 import 'routes.dart';
 
@@ -31,7 +32,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         final isBillingRoute =
             state.matchedLocation.startsWith('/billing/');
         if (!isBillingRoute && !isPublicRoute) {
-          return '/billing/subscribe';
+          return Routes.billingSubscribe;
         }
       }
 
@@ -49,6 +50,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.search, builder: (context, state) => const _Placeholder('Search')),
       GoRoute(path: Routes.settings, builder: (context, state) => const _Placeholder('Settings')),
       GoRoute(path: Routes.settingsPrivacy, builder: (context, state) => const _Placeholder('Privacy Settings')),
+      GoRoute(path: Routes.billingSubscribe, builder: (context, state) => const BillingSubscribeScreen()),
       GoRoute(path: Routes.share, builder: (context, state) => const _Placeholder('Share')),
     ],
   );
