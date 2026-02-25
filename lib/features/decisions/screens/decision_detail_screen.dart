@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
@@ -57,6 +58,12 @@ class _DecisionDetail extends StatelessWidget {
           decision.title,
           overflow: TextOverflow.ellipsis,
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () =>
+            context.push('/outcomes/create/${decision.id}'),
+        tooltip: 'Add outcome',
+        child: const Icon(Icons.add_chart_outlined),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
