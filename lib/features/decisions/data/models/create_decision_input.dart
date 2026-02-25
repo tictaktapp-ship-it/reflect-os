@@ -2,7 +2,7 @@ class CreateDecisionInput {
   const CreateDecisionInput({
     required this.workspaceId,
     required this.title,
-    this.state = 'draft',
+    this.state = 'Draft',
     this.categoryId,
     this.stakes,
     this.initialConfidence,
