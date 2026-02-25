@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+import 'package:reflect_os/features/outcomes/data/models/outcome_update.dart';
+import 'package:reflect_os/features/outcomes/providers/outcomes_provider.dart';
 
 class DecisionDetailScreen extends ConsumerWidget {
   const DecisionDetailScreen({required this.id, super.key});
@@ -45,13 +47,18 @@ class DecisionDetailScreen extends ConsumerWidget {
   }
 }
 
-class _DecisionDetail extends StatelessWidget {
+class _DecisionDetail extends ConsumerWidget {
   const _DecisionDetail({required this.decision});
 
   final Decision decision;
 
+  String _formatDate(DateTime dt) =>
+      DateFormat('d MMM yyyy').format(dt.toLocal());
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final outcomesAsync = ref.watch(outcomesProvider(decision.id));
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -68,7 +75,7 @@ class _DecisionDetail extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // State & health
+          // ── State & health ────────────────────────────────────────
           _SectionCard(
             children: [
               Row(
@@ -83,7 +90,7 @@ class _DecisionDetail extends StatelessWidget {
             ],
           ),
 
-          // Overview
+          // ── Overview ──────────────────────────────────────────────
           _SectionCard(
             children: [
               if (decision.stakes != null)
@@ -98,7 +105,7 @@ class _DecisionDetail extends StatelessWidget {
             ],
           ),
 
-          // Description
+          // ── Description ───────────────────────────────────────────
           if (decision.descriptionEncrypted != null)
             _SectionCard(
               children: [
@@ -110,7 +117,7 @@ class _DecisionDetail extends StatelessWidget {
               ],
             ),
 
-          // Dates
+          // ── Dates ─────────────────────────────────────────────────
           _SectionCard(
             children: [
               if (decision.decisionDeadline != null)
@@ -128,14 +135,161 @@ class _DecisionDetail extends StatelessWidget {
               ),
             ],
           ),
+
+          // ── Outcomes ──────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.only(left: 4, top: 8, bottom: 8),
+            child: Text(
+              'Outcomes',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+            ),
+          ),
+          ...outcomesAsync.when(
+            loading: () => [
+              _SectionCard(
+                children: const [
+                  Center(child: CircularProgressIndicator()),
+                ],
+              ),
+            ],
+            error: (e, _) => [
+              _SectionCard(
+                children: [
+                  Text(
+                    'Failed to load outcomes.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                  ),
+                ],
+              ),
+            ],
+            data: (outcomes) {
+              if (outcomes.isEmpty) {
+                return [
+                  _SectionCard(
+                    children: [
+                      Text(
+                        'No outcomes recorded yet.',
+                        style:
+                            Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: AppColors.textMuted,
+                                ),
+                      ),
+                    ],
+                  ),
+                ];
+              }
+              return outcomes
+                  .map((o) => _OutcomeCard(
+                        outcome: o,
+                        formatDate: _formatDate,
+                      ))
+                  .toList();
+            },
+          ),
+
+          const SizedBox(height: 80), // clear the FAB
         ],
       ),
     );
   }
-
-  String _formatDate(DateTime dt) =>
-      DateFormat('d MMM yyyy').format(dt.toLocal());
 }
+
+// ── Outcome card ───────────────────────────────────────────────────────────────
+
+class _OutcomeCard extends StatelessWidget {
+  const _OutcomeCard({required this.outcome, required this.formatDate});
+
+  final OutcomeUpdate outcome;
+  final String Function(DateTime) formatDate;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      children: [
+        Row(
+          children: [
+            Text(
+              '${outcome.outcomeQualityScore} / 10',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const Spacer(),
+            if (outcome.outcomeState != null)
+              _OutcomeStateBadge(state: outcome.outcomeState!),
+          ],
+        ),
+        if (outcome.outcomeTextEncrypted != null) ...[
+          const SizedBox(height: 8),
+          _DetailRow(
+            label: 'Outcome',
+            value: outcome.outcomeTextEncrypted!,
+            valueMaxLines: null,
+          ),
+        ],
+        if (outcome.lessonsLearnedEncrypted != null)
+          _DetailRow(
+            label: 'Lessons Learned',
+            value: outcome.lessonsLearnedEncrypted!,
+            valueMaxLines: null,
+          ),
+        _DetailRow(
+          label: 'Recorded',
+          value: formatDate(outcome.createdAt),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Outcome state badge ────────────────────────────────────────────────────────
+
+class _OutcomeStateBadge extends StatelessWidget {
+  const _OutcomeStateBadge({required this.state});
+
+  final String state;
+
+  Color get _background => switch (state) {
+        'Unrealised' => AppColors.textMuted.withValues(alpha: 0.2),
+        'Partial' => AppColors.warning.withValues(alpha: 0.2),
+        'Realised' => AppColors.success.withValues(alpha: 0.2),
+        'Written_off' => AppColors.destructive.withValues(alpha: 0.2),
+        _ => AppColors.textMuted.withValues(alpha: 0.2),
+      };
+
+  Color get _foreground => switch (state) {
+        'Unrealised' => AppColors.textMuted,
+        'Partial' => AppColors.warning,
+        'Realised' => AppColors.success,
+        'Written_off' => AppColors.destructive,
+        _ => AppColors.textSecondary,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: _background,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        state.replaceAll('_', ' '),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: _foreground,
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
+  }
+}
+
+// ── Shared section card ────────────────────────────────────────────────────────
 
 class _SectionCard extends StatelessWidget {
   const _SectionCard({required this.children});
@@ -164,6 +318,8 @@ class _SectionCard extends StatelessWidget {
     );
   }
 }
+
+// ── Detail row ────────────────────────────────────────────────────────────────
 
 class _DetailRow extends StatelessWidget {
   const _DetailRow({
@@ -202,6 +358,8 @@ class _DetailRow extends StatelessWidget {
     );
   }
 }
+
+// ── State badge ───────────────────────────────────────────────────────────────
 
 class _StateBadge extends StatelessWidget {
   const _StateBadge({required this.state});
@@ -242,6 +400,8 @@ class _StateBadge extends StatelessWidget {
     );
   }
 }
+
+// ── Health badge ──────────────────────────────────────────────────────────────
 
 class _HealthBadge extends StatelessWidget {
   const _HealthBadge({required this.healthState});
