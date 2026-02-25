@@ -15,16 +15,13 @@ final subscriptionStatusProvider =
 
   final userId = auth.session.user.id;
 
-  // TODO: switch to user_visible_subscriptions view once confirmed present
-  // in migrations, or replace with an RPC call:
-  //   final result = await supabase.rpc('get_subscription_status');
-  //
-  // Current implementation reads from user_visible_subscriptions.
-  // If the view does not exist this will throw; update the query accordingly.
-  // Valid tier values from the schema: 'individual', 'team', 'coach'.
-  // The status column (not tier) drives the gate — valid values: 'active', 'inactive'.
+  // Exception to the no-raw-tables rule: there is no user_visible_subscriptions
+  // view in the schema. The subscriptions table is queried directly here.
+  // RLS on the subscriptions table ensures users can only read their own row.
+  // Valid tier values: 'individual', 'team', 'coach'.
+  // Valid status values: 'active', 'inactive'.
   final response = await supabase
-      .from('user_visible_subscriptions')
+      .from('subscriptions')
       .select('status')
       .eq('user_id', userId)
       .maybeSingle();
