@@ -14,6 +14,11 @@ class DecisionsListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Decisions')),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/decisions/create'),
+        tooltip: 'New decision',
+        child: const Icon(Icons.add),
+      ),
       body: decisionsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(

@@ -9,6 +9,7 @@ import 'package:reflect_os/features/auth/screens/home_screen.dart';
 import 'package:reflect_os/features/auth/screens/login_screen.dart';
 import 'package:reflect_os/features/auth/screens/register_screen.dart';
 import 'package:reflect_os/features/billing/screens/billing_subscribe_screen.dart';
+import 'package:reflect_os/features/decisions/screens/create_decision_screen.dart';
 import 'package:reflect_os/features/decisions/screens/decision_detail_screen.dart';
 import 'package:reflect_os/features/decisions/screens/decisions_list_screen.dart';
 import 'routes.dart';
@@ -55,7 +56,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           id: state.pathParameters['id']!,
         ),
       ),
-      GoRoute(path: Routes.decisionsCreate, builder: (context, state) => const _Placeholder('Create Decision')),
+      GoRoute(path: Routes.decisionsCreate, builder: (context, state) => const CreateDecisionScreen()),
       GoRoute(path: Routes.outcomesCreate, builder: (context, state) => const _Placeholder('Create Outcome')),
 
       // Public share entry — outside the shell, no auth required

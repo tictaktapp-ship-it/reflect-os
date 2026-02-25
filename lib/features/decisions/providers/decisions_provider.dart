@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/features/decisions/data/decisions_repository.dart';
+import 'package:reflect_os/features/decisions/data/models/category.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 
 final decisionsRepositoryProvider = Provider<DecisionsRepository>(
@@ -13,4 +15,10 @@ final decisionsProvider = FutureProvider<List<Decision>>((ref) {
 final decisionDetailProvider =
     FutureProvider.family<Decision?, String>((ref, id) {
   return ref.read(decisionsRepositoryProvider).getDecisionById(id);
+});
+
+final categoriesProvider = FutureProvider<List<Category>>((ref) async {
+  final workspaceId = await ref.watch(currentWorkspaceProvider.future);
+  if (workspaceId == null) return [];
+  return ref.read(decisionsRepositoryProvider).getCategories(workspaceId);
 });
