@@ -14,6 +14,7 @@ import 'package:reflect_os/features/outcomes/screens/create_outcome_screen.dart'
 import 'package:reflect_os/features/decisions/screens/decision_detail_screen.dart';
 import 'package:reflect_os/features/decisions/screens/decisions_list_screen.dart';
 import 'package:reflect_os/features/search/screens/search_screen.dart';
+import 'package:reflect_os/features/dashboard/screens/dashboard_screen.dart';
 import 'package:reflect_os/features/settings/screens/settings_screen.dart';
 import 'routes.dart';
 
@@ -96,7 +97,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: [
             GoRoute(
               path: Routes.dashboard,
-              builder: (context, state) => const _Placeholder('Dashboard'),
+              builder: (context, state) => const DashboardScreen(),
             ),
           ]),
           // 3 — Settings (privacy is a nested sub-route within this branch)
