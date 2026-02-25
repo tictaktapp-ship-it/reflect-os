@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
@@ -57,11 +58,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 48),
-                    Text(
-                      'Sign in',
-                      style: Theme.of(context).textTheme.headlineMedium,
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 180),
+                        child: SvgPicture.asset(
+                          'assets/images/reflect-inline-dark.svg',
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 40),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
