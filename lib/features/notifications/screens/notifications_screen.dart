@@ -38,16 +38,16 @@ class NotificationsScreen extends ConsumerWidget {
         ),
         data: (notifications) {
           if (notifications.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.notifications_none_outlined,
-                      size: 48, color: AppColors.textMuted),
-                  SizedBox(height: 12),
+                      size: 48, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+                  const SizedBox(height: 12),
                   Text(
                     'No notifications',
-                    style: TextStyle(color: AppColors.textSecondary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                   ),
                 ],
               ),
@@ -137,7 +137,7 @@ class _NotificationTile extends StatelessWidget {
       ),
       onDismissed: (_) => onDismissed(),
       child: Card(
-        color: AppColors.backgroundSurface,
+        color: Theme.of(context).colorScheme.surface,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
@@ -156,7 +156,7 @@ class _NotificationTile extends StatelessWidget {
                       Text(
                         _formatType(item.relatedEntityType!),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSecondary,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                       ),
                     ],
@@ -164,7 +164,7 @@ class _NotificationTile extends StatelessWidget {
                     Text(
                       _dateFmt.format(item.scheduledFor.toLocal()),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textMuted,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                           ),
                     ),
                   ],

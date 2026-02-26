@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 
@@ -120,7 +119,7 @@ class _PrivacySettingsScreenState
                   padding: const EdgeInsets.all(16),
                   children: [
                     Card(
-                      color: AppColors.backgroundSurface,
+                      color: Theme.of(context).colorScheme.surface,
                       margin: const EdgeInsets.only(bottom: 12),
                       child: Column(
                         children: [

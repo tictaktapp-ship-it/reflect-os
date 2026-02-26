@@ -54,10 +54,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           style: Theme.of(context)
               .textTheme
               .bodyLarge
-              ?.copyWith(color: AppColors.textPrimary),
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: 'Search decisions…',
-            hintStyle: TextStyle(color: AppColors.textMuted),
+            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
@@ -89,14 +89,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.search, size: 48, color: AppColors.textMuted),
+            Icon(Icons.search, size: 48, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
             const SizedBox(height: 16),
             Text(
               'Search your decisions',
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
-                  ?.copyWith(color: AppColors.textMuted),
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
             ),
           ],
         ),
@@ -122,7 +122,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
-                  ?.copyWith(color: AppColors.textMuted),
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
             ),
           );
         }

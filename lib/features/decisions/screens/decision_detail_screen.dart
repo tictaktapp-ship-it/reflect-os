@@ -290,7 +290,7 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
             child: Text(
               'Outcomes',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
             ),
           ),
@@ -308,7 +308,7 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
                   Text(
                     'Failed to load outcomes.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textMuted,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                         ),
                   ),
                 ],
@@ -323,7 +323,7 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
                         'No outcomes recorded yet.',
                         style:
                             Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: AppColors.textMuted,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                                 ),
                       ),
                     ],
@@ -389,7 +389,7 @@ class _OutcomeCard extends StatelessWidget {
             Text(
               '${outcome.outcomeQualityScore} / 10',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
             ),
@@ -480,7 +480,7 @@ class _SectionCard extends StatelessWidget {
     if (nonEmpty.isEmpty) return const SizedBox.shrink();
 
     return Card(
-      color: AppColors.backgroundSurface,
+      color: Theme.of(context).colorScheme.surface,
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -516,7 +516,7 @@ class _DetailRow extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
           ),
           const SizedBox(height: 2),
@@ -671,7 +671,7 @@ class _StateTransitionBarState extends ConsumerState<_StateTransitionBar> {
     if (buttons.isEmpty) return const SizedBox.shrink();
 
     return Card(
-      color: AppColors.backgroundSurface,
+      color: Theme.of(context).colorScheme.surface,
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -899,7 +899,7 @@ class _InitiativesSectionState extends ConsumerState<_InitiativesSection> {
                 child: Text(
                   'Initiatives',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                 ),
               ),
@@ -933,7 +933,7 @@ class _InitiativesSectionState extends ConsumerState<_InitiativesSection> {
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
-                    ?.copyWith(color: AppColors.textMuted),
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
               ),
               data: (initiatives) {
                 if (initiatives.isEmpty) {
@@ -942,7 +942,7 @@ class _InitiativesSectionState extends ConsumerState<_InitiativesSection> {
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
-                        ?.copyWith(color: AppColors.textMuted),
+                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                   );
                 }
                 return Wrap(
@@ -1132,7 +1132,7 @@ class _TagsSectionState extends ConsumerState<_TagsSection> {
                 child: Text(
                   'Tags',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                 ),
               ),
@@ -1168,7 +1168,7 @@ class _TagsSectionState extends ConsumerState<_TagsSection> {
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
-                    ?.copyWith(color: AppColors.textMuted),
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
               ),
               data: (tags) {
                 if (tags.isEmpty) {
@@ -1177,7 +1177,7 @@ class _TagsSectionState extends ConsumerState<_TagsSection> {
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
-                        ?.copyWith(color: AppColors.textMuted),
+                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                   );
                 }
                 return Wrap(
@@ -1221,7 +1221,7 @@ class _CheckpointsSection extends ConsumerWidget {
           child: Text(
             'Review Checkpoints',
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
           ),
         ),
@@ -1235,7 +1235,7 @@ class _CheckpointsSection extends ConsumerWidget {
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
-                    ?.copyWith(color: AppColors.textMuted),
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
               ),
               data: (checkpoints) {
                 if (checkpoints.isEmpty) {
@@ -1244,7 +1244,7 @@ class _CheckpointsSection extends ConsumerWidget {
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
-                        ?.copyWith(color: AppColors.textMuted),
+                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                   );
                 }
                 return Column(
@@ -1328,7 +1328,7 @@ class _CheckpointRow extends StatelessWidget {
                 Text(
                   DateFormat('d MMM yyyy').format(displayDate),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                 ),
               ],
@@ -1375,7 +1375,7 @@ class _ActivitySection extends ConsumerWidget {
           child: Text(
             'Activity',
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
           ),
         ),
@@ -1389,7 +1389,7 @@ class _ActivitySection extends ConsumerWidget {
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
-                    ?.copyWith(color: AppColors.textMuted),
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
               ),
               data: (events) {
                 if (events.isEmpty) {
@@ -1398,7 +1398,7 @@ class _ActivitySection extends ConsumerWidget {
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
-                        ?.copyWith(color: AppColors.textMuted),
+                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                   );
                 }
                 return Column(
@@ -1476,7 +1476,7 @@ class _ActivityEventRow extends StatelessWidget {
                 Expanded(
                   child: Container(
                     width: 2,
-                    color: AppColors.borderSubtle,
+                    color: Theme.of(context).dividerColor,
                   ),
                 ),
             ],
@@ -1503,7 +1503,7 @@ class _ActivityEventRow extends StatelessWidget {
                         style: Theme.of(context)
                             .textTheme
                             .bodySmall
-                            ?.copyWith(color: AppColors.textSecondary),
+                            ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                       ),
                     ],
                   ),
@@ -1515,7 +1515,7 @@ class _ActivityEventRow extends StatelessWidget {
                         style: Theme.of(context)
                             .textTheme
                             .bodySmall
-                            ?.copyWith(color: AppColors.textMuted),
+                            ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                       ),
                     ),
                 ],
@@ -1580,7 +1580,7 @@ class _CommentsSectionState extends ConsumerState<_CommentsSection> {
           child: Text(
             'Comments',
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
           ),
         ),
@@ -1595,7 +1595,7 @@ class _CommentsSectionState extends ConsumerState<_CommentsSection> {
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
-                    ?.copyWith(color: AppColors.textMuted),
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
               ),
             ],
           ),
@@ -1608,7 +1608,7 @@ class _CommentsSectionState extends ConsumerState<_CommentsSection> {
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
-                        ?.copyWith(color: AppColors.textMuted),
+                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                   ),
                 ],
               );
@@ -1652,7 +1652,7 @@ class _CommentsThreadView extends ConsumerWidget {
             style: Theme.of(context)
                 .textTheme
                 .bodyMedium
-                ?.copyWith(color: AppColors.textMuted),
+                ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
           ),
           data: (comments) {
             if (comments.isEmpty) {
@@ -1661,7 +1661,7 @@ class _CommentsThreadView extends ConsumerWidget {
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
-                    ?.copyWith(color: AppColors.textMuted),
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
               );
             }
             return Column(
@@ -1732,7 +1732,7 @@ class _CommentRow extends StatelessWidget {
             style: Theme.of(context)
                 .textTheme
                 .bodySmall
-                ?.copyWith(color: AppColors.textSecondary),
+                ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
           ),
         ],
       ),
@@ -1843,7 +1843,7 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
                 child: Text(
                   'Stakeholders',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                 ),
               ),
@@ -1879,7 +1879,7 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
-                    ?.copyWith(color: AppColors.textMuted),
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
               ),
               data: (stakeholders) {
                 if (stakeholders.isEmpty) {
@@ -1888,7 +1888,7 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
-                        ?.copyWith(color: AppColors.textMuted),
+                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                   );
                 }
                 return Wrap(
@@ -1975,7 +1975,7 @@ class _AddStakeholderSheetState extends State<_AddStakeholderSheet> {
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
-                  ?.copyWith(color: AppColors.textMuted),
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
             ),
           )
         else
@@ -2179,7 +2179,7 @@ class _EvidenceSectionState extends ConsumerState<_EvidenceSection> {
                 style: Theme.of(context)
                     .textTheme
                     .labelMedium
-                    ?.copyWith(color: AppColors.textSecondary),
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
               ),
               const Spacer(),
               if (_isLoading)
@@ -2210,7 +2210,7 @@ class _EvidenceSectionState extends ConsumerState<_EvidenceSection> {
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
-                    ?.copyWith(color: AppColors.textMuted),
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
               ),
             ],
           ),
@@ -2223,7 +2223,7 @@ class _EvidenceSectionState extends ConsumerState<_EvidenceSection> {
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
-                        ?.copyWith(color: AppColors.textMuted),
+                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                   ),
                 ],
               );
@@ -2263,12 +2263,12 @@ class _EvidenceTile extends StatelessWidget {
       leading: Icon(
         isLink ? Icons.link : Icons.attach_file,
         size: 18,
-        color: AppColors.textSecondary,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
       ),
       title: Text(
         displayText,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: isLink ? AppColors.accentHover : AppColors.textPrimary,
+              color: isLink ? AppColors.accentHover : Theme.of(context).colorScheme.onSurface,
               decoration: isLink ? TextDecoration.underline : null,
             ),
         maxLines: 1,
@@ -2436,7 +2436,7 @@ class _RelatedDecisionsSectionState
                               style: Theme.of(ctx)
                                   .textTheme
                                   .bodySmall
-                                  ?.copyWith(color: AppColors.textMuted),
+                                  ?.copyWith(color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.4)),
                             ),
                           )
                         : ListView.builder(
@@ -2505,7 +2505,7 @@ class _RelatedDecisionsSectionState
                 style: Theme.of(context)
                     .textTheme
                     .labelMedium
-                    ?.copyWith(color: AppColors.textSecondary),
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
               ),
               const Spacer(),
               if (_isSaving)
@@ -2535,7 +2535,7 @@ class _RelatedDecisionsSectionState
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
-                    ?.copyWith(color: AppColors.textMuted),
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
               ),
             ],
           ),
@@ -2548,7 +2548,7 @@ class _RelatedDecisionsSectionState
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
-                        ?.copyWith(color: AppColors.textMuted),
+                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                   ),
                 ],
               );
@@ -2620,7 +2620,7 @@ class _RelationshipTile extends StatelessWidget {
                     style: Theme.of(context)
                         .textTheme
                         .labelSmall
-                        ?.copyWith(color: AppColors.textSecondary),
+                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -2632,7 +2632,7 @@ class _RelationshipTile extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.textMuted),
+            Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
           ],
         ),
       ),

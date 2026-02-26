@@ -64,7 +64,7 @@ class _CurrentPlanCard extends StatelessWidget {
     final sub = subscription;
 
     return Card(
-      color: AppColors.backgroundSurface,
+      color: Theme.of(context).colorScheme.surface,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -75,7 +75,7 @@ class _CurrentPlanCard extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .labelMedium
-                  ?.copyWith(color: AppColors.textSecondary),
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
             ),
             const SizedBox(height: 12),
             if (sub == null)
@@ -95,7 +95,7 @@ class _CurrentPlanCard extends StatelessWidget {
                 style: Theme.of(context)
                     .textTheme
                     .bodySmall
-                    ?.copyWith(color: AppColors.textSecondary),
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
               ),
               if (sub.isCancelling) ...[
                 const SizedBox(height: 12),
@@ -164,7 +164,7 @@ class _PlansSection extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .labelMedium
-                  ?.copyWith(color: AppColors.textSecondary),
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
             ),
             const Spacer(),
             Text(
@@ -231,7 +231,7 @@ class _PlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppColors.backgroundSurface,
+      color: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: _isCurrent
@@ -277,7 +277,7 @@ class _PlanCard extends StatelessWidget {
                   ? '$monthlyPrice  ·  $annualPrice'
                   : monthlyPrice,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
             ),
             const SizedBox(height: 4),
@@ -286,7 +286,7 @@ class _PlanCard extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
-                  ?.copyWith(color: AppColors.textMuted),
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
             ),
             if (!_isCurrent) ...[
               const SizedBox(height: 12),

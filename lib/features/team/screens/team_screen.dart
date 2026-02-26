@@ -86,7 +86,7 @@ class _MemberTile extends StatelessWidget {
                   Text(
                     'Joined $joined',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                   ),
                 ],

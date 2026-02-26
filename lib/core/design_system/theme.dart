@@ -155,6 +155,10 @@ final class AppTheme {
         backgroundColor: Color(0xFF2A2A3E),
         contentTextStyle: TextStyle(color: Colors.white),
       ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+      ),
     );
   }
 }

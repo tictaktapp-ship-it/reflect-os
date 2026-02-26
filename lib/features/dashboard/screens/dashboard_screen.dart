@@ -138,12 +138,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     Row(
                       children: [
                         Icon(Icons.business_outlined,
-                            size: 13, color: AppColors.textSecondary),
+                            size: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                         const SizedBox(width: 4),
                         Text(
                           workspaceName,
-                          style: const TextStyle(
-                              fontSize: 13, color: AppColors.textSecondary),
+                          style: TextStyle(
+                              fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                         ),
                       ],
                     ),
@@ -210,7 +210,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         style: Theme.of(context)
                             .textTheme
                             .labelSmall
-                            ?.copyWith(color: AppColors.textMuted),
+                            ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                       ),
                     ),
 
@@ -224,7 +224,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         style: Theme.of(context)
                             .textTheme
                             .bodySmall
-                            ?.copyWith(color: AppColors.textMuted),
+                            ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                       ),
                     )
                   else
@@ -273,7 +273,7 @@ Widget _sectionHeader(BuildContext context, String label) => Padding(
         style: Theme.of(context)
             .textTheme
             .labelMedium
-            ?.copyWith(color: AppColors.textSecondary),
+            ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
       ),
     );
 
@@ -333,7 +333,7 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppColors.backgroundSurface,
+      color: Theme.of(context).colorScheme.surface,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -342,7 +342,7 @@ class _StatTile extends StatelessWidget {
             Text(
               value,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: valueColor ?? AppColors.textPrimary,
+                    color: valueColor ?? Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w700,
                   ),
             ),
@@ -352,7 +352,7 @@ class _StatTile extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
-                  ?.copyWith(color: AppColors.textSecondary),
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
             ),
           ],
         ),
@@ -437,7 +437,7 @@ class _NeedsAttentionCard extends StatelessWidget {
                         style: Theme.of(context)
                             .textTheme
                             .labelSmall
-                            ?.copyWith(color: AppColors.textSecondary),
+                            ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                       ),
                     ],
                   ],

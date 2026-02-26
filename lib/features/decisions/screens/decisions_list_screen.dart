@@ -190,7 +190,7 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
-                  ?.copyWith(color: AppColors.textSecondary),
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
             ),
             const SizedBox(height: 20),
             FilledButton(

@@ -97,7 +97,7 @@ class SettingsScreen extends ConsumerWidget {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.destructive,
-                    foregroundColor: AppColors.textPrimary,
+                    foregroundColor: Colors.white,
                   ),
                   onPressed: isSigningOut
                       ? null
@@ -142,7 +142,7 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppColors.backgroundSurface,
+      color: Theme.of(context).colorScheme.surface,
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -169,7 +169,7 @@ class _SettingsRow extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
         ),
         const SizedBox(height: 2),

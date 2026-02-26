@@ -83,7 +83,7 @@ class AuditLogScreen extends ConsumerWidget {
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
-                    ?.copyWith(color: AppColors.textMuted),
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
               ),
             );
           }
@@ -147,7 +147,7 @@ class _DateHeaderWidget extends StatelessWidget {
         style: Theme.of(context)
             .textTheme
             .labelMedium
-            ?.copyWith(color: AppColors.textSecondary),
+            ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
       ),
     );
   }
@@ -176,7 +176,7 @@ class _EventRowWidget extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .labelSmall
-                  ?.copyWith(color: AppColors.textMuted),
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
             ),
           ),
           const SizedBox(width: 12),
@@ -194,7 +194,7 @@ class _EventRowWidget extends StatelessWidget {
                     Text(
                       _truncateId(event.subjectEntityId),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: AppColors.textMuted,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                             fontFamily: 'monospace',
                           ),
                     ),

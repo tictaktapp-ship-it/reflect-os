@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/initiatives/data/models/initiative.dart';
 import 'package:reflect_os/features/initiatives/providers/initiatives_provider.dart';
@@ -61,7 +60,7 @@ class _InitiativeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppColors.backgroundSurface,
+      color: Theme.of(context).colorScheme.surface,
       clipBehavior: Clip.hardEdge,
       child: InkWell(
         onTap: () => context.push(
@@ -84,7 +83,7 @@ class _InitiativeTile extends StatelessWidget {
                   style: Theme.of(context)
                       .textTheme
                       .bodySmall
-                      ?.copyWith(color: AppColors.textSecondary),
+                      ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
