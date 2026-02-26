@@ -1,3 +1,6 @@
+// ignore: avoid_web_libraries_in_flutter, deprecated_member_use
+import 'dart:html' as html;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,7 +24,6 @@ import 'package:reflect_os/features/tags/providers/tags_provider.dart';
 import 'package:reflect_os/features/outcomes/providers/outcomes_provider.dart';
 import 'package:reflect_os/features/evidence/data/models/evidence_item.dart';
 import 'package:reflect_os/features/evidence/providers/evidence_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class DecisionDetailScreen extends ConsumerWidget {
   const DecisionDetailScreen({required this.id, super.key});
@@ -2158,12 +2160,7 @@ class _EvidenceTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
       ),
       onTap: isLink && item.url != null
-          ? () async {
-              final uri = Uri.tryParse(item.url!);
-              if (uri != null) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
-            }
+          ? () => html.window.open(item.url!, '_blank')
           : null,
       onLongPress: onDelete,
     );
