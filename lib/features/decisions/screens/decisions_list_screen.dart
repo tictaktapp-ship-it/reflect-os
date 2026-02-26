@@ -1,3 +1,7 @@
+import 'dart:convert';
+// ignore: avoid_web_libraries_in_flutter, deprecated_member_use
+import 'dart:html' as html;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -56,6 +60,62 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
         _SortOrder.titleDesc => 'Z → A',
       };
 
+  // ── CSV helpers ──────────────────────────────────────────────────────────────
+
+  static String _csvField(String? value) {
+    if (value == null || value.isEmpty) return '';
+    if (value.contains(',') ||
+        value.contains('"') ||
+        value.contains('\n') ||
+        value.contains('\r')) {
+      return '"${value.replaceAll('"', '""')}"';
+    }
+    return value;
+  }
+
+  static String _isoDate(DateTime dt) =>
+      dt.toLocal().toIso8601String().split('T').first;
+
+  static String _toCsv(List<Decision> decisions) {
+    final buf = StringBuffer();
+    buf.writeln(
+        'Title,State,Stakes,Category,Initial Confidence,Visibility,Created,Updated');
+    for (final d in decisions) {
+      buf.writeln([
+        _csvField(d.title),
+        _csvField(d.state),
+        _csvField(d.stakes),
+        _csvField(d.categoryName),
+        _csvField(d.initialConfidence?.toString()),
+        '', // Visibility — not present in current model
+        _csvField(_isoDate(d.createdAt)),
+        _csvField(_isoDate(d.updatedAt)),
+      ].join(','));
+    }
+    return buf.toString();
+  }
+
+  void _downloadCsv(List<Decision> decisions) {
+    final csv = _toCsv(decisions);
+    // utf-8 BOM so Excel opens it correctly
+    final bytes = [0xEF, 0xBB, 0xBF, ...utf8.encode(csv)];
+    final blob = html.Blob([bytes], 'text/csv');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    html.AnchorElement(href: url)
+      ..setAttribute(
+          'download',
+          'decisions_${DateTime.now().millisecondsSinceEpoch}.csv')
+      ..click();
+    html.Url.revokeObjectUrl(url);
+
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Exported ${decisions.length} decisions')),
+    );
+  }
+
+  // ── Sheets ───────────────────────────────────────────────────────────────────
+
   void _showSortSheet() {
     showModalBottomSheet(
       context: context,
@@ -98,6 +158,54 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
       ),
     );
   }
+
+  void _showExportSheet(List<Decision> all, List<Decision> filtered) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Export Decisions',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Export your decisions as a CSV file',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () => _downloadCsv(all),
+              child: Text('Export All (${all.length})'),
+            ),
+            const SizedBox(height: 8),
+            FilledButton.tonal(
+              onPressed:
+                  _filtersActive ? () => _downloadCsv(filtered) : null,
+              child: Text('Export Filtered (${filtered.length})'),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Filter bar ───────────────────────────────────────────────────────────────
 
   Widget _filterBar() {
     return Column(
@@ -171,6 +279,13 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
           _filtersActive ? 'Decisions (${filtered.length})' : 'Decisions',
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.download_outlined),
+            tooltip: 'Export CSV',
+            onPressed: allDecisions.isEmpty
+                ? null
+                : () => _showExportSheet(allDecisions, filtered),
+          ),
           IconButton(
             icon: const Icon(Icons.sort),
             tooltip: 'Sort',
