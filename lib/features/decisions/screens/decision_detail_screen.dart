@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
@@ -65,6 +66,37 @@ class _DecisionDetail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final outcomesAsync = ref.watch(outcomesProvider(decision.id));
 
+    Future<void> onDeleteTapped() async {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Delete Decision'),
+          content: const Text(
+            'This will permanently remove this decision. This cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.destructive,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+      await ref
+          .read(decisionsRepositoryProvider)
+          .deleteDecision(decision.id);
+      ref.invalidate(decisionsProvider);
+      if (context.mounted) context.go(Routes.decisionsList);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -79,6 +111,11 @@ class _DecisionDetail extends ConsumerWidget {
               '/decisions/edit/${decision.id}',
               extra: decision,
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Delete',
+            onPressed: onDeleteTapped,
           ),
         ],
       ),

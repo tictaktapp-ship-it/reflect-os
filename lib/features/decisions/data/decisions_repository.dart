@@ -99,6 +99,13 @@ class DecisionsRepository {
     await supabase.from('decisions').update(fields).eq('id', id);
   }
 
+  Future<void> deleteDecision(String id) async {
+    await supabase
+        .from('decisions')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
   Future<void> activateDecision(String id) async {
     await supabase.rpc('activate_decision', params: {'p_decision_id': id});
   }
