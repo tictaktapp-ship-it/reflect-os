@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
+import 'package:reflect_os/features/decisions/data/models/comment.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
@@ -256,6 +257,10 @@ class _DecisionDetail extends ConsumerWidget {
           // ── Review Checkpoints ────────────────────────────────
           if (decision.state == 'Active' || decision.state == 'Closed')
             _CheckpointsSection(decisionId: decision.id),
+
+          // ── Comments ──────────────────────────────────────────
+          if (decision.state == 'Active')
+            _CommentsSection(decisionId: decision.id),
 
           // ── Activity ──────────────────────────────────────────
           _ActivitySection(decisionId: decision.id),
@@ -1395,6 +1400,218 @@ class _ActivityEventRow extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Comments section ───────────────────────────────────────────────────────────
+
+class _CommentsSection extends ConsumerStatefulWidget {
+  const _CommentsSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  ConsumerState<_CommentsSection> createState() => _CommentsSectionState();
+}
+
+class _CommentsSectionState extends ConsumerState<_CommentsSection> {
+  final _controller = TextEditingController();
+  bool _isSending = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send(String threadId) async {
+    final body = _controller.text.trim();
+    if (body.isEmpty) return;
+    setState(() => _isSending = true);
+    try {
+      await ref.read(decisionsRepositoryProvider).postComment(threadId, body);
+      _controller.clear();
+      ref.invalidate(commentsProvider(threadId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to post comment: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final threadAsync =
+        ref.watch(commentThreadProvider(widget.decisionId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
+          child: Text(
+            'Comments',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+          ),
+        ),
+        threadAsync.when(
+          loading: () => const _SectionCard(
+            children: [Center(child: CircularProgressIndicator())],
+          ),
+          error: (_, _) => _SectionCard(
+            children: [
+              Text(
+                'Comments available once decision is activated.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: AppColors.textMuted),
+              ),
+            ],
+          ),
+          data: (thread) {
+            if (thread == null) {
+              return _SectionCard(
+                children: [
+                  Text(
+                    'Comments available once decision is activated.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: AppColors.textMuted),
+                  ),
+                ],
+              );
+            }
+            return _CommentsThreadView(
+              thread: thread,
+              onSend: _send,
+              controller: _controller,
+              isSending: _isSending,
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _CommentsThreadView extends ConsumerWidget {
+  const _CommentsThreadView({
+    required this.thread,
+    required this.onSend,
+    required this.controller,
+    required this.isSending,
+  });
+
+  final dynamic thread; // CommentThread
+  final Future<void> Function(String threadId) onSend;
+  final TextEditingController controller;
+  final bool isSending;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final commentsAsync = ref.watch(commentsProvider(thread.id as String));
+
+    return _SectionCard(
+      children: [
+        commentsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, _) => Text(
+            'No comments yet. Be the first to comment.',
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: AppColors.textMuted),
+          ),
+          data: (comments) {
+            if (comments.isEmpty) {
+              return Text(
+                'No comments yet. Be the first to comment.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: AppColors.textMuted),
+              );
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: comments
+                  .map((c) => _CommentRow(comment: c))
+                  .toList(),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                minLines: 1,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  hintText: 'Add a comment…',
+                ),
+                onSubmitted:
+                    isSending ? null : (_) => onSend(thread.id as String),
+              ),
+            ),
+            const SizedBox(width: 8),
+            isSending
+                ? const SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: Padding(
+                      padding: EdgeInsets.all(8),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.send_outlined),
+                    tooltip: 'Send',
+                    onPressed: () => onSend(thread.id as String),
+                  ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _CommentRow extends StatelessWidget {
+  const _CommentRow({required this.comment});
+
+  final Comment comment;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            comment.bodyEncrypted,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            DateFormat('d MMM yyyy HH:mm').format(comment.createdAt.toLocal()),
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),

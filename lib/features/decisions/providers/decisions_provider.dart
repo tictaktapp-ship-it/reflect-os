@@ -4,6 +4,8 @@ import 'package:reflect_os/features/decisions/data/decisions_repository.dart';
 import 'package:reflect_os/features/decisions/data/models/category.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
+import 'package:reflect_os/features/decisions/data/models/comment.dart';
+import 'package:reflect_os/features/decisions/data/models/comment_thread.dart';
 import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
 
 final decisionsRepositoryProvider = Provider<DecisionsRepository>(
@@ -31,6 +33,18 @@ final auditEventsProvider =
   return ref
       .read(decisionsRepositoryProvider)
       .getAuditEventsForDecision(decisionId, workspaceId);
+});
+
+final commentThreadProvider =
+    FutureProvider.family<CommentThread?, String>((ref, decisionId) {
+  return ref
+      .read(decisionsRepositoryProvider)
+      .getCommentThread(decisionId);
+});
+
+final commentsProvider =
+    FutureProvider.family<List<Comment>, String>((ref, threadId) {
+  return ref.read(decisionsRepositoryProvider).getComments(threadId);
 });
 
 final checkpointsProvider =

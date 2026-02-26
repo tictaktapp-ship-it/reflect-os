@@ -3,6 +3,8 @@ import 'package:reflect_os/features/decisions/data/models/category.dart';
 import 'package:reflect_os/features/decisions/data/models/create_decision_input.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
+import 'package:reflect_os/features/decisions/data/models/comment.dart';
+import 'package:reflect_os/features/decisions/data/models/comment_thread.dart';
 import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
 
 class DecisionsRepository {
@@ -155,6 +157,40 @@ class DecisionsRepository {
         .limit(20);
 
     return rows.map((row) => AuditEvent.fromJson(row)).toList();
+  }
+
+  Future<CommentThread?> getCommentThread(String decisionId) async {
+    final row = await supabase
+        .from('comment_threads')
+        .select()
+        .eq('decision_id', decisionId)
+        .isFilter('deleted_at', null)
+        .maybeSingle();
+
+    if (row == null) return null;
+    return CommentThread.fromJson(row);
+  }
+
+  Future<List<Comment>> getComments(String threadId) async {
+    final rows = await supabase
+        .from('comments')
+        .select()
+        .eq('thread_id', threadId)
+        .isFilter('deleted_at', null)
+        .order('created_at');
+
+    return rows.map((row) => Comment.fromJson(row)).toList();
+  }
+
+  Future<void> postComment(String threadId, String body) async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    await supabase.from('comments').insert({
+      'thread_id': threadId,
+      'author_user_id': supabase.auth.currentUser!.id,
+      'body_encrypted': body,
+      'created_at': now,
+      'updated_at': now,
+    });
   }
 
   /// Exception to the no-raw-tables rule: there is no user_visible_categories
