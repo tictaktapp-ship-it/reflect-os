@@ -62,16 +62,64 @@ class DecisionDetailScreen extends ConsumerWidget {
   }
 }
 
-class _DecisionDetail extends ConsumerWidget {
+class _DecisionDetail extends ConsumerStatefulWidget {
   const _DecisionDetail({required this.decision});
 
   final Decision decision;
 
+  @override
+  ConsumerState<_DecisionDetail> createState() => _DecisionDetailState();
+}
+
+class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
+  bool _isGenerating = false;
+
   String _formatDate(DateTime dt) =>
       DateFormat('d MMM yyyy').format(dt.toLocal());
 
+  Future<void> _onGenerateBriefTapped() async {
+    setState(() => _isGenerating = true);
+    try {
+      final workspaceId = await ref.read(currentWorkspaceProvider.future);
+      if (workspaceId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No workspace found')),
+          );
+        }
+        return;
+      }
+      final response = await supabase.functions.invoke(
+        'generate-document',
+        body: {
+          'document_type': 'decision_brief',
+          'decision_id': widget.decision.id,
+          'workspace_id': workspaceId,
+        },
+      );
+      final downloadUrl = response.data?['download_url'] as String?;
+      if (downloadUrl == null) throw Exception('No download_url in response');
+      web.window.open(downloadUrl, '_blank');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Brief generated — opening download...')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate brief: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGenerating = false);
+    }
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final decision = widget.decision;
     final outcomesAsync = ref.watch(outcomesProvider(decision.id));
 
     Future<void> onDeleteTapped() async {
@@ -112,6 +160,21 @@ class _DecisionDetail extends ConsumerWidget {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          if (_isGenerating)
+            const Padding(
+              padding: EdgeInsets.all(14),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.picture_as_pdf_outlined),
+              tooltip: 'Generate Brief',
+              onPressed: _onGenerateBriefTapped,
+            ),
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Edit',

@@ -194,6 +194,16 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
                   _filtersActive ? () => _downloadCsv(filtered) : null,
               child: Text('Export Filtered (${filtered.length})'),
             ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            Tooltip(
+              message: 'Select a decision to generate a brief',
+              child: FilledButton.tonal(
+                onPressed: null,
+                child: const Text('Export Brief (all decisions)'),
+              ),
+            ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
