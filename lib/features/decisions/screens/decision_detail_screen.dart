@@ -2159,14 +2159,7 @@ class _EvidenceTile extends StatelessWidget {
       ),
       onTap: isLink && item.url != null
           ? () {
-              final anchor = web.document.createElement('a')
-                  as web.HTMLAnchorElement;
-              anchor.href = item.url!;
-              anchor.target = '_blank';
-              anchor.rel = 'noopener noreferrer';
-              web.document.body!.append(anchor);
-              anchor.click();
-              anchor.remove();
+              web.window.location.href = item.url!;
             }
           : null,
       onLongPress: onDelete,
