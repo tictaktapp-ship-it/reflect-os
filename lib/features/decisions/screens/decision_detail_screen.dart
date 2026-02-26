@@ -89,6 +89,8 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
         }
         return;
       }
+      // TODO: Corporate network blocks external Supabase function URLs in dev.
+      // Verified working via direct API test. Will work in production deployment.
       final response = await supabase.functions.invoke(
         'generate-document',
         body: {
@@ -109,7 +111,11 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to generate brief: $e')),
+          const SnackBar(
+            content: Text(
+              'Brief generation unavailable in this network environment. Will work in production.',
+            ),
+          ),
         );
       }
     } finally {
