@@ -7,6 +7,9 @@ import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:reflect_os/features/initiatives/providers/initiatives_provider.dart';
 import 'package:reflect_os/features/outcomes/data/models/outcome_update.dart';
+import 'package:reflect_os/core/providers/current_workspace_provider.dart';
+import 'package:reflect_os/features/tags/data/models/tag.dart';
+import 'package:reflect_os/features/tags/providers/tags_provider.dart';
 import 'package:reflect_os/features/outcomes/providers/outcomes_provider.dart';
 
 class DecisionDetailScreen extends ConsumerWidget {
@@ -207,6 +210,9 @@ class _DecisionDetail extends ConsumerWidget {
 
           // ── Initiatives ───────────────────────────────────────
           _InitiativesSection(decisionId: decision.id),
+
+          // ── Tags ──────────────────────────────────────────────
+          _TagsSection(decisionId: decision.id),
 
           const SizedBox(height: 80), // clear the FAB
         ],
@@ -784,6 +790,233 @@ class _InitiativesSectionState extends ConsumerState<_InitiativesSection> {
                           deleteIcon: const Icon(Icons.close, size: 16),
                           onDeleted:
                               _isLoading ? null : () => _unlink(i.id),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ── Tags section ───────────────────────────────────────────────────────────────
+
+class _TagsSection extends ConsumerStatefulWidget {
+  const _TagsSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  ConsumerState<_TagsSection> createState() => _TagsSectionState();
+}
+
+class _TagsSectionState extends ConsumerState<_TagsSection> {
+  bool _isLoading = false;
+
+  Future<void> _add(String tagId) async {
+    setState(() => _isLoading = true);
+    try {
+      await ref
+          .read(tagsRepositoryProvider)
+          .addTagToDecision(widget.decisionId, tagId);
+      ref.invalidate(decisionTagsProvider(widget.decisionId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to add tag: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _remove(String tagId) async {
+    setState(() => _isLoading = true);
+    try {
+      await ref
+          .read(tagsRepositoryProvider)
+          .removeTagFromDecision(widget.decisionId, tagId);
+      ref.invalidate(decisionTagsProvider(widget.decisionId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to remove tag: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showAddSheet(List<Tag> linked) {
+    final workspaceTags = ref.read(workspaceTagsProvider).valueOrNull ?? [];
+    final linkedIds = linked.map((t) => t.id).toSet();
+    final available =
+        workspaceTags.where((t) => !linkedIds.contains(t.id)).toList();
+
+    final controller = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            Future<void> createAndLink(String name) async {
+              final trimmed = name.trim();
+              if (trimmed.isEmpty) return;
+              Navigator.of(sheetContext).pop();
+              setState(() => _isLoading = true);
+              try {
+                final workspaceId =
+                    await ref.read(currentWorkspaceProvider.future);
+                if (workspaceId == null) return;
+                final tag = await ref
+                    .read(tagsRepositoryProvider)
+                    .createTag(workspaceId, trimmed);
+                await ref
+                    .read(tagsRepositoryProvider)
+                    .addTagToDecision(widget.decisionId, tag.id);
+                ref.invalidate(workspaceTagsProvider);
+                ref.invalidate(decisionTagsProvider(widget.decisionId));
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to create tag: $e')));
+                }
+              } finally {
+                if (mounted) setState(() => _isLoading = false);
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Text(
+                      'Add Tag',
+                      style: Theme.of(ctx).textTheme.titleMedium,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TextField(
+                      controller: controller,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        hintText: 'Create new tag…',
+                        suffixIcon: Icon(Icons.add),
+                      ),
+                      onSubmitted: createAndLink,
+                    ),
+                  ),
+                  if (available.isNotEmpty) ...[
+                    const Divider(height: 24),
+                    ...available.map(
+                      (tag) => ListTile(
+                        title: Text(tag.name),
+                        onTap: () {
+                          Navigator.of(sheetContext).pop();
+                          _add(tag.id);
+                        },
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tagsAsync = ref.watch(decisionTagsProvider(widget.decisionId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section header
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Tags',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+              ),
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: _isLoading
+                    ? const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : IconButton(
+                        icon: const Icon(Icons.add, size: 18),
+                        padding: EdgeInsets.zero,
+                        tooltip: 'Add tag',
+                        onPressed: tagsAsync.valueOrNull != null
+                            ? () => _showAddSheet(tagsAsync.valueOrNull!)
+                            : null,
+                      ),
+              ),
+            ],
+          ),
+        ),
+
+        // Content
+        _SectionCard(
+          children: [
+            tagsAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Text(
+                'Failed to load tags.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: AppColors.textMuted),
+              ),
+              data: (tags) {
+                if (tags.isEmpty) {
+                  return Text(
+                    'No tags.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: AppColors.textMuted),
+                  );
+                }
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: tags
+                      .map(
+                        (t) => Chip(
+                          label: Text(t.name),
+                          deleteIcon: const Icon(Icons.close, size: 16),
+                          onDeleted: _isLoading ? null : () => _remove(t.id),
                         ),
                       )
                       .toList(),
