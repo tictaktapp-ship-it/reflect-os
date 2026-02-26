@@ -87,16 +87,16 @@ class DashboardScreen extends ConsumerWidget {
                       children: [
                         Icon(
                           Icons.business_outlined,
-                          size: 14,
-                          color: AppColors.textMuted,
+                          size: 13,
+                          color: AppColors.textSecondary,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           workspaceName,
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: AppColors.textMuted,
-                                  ),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
