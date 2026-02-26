@@ -28,6 +28,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
 
   String? _categoryId;
   String? _stakes;
+  bool _requiresApproval = false;
   bool _useConfidence = false;
   int _confidence = 5;
   DateTime? _deadline;
@@ -39,8 +40,11 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialTemplate != null) {
-      _applyTemplate(widget.initialTemplate!);
+    final t = widget.initialTemplate;
+    if (t != null) {
+      _appliedTemplate = t;
+      if (t.defaultStakes != null) _stakes = t.defaultStakes;
+      _requiresApproval = t.requiresApproval;
     }
   }
 
@@ -48,15 +52,16 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
     setState(() {
       _appliedTemplate = template;
       if (template.defaultStakes != null) _stakes = template.defaultStakes;
-      if (template.descriptionEncrypted != null &&
-          template.descriptionEncrypted!.isNotEmpty) {
-        _descriptionController.text = template.descriptionEncrypted!;
-      }
+      _requiresApproval = template.requiresApproval;
     });
   }
 
   void _clearTemplate() {
-    setState(() => _appliedTemplate = null);
+    setState(() {
+      _appliedTemplate = null;
+      _stakes = null;
+      _requiresApproval = false;
+    });
   }
 
   Future<void> _showTemplatePicker() async {
@@ -184,22 +189,11 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                     onPressed: _showTemplatePicker,
                   )
                 else
-                  Row(
-                    children: [
-                      const Icon(Icons.article_outlined, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _appliedTemplate!.name,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 18),
-                        tooltip: 'Remove template',
-                        onPressed: _clearTemplate,
-                      ),
-                    ],
+                  Chip(
+                    avatar: const Icon(Icons.article_outlined, size: 16),
+                    label: Text('Template: ${_appliedTemplate!.name}'),
+                    deleteIcon: const Icon(Icons.close, size: 16),
+                    onDeleted: _clearTemplate,
                   ),
               ],
             ),
@@ -253,6 +247,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
+                  key: ValueKey(_stakes),
                   initialValue: _stakes,
                   decoration: const InputDecoration(labelText: 'Stakes'),
                   hint: const Text('Select stakes'),
@@ -410,6 +405,19 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                   value: _isContinuous,
                   onChanged: (value) =>
                       setState(() => _isContinuous = value),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Requires Approval'),
+                  subtitle: Text(
+                    'Workspace admin must approve before this decision is published',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                        ),
+                  ),
+                  value: _requiresApproval,
+                  onChanged: (value) =>
+                      setState(() => _requiresApproval = value),
                 ),
               ],
             ),
