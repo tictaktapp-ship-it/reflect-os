@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/features/decisions/data/decisions_repository.dart';
+import 'package:reflect_os/features/decisions/data/models/approval_record.dart';
 import 'package:reflect_os/features/decisions/data/models/category.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
@@ -76,6 +77,13 @@ final decisionRelationshipsProvider =
   return ref
       .read(decisionsRepositoryProvider)
       .getRelationshipsForDecision(decisionId);
+});
+
+final approvalRecordsProvider =
+    FutureProvider.family<List<ApprovalRecord>, String>((ref, decisionId) {
+  return ref
+      .read(decisionsRepositoryProvider)
+      .getApprovalRecords(decisionId);
 });
 
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {

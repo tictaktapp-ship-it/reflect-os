@@ -18,6 +18,7 @@ abstract class Decision with _$Decision {
     @JsonKey(name: 'decision_deadline') DateTime? decisionDeadline,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
+    @Default(false) @JsonKey(name: 'requires_approval') bool requiresApproval,
   }) = _Decision;
 
   factory Decision.fromJson(Map<String, dynamic> json) =>

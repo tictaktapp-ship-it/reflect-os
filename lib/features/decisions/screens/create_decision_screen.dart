@@ -98,6 +98,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
         decisionDeadline: _deadline,
         isContinuous: _isContinuous,
         visibility: _visibility,
+        requiresApproval: _requiresApproval,
       );
 
       final id = await ref

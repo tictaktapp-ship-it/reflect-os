@@ -8,6 +8,7 @@ import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
 import 'package:reflect_os/features/decisions/data/models/comment.dart';
+import 'package:reflect_os/features/decisions/data/models/approval_record.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/data/models/decision_stakeholder.dart';
 import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
@@ -237,6 +238,10 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
               ),
             ],
           ),
+
+          // ── Approvals (requires_approval decisions only) ──────────
+          if (decision.requiresApproval)
+            _ApprovalsSection(decisionId: decision.id),
 
           // ── Overview ──────────────────────────────────────────────
           _SectionCard(
@@ -615,14 +620,26 @@ class _StateTransitionBarState extends ConsumerState<_StateTransitionBar> {
     final id = widget.decision.id;
     final state = widget.decision.state;
 
+    // Approval gate: if requires_approval and no Approved record, block Activate.
+    final approvalsAsync = ref.watch(approvalRecordsProvider(id));
+    final approvals = approvalsAsync.valueOrNull ?? [];
+    final approvalBlocked = widget.decision.requiresApproval &&
+        !approvals.any((a) => a.status == 'Approved');
+
     final buttons = switch (state) {
       'Draft' => <Widget>[
-          OutlinedButton(
-            onPressed:
-                _isLoading ? null : () => _run(() => repo.activateDecision(id)),
-            style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.accentHover),
-            child: const Text('Activate'),
+          Tooltip(
+            message: approvalBlocked
+                ? 'Approval required before activating'
+                : '',
+            child: OutlinedButton(
+              onPressed: (_isLoading || approvalBlocked)
+                  ? null
+                  : () => _run(() => repo.activateDecision(id)),
+              style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.accentHover),
+              child: const Text('Activate'),
+            ),
           ),
         ],
       'Active' => <Widget>[
@@ -2569,6 +2586,329 @@ class _RelatedDecisionsSectionState
           },
         ),
       ],
+    );
+  }
+}
+
+// ── Approvals section ─────────────────────────────────────────────────────────
+
+class _ApprovalsSection extends ConsumerStatefulWidget {
+  const _ApprovalsSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  ConsumerState<_ApprovalsSection> createState() => _ApprovalsSectionState();
+}
+
+class _ApprovalsSectionState extends ConsumerState<_ApprovalsSection> {
+  bool _isLoading = false;
+
+  Future<void> _approve(String recordId) async {
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(decisionsRepositoryProvider).approveDecision(recordId);
+      ref.invalidate(approvalRecordsProvider(widget.decisionId));
+      ref.invalidate(decisionDetailProvider(widget.decisionId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to approve: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _reject(String recordId) async {
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(decisionsRepositoryProvider).rejectDecision(recordId);
+      ref.invalidate(approvalRecordsProvider(widget.decisionId));
+      ref.invalidate(decisionDetailProvider(widget.decisionId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to reject: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _requestApproval(String userId) async {
+    setState(() => _isLoading = true);
+    try {
+      await ref
+          .read(decisionsRepositoryProvider)
+          .requestApproval(widget.decisionId, userId);
+      ref.invalidate(approvalRecordsProvider(widget.decisionId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to request approval: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showRequestSheet(List<ApprovalRecord> existing) {
+    final teamMembers = ref.read(teamMembersProvider).valueOrNull ?? [];
+    final existingIds = existing.map((r) => r.approverUserId).toSet();
+    final available =
+        teamMembers.where((m) => !existingIds.contains(m.userId)).toList();
+    final currentUserId = supabase.auth.currentUser?.id;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: SvgPicture.asset(
+                      isDark
+                          ? 'assets/images/reflect-icon-dark.svg'
+                          : 'assets/images/reflect-icon-light.svg',
+                      height: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Request Approval',
+                    style: Theme.of(ctx).textTheme.titleMedium,
+                  ),
+                ],
+              ),
+            ),
+            if (available.isEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Text(
+                  'All workspace members already have approval records.',
+                  style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(ctx)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.4),
+                      ),
+                ),
+              )
+            else
+              ...available.map((m) {
+                final shortId = m.userId.length >= 8
+                    ? m.userId.substring(0, 8)
+                    : m.userId;
+                final isYou = m.userId == currentUserId;
+                return ListTile(
+                  title: Text(
+                    isYou ? '$shortId (you)' : shortId,
+                    style: const TextStyle(fontFamily: 'monospace'),
+                  ),
+                  trailing: const Icon(Icons.add),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _requestApproval(m.userId);
+                  },
+                );
+              }),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final approvalsAsync = ref.watch(approvalRecordsProvider(widget.decisionId));
+    final currentUserId = supabase.auth.currentUser?.id;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Approvals',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                      ),
+                ),
+              ),
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: _isLoading
+                    ? const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : IconButton(
+                        icon: const Icon(Icons.add, size: 18),
+                        padding: EdgeInsets.zero,
+                        tooltip: 'Request approval',
+                        onPressed: approvalsAsync.isLoading
+                            ? null
+                            : () => _showRequestSheet(
+                                approvalsAsync.valueOrNull ?? []),
+                      ),
+              ),
+            ],
+          ),
+        ),
+        _SectionCard(
+          children: [
+            approvalsAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Text(
+                'Failed to load approvals.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.4),
+                    ),
+              ),
+              data: (approvals) {
+                if (approvals.isEmpty) {
+                  return Text(
+                    'No approvals requested.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.4),
+                        ),
+                  );
+                }
+                return Column(
+                  children: [
+                    for (int i = 0; i < approvals.length; i++) ...[
+                      if (i > 0) const Divider(height: 1),
+                      _ApprovalRecordRow(
+                        record: approvals[i],
+                        isCurrentUser:
+                            approvals[i].approverUserId == currentUserId,
+                        isLoading: _isLoading,
+                        onApprove: () => _approve(approvals[i].id),
+                        onReject: () => _reject(approvals[i].id),
+                      ),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ApprovalRecordRow extends StatelessWidget {
+  const _ApprovalRecordRow({
+    required this.record,
+    required this.isCurrentUser,
+    required this.isLoading,
+    required this.onApprove,
+    required this.onReject,
+  });
+
+  final ApprovalRecord record;
+  final bool isCurrentUser;
+  final bool isLoading;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+
+  static Color _statusColor(String status) => switch (status) {
+        'Approved' => AppColors.success,
+        'Rejected' => AppColors.destructive,
+        _ => AppColors.warning,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final shortId = record.approverUserId.length >= 8
+        ? record.approverUserId.substring(0, 8)
+        : record.approverUserId;
+    final color = _statusColor(record.status);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isCurrentUser ? '$shortId (you)' : shortId,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+                ),
+                if (record.decidedAt != null)
+                  Text(
+                    DateFormat('d MMM yyyy').format(record.decidedAt!),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.5),
+                        ),
+                  ),
+              ],
+            ),
+          ),
+          if (isCurrentUser && record.status == 'Pending') ...[
+            TextButton(
+              onPressed: isLoading ? null : onApprove,
+              style:
+                  TextButton.styleFrom(foregroundColor: AppColors.success),
+              child: const Text('Approve'),
+            ),
+            TextButton(
+              onPressed: isLoading ? null : onReject,
+              style: TextButton.styleFrom(
+                  foregroundColor: AppColors.destructive),
+              child: const Text('Reject'),
+            ),
+          ] else
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                record.status,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

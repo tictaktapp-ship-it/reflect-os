@@ -1,4 +1,5 @@
 import 'package:reflect_os/core/supabase/supabase_client.dart';
+import 'package:reflect_os/features/decisions/data/models/approval_record.dart';
 import 'package:reflect_os/features/decisions/data/models/category.dart';
 import 'package:reflect_os/features/decisions/data/models/create_decision_input.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
@@ -272,6 +273,45 @@ class DecisionsRepository {
         .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
         .eq('id', id);
   }
+
+  // ── Approval records ──────────────────────────────────────────────────────
+
+  /// Exception to the no-raw-tables rule: no user_visible_approval_records view.
+  /// RLS scopes reads to the decision owner and the approver.
+  Future<List<ApprovalRecord>> getApprovalRecords(String decisionId) async {
+    final rows = await supabase
+        .from('approval_records')
+        .select()
+        .eq('decision_id', decisionId)
+        .isFilter('deleted_at', null)
+        .order('created_at');
+    return rows.map((row) => ApprovalRecord.fromJson(row)).toList();
+  }
+
+  Future<void> requestApproval(
+      String decisionId, String approverUserId) async {
+    await supabase.from('approval_records').insert({
+      'decision_id': decisionId,
+      'approver_user_id': approverUserId,
+      'status': 'Pending',
+    });
+  }
+
+  Future<void> approveDecision(String approvalRecordId) async {
+    await supabase.from('approval_records').update({
+      'status': 'Approved',
+      'decided_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', approvalRecordId);
+  }
+
+  Future<void> rejectDecision(String approvalRecordId) async {
+    await supabase.from('approval_records').update({
+      'status': 'Rejected',
+      'decided_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', approvalRecordId);
+  }
+
+  // ── Categories ────────────────────────────────────────────────────────────
 
   /// Exception to the no-raw-tables rule: there is no user_visible_categories
   /// view in the schema. The categories table is queried directly here.

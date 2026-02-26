@@ -10,6 +10,7 @@ class CreateDecisionInput {
     this.decisionDeadline,
     this.isContinuous = false,
     this.visibility = 'workspace',
+    this.requiresApproval = false,
   });
 
   final String workspaceId;
@@ -22,6 +23,7 @@ class CreateDecisionInput {
   final DateTime? decisionDeadline;
   final bool isContinuous;
   final String visibility;
+  final bool requiresApproval;
 
   Map<String, dynamic> toJson() => {
         'workspace_id': workspaceId,
@@ -36,5 +38,6 @@ class CreateDecisionInput {
           'decision_deadline': decisionDeadline!.toIso8601String(),
         'continuous': isContinuous,
         'visibility_mode': visibility,
+        'requires_approval': requiresApproval,
       };
 }

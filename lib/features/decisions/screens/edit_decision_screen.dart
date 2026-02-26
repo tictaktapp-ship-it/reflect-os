@@ -39,6 +39,7 @@ class _EditDecisionScreenState extends ConsumerState<EditDecisionScreen> {
   // They default to 'workspace' and false and are always included in the update.
   String _visibility = 'workspace';
   bool _isContinuous = false;
+  bool _requiresApproval = false;
   bool _isSubmitting = false;
 
   @override
@@ -53,6 +54,7 @@ class _EditDecisionScreenState extends ConsumerState<EditDecisionScreen> {
       _confidence = d.initialConfidence!;
     }
     _deadline = d.decisionDeadline;
+    _requiresApproval = d.requiresApproval;
     // Category resolved post-frame once categories are available.
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryInitCategory());
   }
@@ -124,9 +126,11 @@ class _EditDecisionScreenState extends ConsumerState<EditDecisionScreen> {
         fields['decision_deadline'] = _deadline?.toIso8601String();
       }
 
-      // Visibility & continuous — cannot pre-populate from view; always include.
+      // Visibility, continuous, requires_approval — cannot pre-populate from
+      // view; always include.
       fields['visibility_mode'] = _visibility;
       fields['continuous'] = _isContinuous;
+      fields['requires_approval'] = _requiresApproval;
 
       // ── Conflict detection ────────────────────────────────────────
       final serverRow = await supabase
@@ -469,6 +473,20 @@ class _EditDecisionScreenState extends ConsumerState<EditDecisionScreen> {
                   value: _isContinuous,
                   onChanged: (value) =>
                       setState(() => _isContinuous = value),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Requires Approval'),
+                  subtitle: Text(
+                    'Workspace admin must approve before this decision is published',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+                  ),
+                  value: _requiresApproval,
+                  onChanged: (value) =>
+                      setState(() => _requiresApproval = value),
                 ),
               ],
             ),

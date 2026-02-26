@@ -20,6 +20,7 @@ _Decision _$DecisionFromJson(Map<String, dynamic> json) => _Decision(
       : DateTime.parse(json['decision_deadline'] as String),
   createdAt: DateTime.parse(json['created_at'] as String),
   updatedAt: DateTime.parse(json['updated_at'] as String),
+  requiresApproval: json['requires_approval'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$DecisionToJson(_Decision instance) => <String, dynamic>{
@@ -34,4 +35,5 @@ Map<String, dynamic> _$DecisionToJson(_Decision instance) => <String, dynamic>{
   'decision_deadline': instance.decisionDeadline?.toIso8601String(),
   'created_at': instance.createdAt.toIso8601String(),
   'updated_at': instance.updatedAt.toIso8601String(),
+  'requires_approval': instance.requiresApproval,
 };
