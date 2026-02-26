@@ -25,16 +25,20 @@ final currentWorkspaceProvider = FutureProvider<String?>((ref) async {
 
 /// Reads the workspace name from the workspaces table.
 /// Exception to the no-raw-tables rule: there is no user_visible_workspaces view.
-/// RLS on the workspaces table ensures the user can only read their own workspace.
+/// Falls back to 'My Workspace' if RLS blocks the read or the row is missing.
 final workspaceNameProvider = FutureProvider<String?>((ref) async {
   final workspaceId = await ref.watch(currentWorkspaceProvider.future);
   if (workspaceId == null) return null;
 
-  final row = await supabase
-      .from('workspaces')
-      .select('name')
-      .eq('id', workspaceId)
-      .maybeSingle();
+  try {
+    final row = await supabase
+        .from('workspaces')
+        .select('name')
+        .eq('id', workspaceId)
+        .maybeSingle();
 
-  return row?['name'] as String?;
+    return (row?['name'] as String?) ?? 'My Workspace';
+  } catch (_) {
+    return 'My Workspace';
+  }
 });
