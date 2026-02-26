@@ -6,6 +6,7 @@ import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
 import 'package:reflect_os/features/decisions/data/models/comment.dart';
 import 'package:reflect_os/features/decisions/data/models/comment_thread.dart';
+import 'package:reflect_os/features/decisions/data/models/decision_relationship.dart';
 import 'package:reflect_os/features/decisions/data/models/decision_stakeholder.dart';
 import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
 
@@ -67,6 +68,14 @@ final checkpointsProvider =
 final upcomingCheckpointsProvider =
     FutureProvider<List<ReviewCheckpoint>>((ref) {
   return ref.read(decisionsRepositoryProvider).getUpcomingCheckpoints();
+});
+
+final decisionRelationshipsProvider =
+    FutureProvider.family<List<DecisionRelationship>, String>(
+        (ref, decisionId) {
+  return ref
+      .read(decisionsRepositoryProvider)
+      .getRelationshipsForDecision(decisionId);
 });
 
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {

@@ -19,6 +19,7 @@ import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/features/tags/data/models/tag.dart';
 import 'package:reflect_os/features/tags/providers/tags_provider.dart';
 import 'package:reflect_os/features/outcomes/providers/outcomes_provider.dart';
+import 'package:reflect_os/features/decisions/data/models/decision_relationship.dart';
 import 'package:reflect_os/features/evidence/data/models/evidence_item.dart';
 import 'package:reflect_os/features/evidence/providers/evidence_provider.dart';
 import 'package:web/web.dart' as web;
@@ -333,6 +334,9 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
           // ── Review Checkpoints ────────────────────────────────
           if (decision.state == 'Active' || decision.state == 'Closed')
             _CheckpointsSection(decisionId: decision.id),
+
+          // ── Related Decisions ─────────────────────────────────
+          _RelatedDecisionsSection(decisionId: decision.id),
 
           // ── Evidence ──────────────────────────────────────────
           _EvidenceSection(decisionId: decision.id),
@@ -2233,6 +2237,359 @@ class _EvidenceTile extends StatelessWidget {
             }
           : null,
       onLongPress: onDelete,
+    );
+  }
+}
+
+// ── Related Decisions section ──────────────────────────────────────────────────
+
+class _RelatedDecisionsSection extends ConsumerStatefulWidget {
+  const _RelatedDecisionsSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  ConsumerState<_RelatedDecisionsSection> createState() =>
+      _RelatedDecisionsSectionState();
+}
+
+class _RelatedDecisionsSectionState
+    extends ConsumerState<_RelatedDecisionsSection> {
+  bool _isSaving = false;
+
+  Future<void> _confirmRemove(
+      BuildContext context, DecisionRelationship rel) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Remove Relationship'),
+        content: const Text('Remove this relationship?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style:
+                TextButton.styleFrom(foregroundColor: AppColors.destructive),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _isSaving = true);
+    try {
+      await ref
+          .read(decisionsRepositoryProvider)
+          .removeRelationship(rel.id);
+      ref.invalidate(decisionRelationshipsProvider(widget.decisionId));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  void _showAddSheet(List<Decision> allDecisions) {
+    final candidates =
+        allDecisions.where((d) => d.id != widget.decisionId).toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        String query = '';
+        String relType = 'related';
+        Decision? selected;
+        bool saving = false;
+
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final filtered = query.isEmpty
+                ? candidates
+                : candidates
+                    .where((d) =>
+                        d.title.toLowerCase().contains(query.toLowerCase()))
+                    .toList();
+
+            Future<void> save() async {
+              if (selected == null) return;
+              setSheetState(() => saving = true);
+              try {
+                final workspaceId =
+                    await ref.read(currentWorkspaceProvider.future);
+                if (workspaceId == null) throw Exception('No workspace');
+                await ref
+                    .read(decisionsRepositoryProvider)
+                    .addRelationship(
+                      widget.decisionId,
+                      selected!.id,
+                      relType,
+                      workspaceId,
+                    );
+                ref.invalidate(
+                    decisionRelationshipsProvider(widget.decisionId));
+                if (mounted) Navigator.of(context).pop();
+              } catch (e) {
+                setSheetState(() => saving = false);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to add: $e')),
+                  );
+                }
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                20,
+                16,
+                MediaQuery.of(ctx).viewInsets.bottom + 32,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Add Related Decision',
+                      style: Theme.of(ctx).textTheme.titleMedium),
+                  const SizedBox(height: 16),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(
+                          value: 'preceded_by', label: Text('Preceded by')),
+                      ButtonSegment(
+                          value: 'related', label: Text('Related')),
+                      ButtonSegment(
+                          value: 'leads_to', label: Text('Leads to')),
+                    ],
+                    selected: {relType},
+                    onSelectionChanged: (v) =>
+                        setSheetState(() => relType = v.first),
+                    showSelectedIcon: false,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Search decisions',
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                    onChanged: (v) => setSheetState(() => query = v),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 200,
+                    child: filtered.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No decisions found.',
+                              style: Theme.of(ctx)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: AppColors.textMuted),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: filtered.length,
+                            itemBuilder: (_, i) {
+                              final d = filtered[i];
+                              final isSelected = selected?.id == d.id;
+                              return ListTile(
+                                title: Text(
+                                  d.title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                selected: isSelected,
+                                onTap: () =>
+                                    setSheetState(() => selected = d),
+                                trailing: isSelected
+                                    ? const Icon(Icons.check)
+                                    : null,
+                              );
+                            },
+                          ),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: (selected != null && !saving) ? save : null,
+                    child: saving
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Add'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final relsAsync =
+        ref.watch(decisionRelationshipsProvider(widget.decisionId));
+    final allDecisions = ref.watch(decisionsProvider).valueOrNull ?? [];
+    final decisionMap = {for (final d in allDecisions) d.id: d};
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
+          child: Row(
+            children: [
+              Text(
+                'Related Decisions',
+                style: Theme.of(context)
+                    .textTheme
+                    .labelMedium
+                    ?.copyWith(color: AppColors.textSecondary),
+              ),
+              const Spacer(),
+              if (_isSaving)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  tooltip: 'Add related decision',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _showAddSheet(allDecisions),
+                ),
+            ],
+          ),
+        ),
+        relsAsync.when(
+          loading: () => const _SectionCard(
+            children: [Center(child: CircularProgressIndicator())],
+          ),
+          error: (e, _) => _SectionCard(
+            children: [
+              Text(
+                'Failed to load relationships.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: AppColors.textMuted),
+              ),
+            ],
+          ),
+          data: (rels) {
+            if (rels.isEmpty) {
+              return _SectionCard(
+                children: [
+                  Text(
+                    'No related decisions.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: AppColors.textMuted),
+                  ),
+                ],
+              );
+            }
+            return _SectionCard(
+              children: [
+                for (int i = 0; i < rels.length; i++) ...[
+                  if (i > 0) const Divider(height: 1),
+                  _RelationshipTile(
+                    relationship: rels[i],
+                    currentDecisionId: widget.decisionId,
+                    decisionMap: decisionMap,
+                    onLongPress: () => _confirmRemove(context, rels[i]),
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+// ── Relationship tile ──────────────────────────────────────────────────────────
+
+class _RelationshipTile extends StatelessWidget {
+  const _RelationshipTile({
+    required this.relationship,
+    required this.currentDecisionId,
+    required this.decisionMap,
+    required this.onLongPress,
+  });
+
+  final DecisionRelationship relationship;
+  final String currentDecisionId;
+  final Map<String, Decision> decisionMap;
+  final VoidCallback onLongPress;
+
+  String _label(String type) => switch (type) {
+        'preceded_by' => 'Preceded by',
+        'leads_to' => 'Leads to',
+        'related' => 'Related to',
+        _ => type,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final isFrom = relationship.fromDecisionId == currentDecisionId;
+    final otherId =
+        isFrom ? relationship.toDecisionId : relationship.fromDecisionId;
+    final otherTitle = decisionMap[otherId]?.title ??
+        otherId.substring(0, otherId.length.clamp(0, 8));
+    final arrow = isFrom ? '→' : '←';
+
+    return InkWell(
+      onTap: () => context.push('/decisions/detail/$otherId'),
+      onLongPress: onLongPress,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _label(relationship.relationshipType),
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelSmall
+                        ?.copyWith(color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$arrow $otherTitle',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.textMuted),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
 import 'package:reflect_os/features/decisions/data/models/comment.dart';
 import 'package:reflect_os/features/decisions/data/models/comment_thread.dart';
+import 'package:reflect_os/features/decisions/data/models/decision_relationship.dart';
 import 'package:reflect_os/features/decisions/data/models/decision_stakeholder.dart';
 import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
 
@@ -237,6 +238,39 @@ class DecisionsRepository {
       'created_at': now,
       'updated_at': now,
     });
+  }
+
+  /// Reads via user_visible_decision_relationships — RLS scopes to workspace.
+  Future<List<DecisionRelationship>> getRelationshipsForDecision(
+      String decisionId) async {
+    final rows = await supabase
+        .from('user_visible_decision_relationships')
+        .select()
+        .or('from_decision_id.eq.$decisionId,to_decision_id.eq.$decisionId')
+        .isFilter('deleted_at', null);
+
+    return rows.map((row) => DecisionRelationship.fromJson(row)).toList();
+  }
+
+  Future<void> addRelationship(
+    String fromDecisionId,
+    String toDecisionId,
+    String relationshipType,
+    String workspaceId,
+  ) async {
+    await supabase.from('decision_relationships').insert({
+      'from_decision_id': fromDecisionId,
+      'to_decision_id': toDecisionId,
+      'relationship_type': relationshipType,
+      'workspace_id': workspaceId,
+    });
+  }
+
+  Future<void> removeRelationship(String id) async {
+    await supabase
+        .from('decision_relationships')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
   }
 
   /// Exception to the no-raw-tables rule: there is no user_visible_categories
