@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
+import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:reflect_os/features/initiatives/providers/initiatives_provider.dart';
 import 'package:reflect_os/features/outcomes/data/models/outcome_update.dart';
@@ -213,6 +214,10 @@ class _DecisionDetail extends ConsumerWidget {
 
           // ── Tags ──────────────────────────────────────────────
           _TagsSection(decisionId: decision.id),
+
+          // ── Review Checkpoints ────────────────────────────────
+          if (decision.state == 'Active' || decision.state == 'Closed')
+            _CheckpointsSection(decisionId: decision.id),
 
           const SizedBox(height: 80), // clear the FAB
         ],
@@ -1026,6 +1031,160 @@ class _TagsSectionState extends ConsumerState<_TagsSection> {
           ],
         ),
       ],
+    );
+  }
+}
+
+// ── Checkpoints section ────────────────────────────────────────────────────────
+
+class _CheckpointsSection extends ConsumerWidget {
+  const _CheckpointsSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final checkpointsAsync = ref.watch(checkpointsProvider(decisionId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
+          child: Text(
+            'Review Checkpoints',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+          ),
+        ),
+        _SectionCard(
+          children: [
+            checkpointsAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Text(
+                'Failed to load checkpoints.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: AppColors.textMuted),
+              ),
+              data: (checkpoints) {
+                if (checkpoints.isEmpty) {
+                  return Text(
+                    'No checkpoints scheduled.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: AppColors.textMuted),
+                  );
+                }
+                return Column(
+                  children: [
+                    for (int i = 0; i < checkpoints.length; i++) ...[
+                      if (i > 0) const Divider(height: 1),
+                      _CheckpointRow(checkpoint: checkpoints[i]),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _CheckpointRow extends StatelessWidget {
+  const _CheckpointRow({required this.checkpoint});
+
+  final ReviewCheckpoint checkpoint;
+
+  static String _formatType(String type) {
+    switch (type) {
+      case '30_day':
+        return '30 Day';
+      case '90_day':
+        return '90 Day';
+      case '180_day':
+        return '180 Day';
+      case '6_month':
+        return '6 Month';
+      case '12_month':
+        return '12 Month';
+      case '24_month':
+        return '24 Month';
+      case 'monthly_continuous':
+        return 'Monthly';
+      case 'custom':
+        return 'Custom';
+      default:
+        return type.replaceAll('_', ' ');
+    }
+  }
+
+  static Color _statusColor(String status) {
+    switch (status) {
+      case 'Scheduled':
+        return AppColors.warning;
+      case 'Completed':
+        return AppColors.success;
+      case 'Snoozed':
+        return AppColors.accentPrimary;
+      default:
+        return AppColors.textMuted;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final displayDate =
+        checkpoint.status == 'Snoozed' && checkpoint.snoozedUntil != null
+            ? checkpoint.snoozedUntil!
+            : checkpoint.dueAt;
+    final color = _statusColor(checkpoint.status);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _formatType(checkpoint.checkpointType),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                Text(
+                  DateFormat('d MMM yyyy').format(displayDate),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              // ignore: deprecated_member_use
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              checkpoint.status,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

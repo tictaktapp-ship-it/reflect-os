@@ -2,6 +2,7 @@ import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/category.dart';
 import 'package:reflect_os/features/decisions/data/models/create_decision_input.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
+import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
 
 class DecisionsRepository {
   const DecisionsRepository();
@@ -118,6 +119,19 @@ class DecisionsRepository {
       'p_decision_id': id,
       'p_new_state': newState,
     });
+  }
+
+  /// RLS is SELECT-only — checkpoints are created by the activate_decision RPC.
+  Future<List<ReviewCheckpoint>> getCheckpointsForDecision(
+      String decisionId) async {
+    final rows = await supabase
+        .from('review_checkpoints')
+        .select()
+        .eq('decision_id', decisionId)
+        .isFilter('deleted_at', null)
+        .order('due_at');
+
+    return rows.map((row) => ReviewCheckpoint.fromJson(row)).toList();
   }
 
   /// Exception to the no-raw-tables rule: there is no user_visible_categories
