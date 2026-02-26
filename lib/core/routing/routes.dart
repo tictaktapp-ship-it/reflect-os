@@ -39,6 +39,7 @@ abstract final class Routes {
 
   // Billing
   static const String billingSubscribe = '/billing/subscribe';
+  static const String settingsBilling = '/settings/billing';
 
   // Share
   // Must work without authentication — this is the public share link entry point.

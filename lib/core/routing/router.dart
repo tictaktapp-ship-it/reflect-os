@@ -21,6 +21,7 @@ import 'package:reflect_os/features/initiatives/screens/create_initiative_screen
 import 'package:reflect_os/features/initiatives/screens/initiative_detail_screen.dart';
 import 'package:reflect_os/features/initiatives/screens/initiatives_list_screen.dart';
 import 'package:reflect_os/features/notifications/screens/notifications_screen.dart';
+import 'package:reflect_os/features/billing/screens/billing_screen.dart';
 import 'package:reflect_os/features/settings/screens/privacy_settings_screen.dart';
 import 'package:reflect_os/features/settings/screens/settings_screen.dart';
 import 'package:reflect_os/features/team/screens/team_screen.dart';
@@ -139,6 +140,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   path: 'privacy',
                   builder: (context, state) =>
                       const PrivacySettingsScreen(),
+                ),
+                GoRoute(
+                  path: 'billing',
+                  builder: (context, state) => const BillingScreen(),
                 ),
               ],
             ),

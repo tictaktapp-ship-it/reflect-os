@@ -42,6 +42,19 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
 
+          // ── Billing ───────────────────────────────────────────────
+          _SectionCard(
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.credit_card_outlined),
+                title: const Text('Billing'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push(Routes.settingsBilling),
+              ),
+            ],
+          ),
+
           // ── Sign out ──────────────────────────────────────────────
           _SectionCard(
             children: [
