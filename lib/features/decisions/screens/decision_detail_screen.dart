@@ -4,10 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
+import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
 import 'package:reflect_os/features/decisions/data/models/comment.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
+import 'package:reflect_os/features/decisions/data/models/decision_stakeholder.dart';
 import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
+import 'package:reflect_os/features/team/data/models/workspace_membership.dart';
+import 'package:reflect_os/features/team/providers/team_provider.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:reflect_os/features/initiatives/providers/initiatives_provider.dart';
 import 'package:reflect_os/features/outcomes/data/models/outcome_update.dart';
@@ -257,6 +261,9 @@ class _DecisionDetail extends ConsumerWidget {
           // ── Review Checkpoints ────────────────────────────────
           if (decision.state == 'Active' || decision.state == 'Closed')
             _CheckpointsSection(decisionId: decision.id),
+
+          // ── Stakeholders ──────────────────────────────────────
+          _StakeholdersSection(decisionId: decision.id),
 
           // ── Comments ──────────────────────────────────────────
           if (decision.state == 'Active')
@@ -1615,6 +1622,281 @@ class _CommentRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Stakeholders section ───────────────────────────────────────────────────────
+
+class _StakeholdersSection extends ConsumerStatefulWidget {
+  const _StakeholdersSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  ConsumerState<_StakeholdersSection> createState() =>
+      _StakeholdersSectionState();
+}
+
+class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
+  bool _isLoading = false;
+
+  static const _roles = ['Owner', 'Approver', 'Consulted', 'Informed'];
+
+  static Color _roleColor(String role) => switch (role) {
+        'Owner' => AppColors.accentPrimary,
+        'Approver' => AppColors.warning,
+        'Consulted' => AppColors.textSecondary,
+        _ => AppColors.textMuted,
+      };
+
+  Future<void> _add(String userId, String role) async {
+    setState(() => _isLoading = true);
+    try {
+      await ref
+          .read(decisionsRepositoryProvider)
+          .addStakeholder(widget.decisionId, userId, role);
+      ref.invalidate(stakeholdersProvider(widget.decisionId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to add stakeholder: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _remove(String userId) async {
+    setState(() => _isLoading = true);
+    try {
+      await ref
+          .read(decisionsRepositoryProvider)
+          .removeStakeholder(widget.decisionId, userId);
+      ref.invalidate(stakeholdersProvider(widget.decisionId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to remove stakeholder: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showAddSheet(List<DecisionStakeholder> current) {
+    final teamMembers = ref.read(teamMembersProvider).valueOrNull ?? [];
+    final addedIds = current.map((s) => s.userId).toSet();
+    final available =
+        teamMembers.where((m) => !addedIds.contains(m.userId)).toList();
+    final currentUserId = supabase.auth.currentUser?.id;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) => _AddStakeholderSheet(
+        available: available,
+        roles: _roles,
+        currentUserId: currentUserId,
+        onAdd: (userId, role) {
+          Navigator.of(sheetContext).pop();
+          _add(userId, role);
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final stakeholdersAsync =
+        ref.watch(stakeholdersProvider(widget.decisionId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Stakeholders',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+              ),
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: _isLoading
+                    ? const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : IconButton(
+                        icon: const Icon(Icons.add, size: 18),
+                        padding: EdgeInsets.zero,
+                        tooltip: 'Add stakeholder',
+                        onPressed: stakeholdersAsync.valueOrNull != null
+                            ? () =>
+                                _showAddSheet(stakeholdersAsync.valueOrNull!)
+                            : null,
+                      ),
+              ),
+            ],
+          ),
+        ),
+        _SectionCard(
+          children: [
+            stakeholdersAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (_, _) => Text(
+                'No stakeholders added.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: AppColors.textMuted),
+              ),
+              data: (stakeholders) {
+                if (stakeholders.isEmpty) {
+                  return Text(
+                    'No stakeholders added.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: AppColors.textMuted),
+                  );
+                }
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: stakeholders.map((s) {
+                    final color = _roleColor(s.stakeholderRole);
+                    final shortId = s.userId.length >= 8
+                        ? s.userId.substring(0, 8)
+                        : s.userId;
+                    return Chip(
+                      backgroundColor: color.withValues(alpha: 0.12),
+                      label: Text(
+                        '${s.stakeholderRole} · $shortId',
+                        style: TextStyle(
+                          color: color,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                        ),
+                      ),
+                      deleteIcon: Icon(Icons.close, size: 14, color: color),
+                      onDeleted:
+                          _isLoading ? null : () => _remove(s.userId),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _AddStakeholderSheet extends StatefulWidget {
+  const _AddStakeholderSheet({
+    required this.available,
+    required this.roles,
+    required this.currentUserId,
+    required this.onAdd,
+  });
+
+  final List<WorkspaceMembership> available;
+  final List<String> roles;
+  final String? currentUserId;
+  final void Function(String userId, String role) onAdd;
+
+  @override
+  State<_AddStakeholderSheet> createState() => _AddStakeholderSheetState();
+}
+
+class _AddStakeholderSheetState extends State<_AddStakeholderSheet> {
+  late final Map<String, String> _selectedRoles = {
+    for (final m in widget.available) m.userId: 'Informed',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(
+            'Add Stakeholder',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ),
+        if (widget.available.isEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Text(
+              'All workspace members are already stakeholders.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: AppColors.textMuted),
+            ),
+          )
+        else
+          ...widget.available.map((m) {
+            final shortId = m.userId.length >= 8
+                ? m.userId.substring(0, 8)
+                : m.userId;
+            final isYou = m.userId == widget.currentUserId;
+            return Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      isYou ? '$shortId (you)' : shortId,
+                      style: const TextStyle(fontFamily: 'monospace'),
+                    ),
+                  ),
+                  DropdownButton<String>(
+                    value: _selectedRoles[m.userId],
+                    underline: const SizedBox.shrink(),
+                    items: widget.roles
+                        .map((r) => DropdownMenuItem(
+                              value: r,
+                              child: Text(r),
+                            ))
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) {
+                        setState(() => _selectedRoles[m.userId] = v);
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    tooltip: 'Add',
+                    onPressed: () =>
+                        widget.onAdd(m.userId, _selectedRoles[m.userId]!),
+                  ),
+                ],
+              ),
+            );
+          }),
+        const SizedBox(height: 8),
+      ],
     );
   }
 }

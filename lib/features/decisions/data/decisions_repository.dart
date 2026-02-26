@@ -5,6 +5,7 @@ import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
 import 'package:reflect_os/features/decisions/data/models/comment.dart';
 import 'package:reflect_os/features/decisions/data/models/comment_thread.dart';
+import 'package:reflect_os/features/decisions/data/models/decision_stakeholder.dart';
 import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
 
 class DecisionsRepository {
@@ -142,6 +143,35 @@ class DecisionsRepository {
         .order('due_at');
 
     return rows.map((row) => ReviewCheckpoint.fromJson(row)).toList();
+  }
+
+  Future<List<DecisionStakeholder>> getStakeholders(
+      String decisionId) async {
+    final rows = await supabase
+        .from('user_visible_decision_stakeholders')
+        .select()
+        .eq('decision_id', decisionId)
+        .isFilter('deleted_at', null);
+
+    return rows.map((row) => DecisionStakeholder.fromJson(row)).toList();
+  }
+
+  Future<void> addStakeholder(
+      String decisionId, String userId, String role) async {
+    await supabase.from('decision_stakeholders').insert({
+      'decision_id': decisionId,
+      'user_id': userId,
+      'stakeholder_role': role,
+    });
+  }
+
+  Future<void> removeStakeholder(String decisionId, String userId) async {
+    await supabase
+        .from('decision_stakeholders')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('decision_id', decisionId)
+        .eq('user_id', userId)
+        .isFilter('deleted_at', null);
   }
 
   /// SELECT-only — audit_events_select_owner RLS policy gates access.
