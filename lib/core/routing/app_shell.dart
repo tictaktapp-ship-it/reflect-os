@@ -73,9 +73,9 @@ class _WideShell extends StatelessWidget {
                 label: Text('Search'),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.insights_outlined),
-                selectedIcon: Icon(Icons.insights),
-                label: Text('Dashboard'),
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: Text('Home'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.flag_outlined),
@@ -132,9 +132,9 @@ class _NarrowShell extends StatelessWidget {
             label: 'Search',
           ),
           NavigationDestination(
-            icon: Icon(Icons.insights_outlined),
-            selectedIcon: Icon(Icons.insights),
-            label: 'Dashboard',
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Home',
           ),
           NavigationDestination(
             icon: Icon(Icons.flag_outlined),
