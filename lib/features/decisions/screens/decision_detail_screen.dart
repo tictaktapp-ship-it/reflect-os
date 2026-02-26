@@ -2159,7 +2159,8 @@ class _EvidenceTile extends StatelessWidget {
       ),
       onTap: isLink && item.url != null
           ? () {
-              web.window.location.href = item.url!;
+              // TODO: verify link opening works in production (may be blocked by corporate network in dev)
+              web.window.open(item.url!, '_blank');
             }
           : null,
       onLongPress: onDelete,
