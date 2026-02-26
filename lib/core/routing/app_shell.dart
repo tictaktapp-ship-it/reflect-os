@@ -87,6 +87,7 @@ class _WideShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: Row(
         children: [
@@ -97,7 +98,9 @@ class _WideShell extends StatelessWidget {
             leading: Padding(
               padding: const EdgeInsets.fromLTRB(0, 24, 0, 16),
               child: SvgPicture.asset(
-                'assets/images/reflect-inline-dark.svg',
+                isDark
+                    ? 'assets/images/reflect-inline-dark.svg'
+                    : 'assets/images/reflect-inline-light.svg',
                 width: 110,
               ),
             ),
@@ -155,10 +158,13 @@ class _NarrowShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
         title: SvgPicture.asset(
-          'assets/images/reflect-inline-dark.svg',
+          isDark
+              ? 'assets/images/reflect-inline-dark.svg'
+              : 'assets/images/reflect-inline-light.svg',
           height: 22,
         ),
         centerTitle: false,

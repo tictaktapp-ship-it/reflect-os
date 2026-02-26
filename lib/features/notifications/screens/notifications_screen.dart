@@ -17,7 +17,12 @@ class NotificationsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Row(
           children: [
-            SvgPicture.asset('assets/images/reflect-icon-dark.svg', height: 20),
+            SvgPicture.asset(
+              Theme.of(context).brightness == Brightness.dark
+                  ? 'assets/images/reflect-icon-dark.svg'
+                  : 'assets/images/reflect-icon-light.svg',
+              height: 20,
+            ),
             const SizedBox(width: 8),
             const Text('Notifications'),
           ],

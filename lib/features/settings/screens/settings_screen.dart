@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
+import 'package:reflect_os/core/providers/theme_provider.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -13,6 +14,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final email = supabase.auth.currentUser?.email ?? '—';
     final isSigningOut = ref.watch(authActionProvider).isLoading;
+    final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -38,6 +40,25 @@ class SettingsScreen extends ConsumerWidget {
                 title: const Text('Notifications'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push(Routes.settingsPrivacy),
+              ),
+            ],
+          ),
+
+          // ── Appearance ────────────────────────────────────────────
+          _SectionCard(
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.brightness_6_outlined),
+                title: const Text('Appearance'),
+                subtitle: Text(
+                  themeMode == ThemeMode.light ? 'Light' : 'Dark',
+                ),
+                trailing: Switch(
+                  value: themeMode == ThemeMode.light,
+                  onChanged: (_) =>
+                      ref.read(themeModeProvider.notifier).toggle(),
+                ),
               ),
             ],
           ),
