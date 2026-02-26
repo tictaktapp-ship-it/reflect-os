@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/providers/draft_persistence_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/create_decision_input.dart';
@@ -107,7 +108,13 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New Decision'),
+        title: Row(
+          children: [
+            SvgPicture.asset('assets/images/reflect-icon-dark.svg', height: 20),
+            const SizedBox(width: 8),
+            const Text('New Decision'),
+          ],
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),

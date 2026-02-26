@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
@@ -60,7 +61,17 @@ class _InitiativeDetail extends ConsumerWidget {
         ref.watch(decisionsForInitiativeProvider(initiative.id));
 
     return Scaffold(
-      appBar: AppBar(title: Text(initiative.name)),
+      appBar: AppBar(
+        title: Row(
+          children: [
+            SvgPicture.asset('assets/images/reflect-icon-dark.svg', height: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(initiative.name, overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

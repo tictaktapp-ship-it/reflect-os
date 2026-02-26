@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
@@ -162,9 +163,17 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          decision.title,
-          overflow: TextOverflow.ellipsis,
+        title: Row(
+          children: [
+            SvgPicture.asset('assets/images/reflect-icon-dark.svg', height: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                decision.title,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
         actions: [
           if (_isGenerating)
@@ -561,9 +570,16 @@ class _StateTransitionBarState extends ConsumerState<_StateTransitionBar> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-              child: Text(
-                'Restore to which state?',
-                style: Theme.of(context).textTheme.titleMedium,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(child: SvgPicture.asset('assets/images/reflect-icon-dark.svg', height: 16)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Restore to which state?',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ],
               ),
             ),
             ListTile(
@@ -833,9 +849,16 @@ class _InitiativesSectionState extends ConsumerState<_InitiativesSection> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-              child: Text(
-                'Link an Initiative',
-                style: Theme.of(context).textTheme.titleMedium,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(child: SvgPicture.asset('assets/images/reflect-icon-dark.svg', height: 16)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Link an Initiative',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ],
               ),
             ),
             ...available.map(
@@ -1042,9 +1065,16 @@ class _TagsSectionState extends ConsumerState<_TagsSection> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: Text(
-                      'Add Tag',
-                      style: Theme.of(ctx).textTheme.titleMedium,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(child: SvgPicture.asset('assets/images/reflect-icon-dark.svg', height: 16)),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Add Tag',
+                          style: Theme.of(ctx).textTheme.titleMedium,
+                        ),
+                      ],
                     ),
                   ),
                   Padding(
@@ -1920,9 +1950,16 @@ class _AddStakeholderSheetState extends State<_AddStakeholderSheet> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text(
-            'Add Stakeholder',
-            style: Theme.of(context).textTheme.titleMedium,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: SvgPicture.asset('assets/images/reflect-icon-dark.svg', height: 16)),
+              const SizedBox(height: 8),
+              Text(
+                'Add Stakeholder',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
           ),
         ),
         if (widget.available.isEmpty)
@@ -2076,6 +2113,8 @@ class _EvidenceSectionState extends ConsumerState<_EvidenceSection> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Center(child: SvgPicture.asset('assets/images/reflect-icon-dark.svg', height: 16)),
+                  const SizedBox(height: 8),
                   Text('Add Link',
                       style: Theme.of(ctx).textTheme.titleMedium),
                   const SizedBox(height: 16),
@@ -2354,6 +2393,8 @@ class _RelatedDecisionsSectionState
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Center(child: SvgPicture.asset('assets/images/reflect-icon-dark.svg', height: 16)),
+                  const SizedBox(height: 8),
                   Text('Add Related Decision',
                       style: Theme.of(ctx).textTheme.titleMedium),
                   const SizedBox(height: 16),

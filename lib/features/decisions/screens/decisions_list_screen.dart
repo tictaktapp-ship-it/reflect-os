@@ -4,6 +4,7 @@ import 'dart:html' as html;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
@@ -127,12 +128,16 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Sort by',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: SvgPicture.asset('assets/images/reflect-icon-dark.svg', height: 16)),
+                const SizedBox(height: 8),
+                Text(
+                  'Sort by',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
             ),
           ),
           RadioGroup<_SortOrder>(
@@ -171,6 +176,8 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(child: SvgPicture.asset('assets/images/reflect-icon-dark.svg', height: 16)),
+            const SizedBox(height: 8),
             Text(
               'Export Decisions',
               style: Theme.of(context).textTheme.titleMedium,

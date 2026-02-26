@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/connectivity_provider.dart';
 
@@ -93,6 +94,13 @@ class _WideShell extends StatelessWidget {
             selectedIndex: selectedIndex,
             onDestinationSelected: onDestinationSelected,
             labelType: NavigationRailLabelType.all,
+            leading: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 24, 0, 16),
+              child: SvgPicture.asset(
+                'assets/images/reflect-inline-dark.svg',
+                width: 110,
+              ),
+            ),
             destinations: const [
               NavigationRailDestination(
                 icon: Icon(Icons.task_alt_outlined),
@@ -148,6 +156,14 @@ class _NarrowShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: SvgPicture.asset(
+          'assets/images/reflect-inline-dark.svg',
+          height: 22,
+        ),
+        centerTitle: false,
+        automaticallyImplyLeading: false,
+      ),
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedIndex,

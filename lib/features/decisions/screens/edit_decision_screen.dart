@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/category.dart';
@@ -216,7 +217,13 @@ class _EditDecisionScreenState extends ConsumerState<EditDecisionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Decision'),
+        title: Row(
+          children: [
+            SvgPicture.asset('assets/images/reflect-icon-dark.svg', height: 20),
+            const SizedBox(width: 8),
+            const Text('Edit Decision'),
+          ],
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
