@@ -148,7 +148,7 @@ class DecisionsRepository {
   Future<List<DecisionStakeholder>> getStakeholders(
       String decisionId) async {
     final rows = await supabase
-        .from('user_visible_decision_stakeholders')
+        .from('decision_stakeholders')
         .select()
         .eq('decision_id', decisionId)
         .isFilter('deleted_at', null);
