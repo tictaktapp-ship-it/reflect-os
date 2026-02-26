@@ -4,24 +4,88 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
+import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/dashboard/providers/dashboard_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 
 final _dateFmt = DateFormat('d MMM');
+final _refreshedFmt = DateFormat('d MMM yyyy HH:mm');
 
-class DashboardScreen extends ConsumerWidget {
+enum _DateRange { thirtyDays, ninetyDays, allTime }
+
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  _DateRange _selectedRange = _DateRange.thirtyDays;
+  bool _isRefreshing = false;
+
+  Future<void> _refreshAnalytics() async {
+    setState(() => _isRefreshing = true);
+    try {
+      await supabase.functions.invoke('refresh-analytics');
+      ref.invalidate(dashboardAnalyticsProvider);
+    } finally {
+      if (mounted) setState(() => _isRefreshing = false);
+    }
+  }
+
+  String _fmtQuality(double? v) =>
+      v != null ? '${v.toStringAsFixed(1)} / 10' : '—';
+
+  String _fmtCount(int? v) => v != null ? '$v' : '—';
+
+  @override
+  Widget build(BuildContext context) {
     final decisionsAsync = ref.watch(decisionsProvider);
     final analyticsAsync = ref.watch(dashboardAnalyticsProvider);
     final checkpointsAsync = ref.watch(upcomingCheckpointsProvider);
     final workspaceName = ref.watch(workspaceNameProvider).valueOrNull;
+    final analytics = analyticsAsync.valueOrNull;
+
+    // Range-appropriate analytics values
+    final avgQuality = switch (_selectedRange) {
+      _DateRange.thirtyDays => analytics?.rolling30dAvgQuality,
+      _DateRange.ninetyDays => analytics?.rolling90dAvgQuality,
+      _DateRange.allTime => analytics?.allTimeAvgQuality,
+    };
+    final reviewedCount = switch (_selectedRange) {
+      _DateRange.thirtyDays => analytics?.rolling30dDecisionsReviewed,
+      _DateRange.ninetyDays => analytics?.rolling90dDecisionsReviewed,
+      _DateRange.allTime => analytics?.allTimeDecisionsLogged,
+    };
+    final reviewedLabel = switch (_selectedRange) {
+      _DateRange.thirtyDays => 'Reviewed (30d)',
+      _DateRange.ninetyDays => 'Reviewed (90d)',
+      _DateRange.allTime => 'All Time Logged',
+    };
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
+      appBar: AppBar(
+        title: const Text('Home'),
+        actions: [
+          if (_isRefreshing)
+            const Padding(
+              padding: EdgeInsets.all(14),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Refresh analytics',
+              onPressed: _refreshAnalytics,
+            ),
+        ],
+      ),
       body: decisionsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
@@ -32,20 +96,11 @@ class DashboardScreen extends ConsumerWidget {
         ),
         data: (decisions) {
           final total = decisions.length;
-          final draft =
-              decisions.where((d) => d.state == 'Draft').length;
-          final active =
-              decisions.where((d) => d.state == 'Active').length;
-          final closed =
-              decisions.where((d) => d.state == 'Closed').length;
+          final draft = decisions.where((d) => d.state == 'Draft').length;
+          final active = decisions.where((d) => d.state == 'Active').length;
+          final closed = decisions.where((d) => d.state == 'Closed').length;
           final archived =
               decisions.where((d) => d.state == 'Archived').length;
-
-          final avgQuality =
-              analyticsAsync.valueOrNull?.avgOutcomeQualityScore;
-          final avgQualityStr = avgQuality != null
-              ? '${avgQuality.toStringAsFixed(1)} / 10'
-              : '—';
 
           // ── Needs Attention derivation ──────────────────────────────
           final upcomingIds = checkpointsAsync.valueOrNull
@@ -53,7 +108,6 @@ class DashboardScreen extends ConsumerWidget {
                   .toSet() ??
               {};
 
-          // Earliest due checkpoint per decision
           final earliestDue = <String, DateTime>{};
           for (final c in checkpointsAsync.valueOrNull ?? []) {
             final existing = earliestDue[c.decisionId];
@@ -64,9 +118,7 @@ class DashboardScreen extends ConsumerWidget {
 
           final needsAttention = decisions.where((d) {
             if (d.state == 'Draft') return true;
-            if (d.state == 'Active' && upcomingIds.contains(d.id)) {
-              return true;
-            }
+            if (d.state == 'Active' && upcomingIds.contains(d.id)) return true;
             return false;
           }).toList();
 
@@ -85,59 +137,82 @@ class DashboardScreen extends ConsumerWidget {
                   if (workspaceName != null) ...[
                     Row(
                       children: [
-                        Icon(
-                          Icons.business_outlined,
-                          size: 13,
-                          color: AppColors.textSecondary,
-                        ),
+                        Icon(Icons.business_outlined,
+                            size: 13, color: AppColors.textSecondary),
                         const SizedBox(width: 4),
                         Text(
                           workspaceName,
                           style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textSecondary,
-                          ),
+                              fontSize: 13, color: AppColors.textSecondary),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
                   ],
 
+                  // ── Date range selector ─────────────────────────────
+                  SegmentedButton<_DateRange>(
+                    segments: const [
+                      ButtonSegment(
+                          value: _DateRange.thirtyDays,
+                          label: Text('30 Days')),
+                      ButtonSegment(
+                          value: _DateRange.ninetyDays,
+                          label: Text('90 Days')),
+                      ButtonSegment(
+                          value: _DateRange.allTime,
+                          label: Text('All Time')),
+                    ],
+                    selected: {_selectedRange},
+                    onSelectionChanged: (s) =>
+                        setState(() => _selectedRange = s.first),
+                    showSelectedIcon: false,
+                  ),
+                  const SizedBox(height: 16),
+
                   // ── Stats grid ──────────────────────────────────────
                   _StatsGrid(
                     isWide: isWide,
                     tiles: [
+                      _StatTile(label: 'Total Decisions', value: '$total'),
                       _StatTile(
-                        label: 'Total Decisions',
-                        value: '$total',
-                      ),
+                          label: 'Active',
+                          value: '$active',
+                          valueColor: AppColors.accentHover),
                       _StatTile(
-                        label: 'Active',
-                        value: '$active',
-                        valueColor: AppColors.accentHover,
-                      ),
+                          label: 'Draft',
+                          value: '$draft',
+                          valueColor: AppColors.textSecondary),
                       _StatTile(
-                        label: 'Draft',
-                        value: '$draft',
-                        valueColor: AppColors.textSecondary,
-                      ),
+                          label: 'Closed',
+                          value: '$closed',
+                          valueColor: AppColors.success),
                       _StatTile(
-                        label: 'Closed',
-                        value: '$closed',
-                        valueColor: AppColors.success,
-                      ),
+                          label: 'Archived',
+                          value: '$archived',
+                          valueColor: AppColors.textMuted),
                       _StatTile(
-                        label: 'Archived',
-                        value: '$archived',
-                        valueColor: AppColors.textMuted,
-                      ),
+                          label: 'Avg Quality',
+                          value: _fmtQuality(avgQuality),
+                          valueColor: AppColors.accentHover),
                       _StatTile(
-                        label: 'Avg Quality Score',
-                        value: avgQualityStr,
-                        valueColor: AppColors.accentHover,
-                      ),
+                          label: reviewedLabel,
+                          value: _fmtCount(reviewedCount)),
                     ],
                   ),
+
+                  // ── Last refreshed ──────────────────────────────────
+                  if (analytics?.computedAt != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, left: 4),
+                      child: Text(
+                        'Last refreshed: ${_refreshedFmt.format(analytics!.computedAt!.toLocal())}',
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelSmall
+                            ?.copyWith(color: AppColors.textMuted),
+                      ),
+                    ),
 
                   // ── Needs Attention ─────────────────────────────────
                   _sectionHeader(context, 'NEEDS ATTENTION'),
@@ -157,8 +232,8 @@ class DashboardScreen extends ConsumerWidget {
                       height: 140,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
-                        padding:
-                            const EdgeInsets.only(left: 4, right: 4, bottom: 4),
+                        padding: const EdgeInsets.only(
+                            left: 4, right: 4, bottom: 4),
                         itemCount: needsAttention.length,
                         separatorBuilder: (_, _) =>
                             const SizedBox(width: 10),
@@ -231,8 +306,7 @@ class _StatsGrid extends StatelessWidget {
             Expanded(child: tiles[i]),
             const SizedBox(width: 12),
             Expanded(
-              child:
-                  i + 1 < tiles.length ? tiles[i + 1] : const SizedBox(),
+              child: i + 1 < tiles.length ? tiles[i + 1] : const SizedBox(),
             ),
           ],
         ),
@@ -321,8 +395,7 @@ class _NeedsAttentionCard extends StatelessWidget {
       child: Card(
         clipBehavior: Clip.hardEdge,
         child: InkWell(
-          onTap: () =>
-              context.push('/decisions/detail/${decision.id}'),
+          onTap: () => context.push('/decisions/detail/${decision.id}'),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -409,8 +482,7 @@ class _RecentDecisionTile extends StatelessWidget {
       child: InkWell(
         onTap: () => context.push('/decisions/detail/${decision.id}'),
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
               Expanded(
@@ -423,18 +495,15 @@ class _RecentDecisionTile extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: _backgroundFor(decision.state),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   decision.state,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelSmall
-                      ?.copyWith(
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: _foregroundFor(decision.state),
                         fontWeight: FontWeight.w600,
                       ),
