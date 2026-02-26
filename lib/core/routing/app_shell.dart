@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/core/providers/connectivity_provider.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({required this.navigationShell, super.key});
@@ -22,21 +24,51 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth >= 600) {
-          return _WideShell(
-            navigationShell: widget.navigationShell,
-            selectedIndex: widget.navigationShell.currentIndex,
-            onDestinationSelected: _onDestinationSelected,
-          );
-        }
-        return _NarrowShell(
-          navigationShell: widget.navigationShell,
-          selectedIndex: widget.navigationShell.currentIndex,
-          onDestinationSelected: _onDestinationSelected,
-        );
-      },
+    final isOnline = ref.watch(connectivityProvider).valueOrNull ?? true;
+
+    return Column(
+      children: [
+        if (!isOnline) const _OfflineBanner(),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth >= 600) {
+                return _WideShell(
+                  navigationShell: widget.navigationShell,
+                  selectedIndex: widget.navigationShell.currentIndex,
+                  onDestinationSelected: _onDestinationSelected,
+                );
+              }
+              return _NarrowShell(
+                navigationShell: widget.navigationShell,
+                selectedIndex: widget.navigationShell.currentIndex,
+                onDestinationSelected: _onDestinationSelected,
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: AppColors.warning,
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+      child: Text(
+        'You are offline — changes will sync when reconnected',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 }

@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/category.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+
+enum _ConflictChoice { keepMine, discard }
 
 class EditDecisionScreen extends ConsumerStatefulWidget {
   const EditDecisionScreen({required this.decision, super.key});
@@ -123,6 +126,49 @@ class _EditDecisionScreenState extends ConsumerState<EditDecisionScreen> {
       // Visibility & continuous — cannot pre-populate from view; always include.
       fields['visibility_mode'] = _visibility;
       fields['continuous'] = _isContinuous;
+
+      // ── Conflict detection ────────────────────────────────────────
+      final serverRow = await supabase
+          .from('user_visible_decisions')
+          .select('updated_at')
+          .eq('id', d.id)
+          .maybeSingle();
+
+      if (serverRow != null) {
+        final serverUpdatedAt =
+            DateTime.parse(serverRow['updated_at'] as String);
+        if (serverUpdatedAt.isAfter(d.updatedAt)) {
+          if (!mounted) return;
+          final choice = await showDialog<_ConflictChoice>(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text('Conflict detected'),
+              content: const Text(
+                'This decision was updated elsewhere since you opened it.\n\nWhat would you like to do?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () =>
+                      Navigator.of(context).pop(_ConflictChoice.discard),
+                  child: const Text('Discard my changes'),
+                ),
+                FilledButton(
+                  onPressed: () =>
+                      Navigator.of(context).pop(_ConflictChoice.keepMine),
+                  child: const Text('Keep my changes'),
+                ),
+              ],
+            ),
+          );
+          if (!mounted) return;
+          if (choice == _ConflictChoice.discard) {
+            ref.invalidate(decisionDetailProvider(d.id));
+            context.pop();
+            return;
+          }
+          // choice == keepMine: fall through to save.
+        }
+      }
 
       await ref
           .read(decisionsRepositoryProvider)

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
+import 'package:reflect_os/core/providers/draft_persistence_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/create_decision_input.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 
@@ -63,6 +64,9 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
       final id = await ref
           .read(decisionsRepositoryProvider)
           .createDecision(input);
+
+      // Clean up any locally persisted draft for this id.
+      await ref.read(draftPersistenceServiceProvider).deleteDraft(id);
 
       ref.invalidate(decisionsProvider);
 
