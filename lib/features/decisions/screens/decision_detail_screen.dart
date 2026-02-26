@@ -169,7 +169,7 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
               Theme.of(context).brightness == Brightness.dark
                   ? 'assets/images/reflect-icon-dark.svg'
                   : 'assets/images/reflect-icon-light.svg',
-              height: 20,
+              height: 40,
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -578,7 +578,7 @@ class _StateTransitionBarState extends ConsumerState<_StateTransitionBar> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(child: SvgPicture.asset(Theme.of(context).brightness == Brightness.dark ? 'assets/images/reflect-icon-dark.svg' : 'assets/images/reflect-icon-light.svg', height: 16)),
+                  Center(child: SvgPicture.asset(Theme.of(context).brightness == Brightness.dark ? 'assets/images/reflect-icon-dark.svg' : 'assets/images/reflect-icon-light.svg', height: 32)),
                   const SizedBox(height: 8),
                   Text(
                     'Restore to which state?',
@@ -857,7 +857,7 @@ class _InitiativesSectionState extends ConsumerState<_InitiativesSection> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(child: SvgPicture.asset(Theme.of(context).brightness == Brightness.dark ? 'assets/images/reflect-icon-dark.svg' : 'assets/images/reflect-icon-light.svg', height: 16)),
+                  Center(child: SvgPicture.asset(Theme.of(context).brightness == Brightness.dark ? 'assets/images/reflect-icon-dark.svg' : 'assets/images/reflect-icon-light.svg', height: 32)),
                   const SizedBox(height: 8),
                   Text(
                     'Link an Initiative',
@@ -1073,7 +1073,7 @@ class _TagsSectionState extends ConsumerState<_TagsSection> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Center(child: SvgPicture.asset(Theme.of(ctx).brightness == Brightness.dark ? 'assets/images/reflect-icon-dark.svg' : 'assets/images/reflect-icon-light.svg', height: 16)),
+                        Center(child: SvgPicture.asset(Theme.of(ctx).brightness == Brightness.dark ? 'assets/images/reflect-icon-dark.svg' : 'assets/images/reflect-icon-light.svg', height: 32)),
                         const SizedBox(height: 8),
                         Text(
                           'Add Tag',
@@ -1958,7 +1958,7 @@ class _AddStakeholderSheetState extends State<_AddStakeholderSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(child: SvgPicture.asset(Theme.of(context).brightness == Brightness.dark ? 'assets/images/reflect-icon-dark.svg' : 'assets/images/reflect-icon-light.svg', height: 16)),
+              Center(child: SvgPicture.asset(Theme.of(context).brightness == Brightness.dark ? 'assets/images/reflect-icon-dark.svg' : 'assets/images/reflect-icon-light.svg', height: 32)),
               const SizedBox(height: 8),
               Text(
                 'Add Stakeholder',
@@ -2118,7 +2118,7 @@ class _EvidenceSectionState extends ConsumerState<_EvidenceSection> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Center(child: SvgPicture.asset(Theme.of(ctx).brightness == Brightness.dark ? 'assets/images/reflect-icon-dark.svg' : 'assets/images/reflect-icon-light.svg', height: 16)),
+                  Center(child: SvgPicture.asset(Theme.of(ctx).brightness == Brightness.dark ? 'assets/images/reflect-icon-dark.svg' : 'assets/images/reflect-icon-light.svg', height: 32)),
                   const SizedBox(height: 8),
                   Text('Add Link',
                       style: Theme.of(ctx).textTheme.titleMedium),
@@ -2398,7 +2398,7 @@ class _RelatedDecisionsSectionState
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Center(child: SvgPicture.asset(Theme.of(ctx).brightness == Brightness.dark ? 'assets/images/reflect-icon-dark.svg' : 'assets/images/reflect-icon-light.svg', height: 16)),
+                  Center(child: SvgPicture.asset(Theme.of(ctx).brightness == Brightness.dark ? 'assets/images/reflect-icon-dark.svg' : 'assets/images/reflect-icon-light.svg', height: 32)),
                   const SizedBox(height: 8),
                   Text('Add Related Decision',
                       style: Theme.of(ctx).textTheme.titleMedium),

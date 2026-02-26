@@ -59,7 +59,7 @@ class AuditLogScreen extends ConsumerWidget {
               Theme.of(context).brightness == Brightness.dark
                   ? 'assets/images/reflect-icon-dark.svg'
                   : 'assets/images/reflect-icon-light.svg',
-              height: 20,
+              height: 40,
             ),
             const SizedBox(width: 8),
             const Text('Audit Log'),

@@ -101,7 +101,7 @@ class _WideShell extends StatelessWidget {
                 isDark
                     ? 'assets/images/reflect-inline-dark.svg'
                     : 'assets/images/reflect-inline-light.svg',
-                width: 110,
+                width: 130,
               ),
             ),
             destinations: const [
