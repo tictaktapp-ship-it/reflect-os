@@ -23,6 +23,7 @@ import 'package:reflect_os/features/initiatives/screens/initiatives_list_screen.
 import 'package:reflect_os/features/notifications/screens/notifications_screen.dart';
 import 'package:reflect_os/features/settings/screens/privacy_settings_screen.dart';
 import 'package:reflect_os/features/settings/screens/settings_screen.dart';
+import 'package:reflect_os/features/team/screens/team_screen.dart';
 import 'routes.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -140,6 +141,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                       const PrivacySettingsScreen(),
                 ),
               ],
+            ),
+          ]),
+          // 5 — Team
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.team,
+              builder: (context, state) => const TeamScreen(),
             ),
           ]),
         ],

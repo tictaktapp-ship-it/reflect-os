@@ -30,6 +30,9 @@ abstract final class Routes {
   static const String initiativesDetail = '/initiatives/detail/:id';
   static const String initiativesCreate = '/initiatives/create';
 
+  // Team
+  static const String team = '/team';
+
   // Settings
   static const String settings = '/settings';
   static const String settingsPrivacy = '/settings/privacy';

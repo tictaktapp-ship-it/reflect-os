@@ -87,6 +87,11 @@ class _WideShell extends StatelessWidget {
                 selectedIcon: Icon(Icons.settings),
                 label: Text('Settings'),
               ),
+              NavigationRailDestination(
+                icon: Icon(Icons.group_outlined),
+                selectedIcon: Icon(Icons.group),
+                label: Text('Team'),
+              ),
             ],
           ),
           const VerticalDivider(thickness: 1, width: 1),
@@ -140,6 +145,11 @@ class _NarrowShell extends StatelessWidget {
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
             label: 'Settings',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.group_outlined),
+            selectedIcon: Icon(Icons.group),
+            label: 'Team',
           ),
         ],
       ),
