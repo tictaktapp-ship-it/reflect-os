@@ -2158,7 +2158,16 @@ class _EvidenceTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
       ),
       onTap: isLink && item.url != null
-          ? () => web.window.open(item.url!, '_blank')
+          ? () {
+              final anchor = web.document.createElement('a')
+                  as web.HTMLAnchorElement;
+              anchor.href = item.url!;
+              anchor.target = '_blank';
+              anchor.rel = 'noopener noreferrer';
+              web.document.body!.append(anchor);
+              anchor.click();
+              anchor.remove();
+            }
           : null,
       onLongPress: onDelete,
     );
