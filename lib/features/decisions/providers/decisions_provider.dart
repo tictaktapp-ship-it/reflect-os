@@ -25,10 +25,12 @@ final searchProvider =
 });
 
 final auditEventsProvider =
-    FutureProvider.family<List<AuditEvent>, String>((ref, decisionId) {
+    FutureProvider.family<List<AuditEvent>, String>((ref, decisionId) async {
+  final workspaceId = await ref.watch(currentWorkspaceProvider.future);
+  if (workspaceId == null) return [];
   return ref
       .read(decisionsRepositoryProvider)
-      .getAuditEventsForDecision(decisionId);
+      .getAuditEventsForDecision(decisionId, workspaceId);
 });
 
 final checkpointsProvider =

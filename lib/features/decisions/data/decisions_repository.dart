@@ -137,10 +137,11 @@ class DecisionsRepository {
 
   /// SELECT-only — audit_events_select_owner RLS policy gates access.
   Future<List<AuditEvent>> getAuditEventsForDecision(
-      String decisionId) async {
+      String decisionId, String workspaceId) async {
     final rows = await supabase
         .from('audit_events')
         .select()
+        .eq('workspace_id', workspaceId)
         .eq('subject_entity_id', decisionId)
         .eq('subject_entity_type', 'decision')
         .order('created_at', ascending: false)
