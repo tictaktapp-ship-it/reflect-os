@@ -104,6 +104,16 @@ class DecisionsRepository {
     await supabase.from('decisions').update(fields).eq('id', id);
   }
 
+  Future<void> shareDecisionToTeam(
+      String decisionId, String targetWorkspaceId) async {
+    await supabase.rpc('share_decision_to_team', params: {
+      'p_decision_id': decisionId,
+      'p_target_workspace_id': targetWorkspaceId,
+      'p_user_id': supabase.auth.currentUser!.id,
+      'p_now': DateTime.now().toIso8601String(),
+    });
+  }
+
   Future<void> deleteDecision(String id) async {
     await supabase
         .from('decisions')

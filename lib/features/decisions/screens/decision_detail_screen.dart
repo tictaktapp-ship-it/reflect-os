@@ -126,6 +126,99 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
     }
   }
 
+  Future<void> _showShareSheet() async {
+    final workspaceId = await ref.read(currentWorkspaceProvider.future);
+    final workspaceName =
+        await ref.read(workspaceNameProvider.future) ?? 'My Workspace';
+    if (workspaceId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No workspace found.')),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: SvgPicture.asset(
+                      Theme.of(ctx).brightness == Brightness.dark
+                          ? 'assets/images/reflect-icon-dark.svg'
+                          : 'assets/images/reflect-icon-light.svg',
+                      height: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Share to Team Workspace',
+                    style: Theme.of(ctx).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Creates a one-time copy in the selected workspace. '
+                    'Changes will not sync between copies.',
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.group_outlined),
+              title: Text(workspaceName),
+              subtitle: const Text('Current workspace'),
+              trailing: FilledButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  _doShare(workspaceId, workspaceName);
+                },
+                child: const Text('Share'),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _doShare(String workspaceId, String workspaceName) async {
+    try {
+      await ref
+          .read(decisionsRepositoryProvider)
+          .shareDecisionToTeam(widget.decision.id, workspaceId);
+      ref.invalidate(decisionDetailProvider(widget.decision.id));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Decision shared to $workspaceName')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to share decision: $e'),
+            backgroundColor: AppColors.destructive,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final decision = widget.decision;
@@ -197,6 +290,12 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
               tooltip: 'Generate Brief',
               onPressed: _onGenerateBriefTapped,
             ),
+          if (decision.state != 'Draft')
+            IconButton(
+              icon: const Icon(Icons.share_outlined),
+              tooltip: 'Share to Team',
+              onPressed: _showShareSheet,
+            ),
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Edit',
@@ -234,6 +333,16 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
                     const SizedBox(width: 8),
                     _HealthBadge(healthState: decision.healthState!),
                   ],
+                  if (decision.sharedToTeamAt != null) ...[
+                    const SizedBox(width: 8),
+                    Chip(
+                      avatar: const Icon(Icons.share_outlined, size: 14),
+                      label: const Text('Shared to team'),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
                 ],
               ),
             ],
@@ -242,6 +351,32 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
           // ── Approvals (requires_approval decisions only) ──────────
           if (decision.requiresApproval)
             _ApprovalsSection(decisionId: decision.id),
+
+          // ── Shared from (forked decisions only) ───────────────────
+          if (decision.sourceDecisionId != null)
+            _SectionCard(
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.call_received_outlined,
+                      size: 16,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Shared from another workspace'
+                        '${decision.sharedFromPersonalAt != null ? ' on ${_formatDate(decision.sharedFromPersonalAt!)}' : ''}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
 
           // ── Overview ──────────────────────────────────────────────
           _SectionCard(

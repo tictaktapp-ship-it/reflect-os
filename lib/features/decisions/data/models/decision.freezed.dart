@@ -15,7 +15,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Decision {
 
- String get id; String get title; String get state; String? get stakes;@JsonKey(name: 'initial_confidence') int? get initialConfidence;@JsonKey(name: 'category_name') String? get categoryName;@JsonKey(name: 'description_encrypted') String? get descriptionEncrypted;@JsonKey(name: 'health_state') String? get healthState;@JsonKey(name: 'decision_deadline') DateTime? get decisionDeadline;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'updated_at') DateTime get updatedAt;@JsonKey(name: 'requires_approval') bool get requiresApproval;
+ String get id; String get title; String get state; String? get stakes;@JsonKey(name: 'initial_confidence') int? get initialConfidence;@JsonKey(name: 'category_name') String? get categoryName;@JsonKey(name: 'description_encrypted') String? get descriptionEncrypted;@JsonKey(name: 'health_state') String? get healthState;@JsonKey(name: 'decision_deadline') DateTime? get decisionDeadline;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'updated_at') DateTime get updatedAt;@JsonKey(name: 'requires_approval') bool get requiresApproval;// Provenance — populated when this decision is a fork of another.
+@JsonKey(name: 'source_decision_id') String? get sourceDecisionId;@JsonKey(name: 'shared_to_team_at') DateTime? get sharedToTeamAt;@JsonKey(name: 'shared_from_personal_at') DateTime? get sharedFromPersonalAt;
 /// Create a copy of Decision
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +29,16 @@ $DecisionCopyWith<Decision> get copyWith => _$DecisionCopyWithImpl<Decision>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Decision&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.state, state) || other.state == state)&&(identical(other.stakes, stakes) || other.stakes == stakes)&&(identical(other.initialConfidence, initialConfidence) || other.initialConfidence == initialConfidence)&&(identical(other.categoryName, categoryName) || other.categoryName == categoryName)&&(identical(other.descriptionEncrypted, descriptionEncrypted) || other.descriptionEncrypted == descriptionEncrypted)&&(identical(other.healthState, healthState) || other.healthState == healthState)&&(identical(other.decisionDeadline, decisionDeadline) || other.decisionDeadline == decisionDeadline)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.requiresApproval, requiresApproval) || other.requiresApproval == requiresApproval));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Decision&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.state, state) || other.state == state)&&(identical(other.stakes, stakes) || other.stakes == stakes)&&(identical(other.initialConfidence, initialConfidence) || other.initialConfidence == initialConfidence)&&(identical(other.categoryName, categoryName) || other.categoryName == categoryName)&&(identical(other.descriptionEncrypted, descriptionEncrypted) || other.descriptionEncrypted == descriptionEncrypted)&&(identical(other.healthState, healthState) || other.healthState == healthState)&&(identical(other.decisionDeadline, decisionDeadline) || other.decisionDeadline == decisionDeadline)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.requiresApproval, requiresApproval) || other.requiresApproval == requiresApproval)&&(identical(other.sourceDecisionId, sourceDecisionId) || other.sourceDecisionId == sourceDecisionId)&&(identical(other.sharedToTeamAt, sharedToTeamAt) || other.sharedToTeamAt == sharedToTeamAt)&&(identical(other.sharedFromPersonalAt, sharedFromPersonalAt) || other.sharedFromPersonalAt == sharedFromPersonalAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,state,stakes,initialConfidence,categoryName,descriptionEncrypted,healthState,decisionDeadline,createdAt,updatedAt,requiresApproval);
+int get hashCode => Object.hash(runtimeType,id,title,state,stakes,initialConfidence,categoryName,descriptionEncrypted,healthState,decisionDeadline,createdAt,updatedAt,requiresApproval,sourceDecisionId,sharedToTeamAt,sharedFromPersonalAt);
 
 @override
 String toString() {
-  return 'Decision(id: $id, title: $title, state: $state, stakes: $stakes, initialConfidence: $initialConfidence, categoryName: $categoryName, descriptionEncrypted: $descriptionEncrypted, healthState: $healthState, decisionDeadline: $decisionDeadline, createdAt: $createdAt, updatedAt: $updatedAt, requiresApproval: $requiresApproval)';
+  return 'Decision(id: $id, title: $title, state: $state, stakes: $stakes, initialConfidence: $initialConfidence, categoryName: $categoryName, descriptionEncrypted: $descriptionEncrypted, healthState: $healthState, decisionDeadline: $decisionDeadline, createdAt: $createdAt, updatedAt: $updatedAt, requiresApproval: $requiresApproval, sourceDecisionId: $sourceDecisionId, sharedToTeamAt: $sharedToTeamAt, sharedFromPersonalAt: $sharedFromPersonalAt)';
 }
 
 
@@ -48,7 +49,7 @@ abstract mixin class $DecisionCopyWith<$Res>  {
   factory $DecisionCopyWith(Decision value, $Res Function(Decision) _then) = _$DecisionCopyWithImpl;
 @useResult
 $Res call({
- String id, String title, String state, String? stakes,@JsonKey(name: 'initial_confidence') int? initialConfidence,@JsonKey(name: 'category_name') String? categoryName,@JsonKey(name: 'description_encrypted') String? descriptionEncrypted,@JsonKey(name: 'health_state') String? healthState,@JsonKey(name: 'decision_deadline') DateTime? decisionDeadline,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt,@JsonKey(name: 'requires_approval') bool requiresApproval
+ String id, String title, String state, String? stakes,@JsonKey(name: 'initial_confidence') int? initialConfidence,@JsonKey(name: 'category_name') String? categoryName,@JsonKey(name: 'description_encrypted') String? descriptionEncrypted,@JsonKey(name: 'health_state') String? healthState,@JsonKey(name: 'decision_deadline') DateTime? decisionDeadline,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt,@JsonKey(name: 'requires_approval') bool requiresApproval,@JsonKey(name: 'source_decision_id') String? sourceDecisionId,@JsonKey(name: 'shared_to_team_at') DateTime? sharedToTeamAt,@JsonKey(name: 'shared_from_personal_at') DateTime? sharedFromPersonalAt
 });
 
 
@@ -65,7 +66,7 @@ class _$DecisionCopyWithImpl<$Res>
 
 /// Create a copy of Decision
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? state = null,Object? stakes = freezed,Object? initialConfidence = freezed,Object? categoryName = freezed,Object? descriptionEncrypted = freezed,Object? healthState = freezed,Object? decisionDeadline = freezed,Object? createdAt = null,Object? updatedAt = null,Object? requiresApproval = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? state = null,Object? stakes = freezed,Object? initialConfidence = freezed,Object? categoryName = freezed,Object? descriptionEncrypted = freezed,Object? healthState = freezed,Object? decisionDeadline = freezed,Object? createdAt = null,Object? updatedAt = null,Object? requiresApproval = null,Object? sourceDecisionId = freezed,Object? sharedToTeamAt = freezed,Object? sharedFromPersonalAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -79,7 +80,10 @@ as String?,decisionDeadline: freezed == decisionDeadline ? _self.decisionDeadlin
 as DateTime?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,requiresApproval: null == requiresApproval ? _self.requiresApproval : requiresApproval // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,sourceDecisionId: freezed == sourceDecisionId ? _self.sourceDecisionId : sourceDecisionId // ignore: cast_nullable_to_non_nullable
+as String?,sharedToTeamAt: freezed == sharedToTeamAt ? _self.sharedToTeamAt : sharedToTeamAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,sharedFromPersonalAt: freezed == sharedFromPersonalAt ? _self.sharedFromPersonalAt : sharedFromPersonalAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -164,10 +168,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String state,  String? stakes, @JsonKey(name: 'initial_confidence')  int? initialConfidence, @JsonKey(name: 'category_name')  String? categoryName, @JsonKey(name: 'description_encrypted')  String? descriptionEncrypted, @JsonKey(name: 'health_state')  String? healthState, @JsonKey(name: 'decision_deadline')  DateTime? decisionDeadline, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt, @JsonKey(name: 'requires_approval')  bool requiresApproval)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String state,  String? stakes, @JsonKey(name: 'initial_confidence')  int? initialConfidence, @JsonKey(name: 'category_name')  String? categoryName, @JsonKey(name: 'description_encrypted')  String? descriptionEncrypted, @JsonKey(name: 'health_state')  String? healthState, @JsonKey(name: 'decision_deadline')  DateTime? decisionDeadline, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt, @JsonKey(name: 'requires_approval')  bool requiresApproval, @JsonKey(name: 'source_decision_id')  String? sourceDecisionId, @JsonKey(name: 'shared_to_team_at')  DateTime? sharedToTeamAt, @JsonKey(name: 'shared_from_personal_at')  DateTime? sharedFromPersonalAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Decision() when $default != null:
-return $default(_that.id,_that.title,_that.state,_that.stakes,_that.initialConfidence,_that.categoryName,_that.descriptionEncrypted,_that.healthState,_that.decisionDeadline,_that.createdAt,_that.updatedAt,_that.requiresApproval);case _:
+return $default(_that.id,_that.title,_that.state,_that.stakes,_that.initialConfidence,_that.categoryName,_that.descriptionEncrypted,_that.healthState,_that.decisionDeadline,_that.createdAt,_that.updatedAt,_that.requiresApproval,_that.sourceDecisionId,_that.sharedToTeamAt,_that.sharedFromPersonalAt);case _:
   return orElse();
 
 }
@@ -185,10 +189,10 @@ return $default(_that.id,_that.title,_that.state,_that.stakes,_that.initialConfi
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String state,  String? stakes, @JsonKey(name: 'initial_confidence')  int? initialConfidence, @JsonKey(name: 'category_name')  String? categoryName, @JsonKey(name: 'description_encrypted')  String? descriptionEncrypted, @JsonKey(name: 'health_state')  String? healthState, @JsonKey(name: 'decision_deadline')  DateTime? decisionDeadline, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt, @JsonKey(name: 'requires_approval')  bool requiresApproval)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String state,  String? stakes, @JsonKey(name: 'initial_confidence')  int? initialConfidence, @JsonKey(name: 'category_name')  String? categoryName, @JsonKey(name: 'description_encrypted')  String? descriptionEncrypted, @JsonKey(name: 'health_state')  String? healthState, @JsonKey(name: 'decision_deadline')  DateTime? decisionDeadline, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt, @JsonKey(name: 'requires_approval')  bool requiresApproval, @JsonKey(name: 'source_decision_id')  String? sourceDecisionId, @JsonKey(name: 'shared_to_team_at')  DateTime? sharedToTeamAt, @JsonKey(name: 'shared_from_personal_at')  DateTime? sharedFromPersonalAt)  $default,) {final _that = this;
 switch (_that) {
 case _Decision():
-return $default(_that.id,_that.title,_that.state,_that.stakes,_that.initialConfidence,_that.categoryName,_that.descriptionEncrypted,_that.healthState,_that.decisionDeadline,_that.createdAt,_that.updatedAt,_that.requiresApproval);case _:
+return $default(_that.id,_that.title,_that.state,_that.stakes,_that.initialConfidence,_that.categoryName,_that.descriptionEncrypted,_that.healthState,_that.decisionDeadline,_that.createdAt,_that.updatedAt,_that.requiresApproval,_that.sourceDecisionId,_that.sharedToTeamAt,_that.sharedFromPersonalAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -205,10 +209,10 @@ return $default(_that.id,_that.title,_that.state,_that.stakes,_that.initialConfi
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String state,  String? stakes, @JsonKey(name: 'initial_confidence')  int? initialConfidence, @JsonKey(name: 'category_name')  String? categoryName, @JsonKey(name: 'description_encrypted')  String? descriptionEncrypted, @JsonKey(name: 'health_state')  String? healthState, @JsonKey(name: 'decision_deadline')  DateTime? decisionDeadline, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt, @JsonKey(name: 'requires_approval')  bool requiresApproval)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String state,  String? stakes, @JsonKey(name: 'initial_confidence')  int? initialConfidence, @JsonKey(name: 'category_name')  String? categoryName, @JsonKey(name: 'description_encrypted')  String? descriptionEncrypted, @JsonKey(name: 'health_state')  String? healthState, @JsonKey(name: 'decision_deadline')  DateTime? decisionDeadline, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt, @JsonKey(name: 'requires_approval')  bool requiresApproval, @JsonKey(name: 'source_decision_id')  String? sourceDecisionId, @JsonKey(name: 'shared_to_team_at')  DateTime? sharedToTeamAt, @JsonKey(name: 'shared_from_personal_at')  DateTime? sharedFromPersonalAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Decision() when $default != null:
-return $default(_that.id,_that.title,_that.state,_that.stakes,_that.initialConfidence,_that.categoryName,_that.descriptionEncrypted,_that.healthState,_that.decisionDeadline,_that.createdAt,_that.updatedAt,_that.requiresApproval);case _:
+return $default(_that.id,_that.title,_that.state,_that.stakes,_that.initialConfidence,_that.categoryName,_that.descriptionEncrypted,_that.healthState,_that.decisionDeadline,_that.createdAt,_that.updatedAt,_that.requiresApproval,_that.sourceDecisionId,_that.sharedToTeamAt,_that.sharedFromPersonalAt);case _:
   return null;
 
 }
@@ -220,7 +224,7 @@ return $default(_that.id,_that.title,_that.state,_that.stakes,_that.initialConfi
 @JsonSerializable()
 
 class _Decision implements Decision {
-  const _Decision({required this.id, required this.title, required this.state, this.stakes, @JsonKey(name: 'initial_confidence') this.initialConfidence, @JsonKey(name: 'category_name') this.categoryName, @JsonKey(name: 'description_encrypted') this.descriptionEncrypted, @JsonKey(name: 'health_state') this.healthState, @JsonKey(name: 'decision_deadline') this.decisionDeadline, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') required this.updatedAt, @JsonKey(name: 'requires_approval') this.requiresApproval = false});
+  const _Decision({required this.id, required this.title, required this.state, this.stakes, @JsonKey(name: 'initial_confidence') this.initialConfidence, @JsonKey(name: 'category_name') this.categoryName, @JsonKey(name: 'description_encrypted') this.descriptionEncrypted, @JsonKey(name: 'health_state') this.healthState, @JsonKey(name: 'decision_deadline') this.decisionDeadline, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') required this.updatedAt, @JsonKey(name: 'requires_approval') this.requiresApproval = false, @JsonKey(name: 'source_decision_id') this.sourceDecisionId, @JsonKey(name: 'shared_to_team_at') this.sharedToTeamAt, @JsonKey(name: 'shared_from_personal_at') this.sharedFromPersonalAt});
   factory _Decision.fromJson(Map<String, dynamic> json) => _$DecisionFromJson(json);
 
 @override final  String id;
@@ -235,6 +239,10 @@ class _Decision implements Decision {
 @override@JsonKey(name: 'created_at') final  DateTime createdAt;
 @override@JsonKey(name: 'updated_at') final  DateTime updatedAt;
 @override@JsonKey(name: 'requires_approval') final  bool requiresApproval;
+// Provenance — populated when this decision is a fork of another.
+@override@JsonKey(name: 'source_decision_id') final  String? sourceDecisionId;
+@override@JsonKey(name: 'shared_to_team_at') final  DateTime? sharedToTeamAt;
+@override@JsonKey(name: 'shared_from_personal_at') final  DateTime? sharedFromPersonalAt;
 
 /// Create a copy of Decision
 /// with the given fields replaced by the non-null parameter values.
@@ -249,16 +257,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Decision&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.state, state) || other.state == state)&&(identical(other.stakes, stakes) || other.stakes == stakes)&&(identical(other.initialConfidence, initialConfidence) || other.initialConfidence == initialConfidence)&&(identical(other.categoryName, categoryName) || other.categoryName == categoryName)&&(identical(other.descriptionEncrypted, descriptionEncrypted) || other.descriptionEncrypted == descriptionEncrypted)&&(identical(other.healthState, healthState) || other.healthState == healthState)&&(identical(other.decisionDeadline, decisionDeadline) || other.decisionDeadline == decisionDeadline)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.requiresApproval, requiresApproval) || other.requiresApproval == requiresApproval));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Decision&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.state, state) || other.state == state)&&(identical(other.stakes, stakes) || other.stakes == stakes)&&(identical(other.initialConfidence, initialConfidence) || other.initialConfidence == initialConfidence)&&(identical(other.categoryName, categoryName) || other.categoryName == categoryName)&&(identical(other.descriptionEncrypted, descriptionEncrypted) || other.descriptionEncrypted == descriptionEncrypted)&&(identical(other.healthState, healthState) || other.healthState == healthState)&&(identical(other.decisionDeadline, decisionDeadline) || other.decisionDeadline == decisionDeadline)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.requiresApproval, requiresApproval) || other.requiresApproval == requiresApproval)&&(identical(other.sourceDecisionId, sourceDecisionId) || other.sourceDecisionId == sourceDecisionId)&&(identical(other.sharedToTeamAt, sharedToTeamAt) || other.sharedToTeamAt == sharedToTeamAt)&&(identical(other.sharedFromPersonalAt, sharedFromPersonalAt) || other.sharedFromPersonalAt == sharedFromPersonalAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,state,stakes,initialConfidence,categoryName,descriptionEncrypted,healthState,decisionDeadline,createdAt,updatedAt,requiresApproval);
+int get hashCode => Object.hash(runtimeType,id,title,state,stakes,initialConfidence,categoryName,descriptionEncrypted,healthState,decisionDeadline,createdAt,updatedAt,requiresApproval,sourceDecisionId,sharedToTeamAt,sharedFromPersonalAt);
 
 @override
 String toString() {
-  return 'Decision(id: $id, title: $title, state: $state, stakes: $stakes, initialConfidence: $initialConfidence, categoryName: $categoryName, descriptionEncrypted: $descriptionEncrypted, healthState: $healthState, decisionDeadline: $decisionDeadline, createdAt: $createdAt, updatedAt: $updatedAt, requiresApproval: $requiresApproval)';
+  return 'Decision(id: $id, title: $title, state: $state, stakes: $stakes, initialConfidence: $initialConfidence, categoryName: $categoryName, descriptionEncrypted: $descriptionEncrypted, healthState: $healthState, decisionDeadline: $decisionDeadline, createdAt: $createdAt, updatedAt: $updatedAt, requiresApproval: $requiresApproval, sourceDecisionId: $sourceDecisionId, sharedToTeamAt: $sharedToTeamAt, sharedFromPersonalAt: $sharedFromPersonalAt)';
 }
 
 
@@ -269,7 +277,7 @@ abstract mixin class _$DecisionCopyWith<$Res> implements $DecisionCopyWith<$Res>
   factory _$DecisionCopyWith(_Decision value, $Res Function(_Decision) _then) = __$DecisionCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String title, String state, String? stakes,@JsonKey(name: 'initial_confidence') int? initialConfidence,@JsonKey(name: 'category_name') String? categoryName,@JsonKey(name: 'description_encrypted') String? descriptionEncrypted,@JsonKey(name: 'health_state') String? healthState,@JsonKey(name: 'decision_deadline') DateTime? decisionDeadline,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt,@JsonKey(name: 'requires_approval') bool requiresApproval
+ String id, String title, String state, String? stakes,@JsonKey(name: 'initial_confidence') int? initialConfidence,@JsonKey(name: 'category_name') String? categoryName,@JsonKey(name: 'description_encrypted') String? descriptionEncrypted,@JsonKey(name: 'health_state') String? healthState,@JsonKey(name: 'decision_deadline') DateTime? decisionDeadline,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt,@JsonKey(name: 'requires_approval') bool requiresApproval,@JsonKey(name: 'source_decision_id') String? sourceDecisionId,@JsonKey(name: 'shared_to_team_at') DateTime? sharedToTeamAt,@JsonKey(name: 'shared_from_personal_at') DateTime? sharedFromPersonalAt
 });
 
 
@@ -286,7 +294,7 @@ class __$DecisionCopyWithImpl<$Res>
 
 /// Create a copy of Decision
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? state = null,Object? stakes = freezed,Object? initialConfidence = freezed,Object? categoryName = freezed,Object? descriptionEncrypted = freezed,Object? healthState = freezed,Object? decisionDeadline = freezed,Object? createdAt = null,Object? updatedAt = null,Object? requiresApproval = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? state = null,Object? stakes = freezed,Object? initialConfidence = freezed,Object? categoryName = freezed,Object? descriptionEncrypted = freezed,Object? healthState = freezed,Object? decisionDeadline = freezed,Object? createdAt = null,Object? updatedAt = null,Object? requiresApproval = null,Object? sourceDecisionId = freezed,Object? sharedToTeamAt = freezed,Object? sharedFromPersonalAt = freezed,}) {
   return _then(_Decision(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -300,7 +308,10 @@ as String?,decisionDeadline: freezed == decisionDeadline ? _self.decisionDeadlin
 as DateTime?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,requiresApproval: null == requiresApproval ? _self.requiresApproval : requiresApproval // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,sourceDecisionId: freezed == sourceDecisionId ? _self.sourceDecisionId : sourceDecisionId // ignore: cast_nullable_to_non_nullable
+as String?,sharedToTeamAt: freezed == sharedToTeamAt ? _self.sharedToTeamAt : sharedToTeamAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,sharedFromPersonalAt: freezed == sharedFromPersonalAt ? _self.sharedFromPersonalAt : sharedFromPersonalAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

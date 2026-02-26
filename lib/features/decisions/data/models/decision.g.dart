@@ -21,6 +21,13 @@ _Decision _$DecisionFromJson(Map<String, dynamic> json) => _Decision(
   createdAt: DateTime.parse(json['created_at'] as String),
   updatedAt: DateTime.parse(json['updated_at'] as String),
   requiresApproval: json['requires_approval'] as bool? ?? false,
+  sourceDecisionId: json['source_decision_id'] as String?,
+  sharedToTeamAt: json['shared_to_team_at'] == null
+      ? null
+      : DateTime.parse(json['shared_to_team_at'] as String),
+  sharedFromPersonalAt: json['shared_from_personal_at'] == null
+      ? null
+      : DateTime.parse(json['shared_from_personal_at'] as String),
 );
 
 Map<String, dynamic> _$DecisionToJson(_Decision instance) => <String, dynamic>{
@@ -36,4 +43,7 @@ Map<String, dynamic> _$DecisionToJson(_Decision instance) => <String, dynamic>{
   'created_at': instance.createdAt.toIso8601String(),
   'updated_at': instance.updatedAt.toIso8601String(),
   'requires_approval': instance.requiresApproval,
+  'source_decision_id': instance.sourceDecisionId,
+  'shared_to_team_at': instance.sharedToTeamAt?.toIso8601String(),
+  'shared_from_personal_at': instance.sharedFromPersonalAt?.toIso8601String(),
 };
