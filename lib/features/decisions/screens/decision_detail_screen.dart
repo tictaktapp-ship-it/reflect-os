@@ -142,80 +142,54 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: SvgPicture.asset(
-                      Theme.of(ctx).brightness == Brightness.dark
-                          ? 'assets/images/reflect-icon-dark.svg'
-                          : 'assets/images/reflect-icon-light.svg',
-                      height: 32,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Share to Team Workspace',
-                    style: Theme.of(ctx).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Creates a one-time copy in the selected workspace. '
-                    'Changes will not sync between copies.',
-                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                  ),
-                ],
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: SvgPicture.asset(
+                  Theme.of(ctx).brightness == Brightness.dark
+                      ? 'assets/images/reflect-icon-dark.svg'
+                      : 'assets/images/reflect-icon-light.svg',
+                  height: 32,
+                ),
               ),
-            ),
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  const Icon(Icons.group_outlined),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          workspaceName,
-                          style: Theme.of(ctx).textTheme.titleMedium,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                        Text(
-                          'Current workspace',
-                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  FilledButton(
-                    onPressed: () {
-                      Navigator.of(ctx).pop();
-                      _doShare(workspaceId, workspaceName);
-                    },
-                    child: const Text('Share'),
-                  ),
-                ],
+              const SizedBox(height: 16),
+              Text(
+                'Share to Team Workspace',
+                style: Theme.of(ctx).textTheme.titleLarge,
               ),
-            ),
-            const SizedBox(height: 8),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                'Creates a one-time copy in the selected workspace. '
+                'Changes will not sync between copies.',
+                style: Theme.of(ctx).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 24),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.group_outlined),
+                title: Text(workspaceName),
+                subtitle: const Text('Target workspace'),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  _doShare(workspaceId, workspaceName);
+                },
+                child: const Text('Share'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
         ),
       ),
     );
