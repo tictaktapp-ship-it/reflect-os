@@ -1221,8 +1221,8 @@ class _ActivitySection extends ConsumerWidget {
             eventsAsync.when(
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text(
-                'Failed to load activity.',
+              error: (_, _) => Text(
+                'No activity recorded.',
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
