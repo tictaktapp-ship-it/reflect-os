@@ -21,6 +21,7 @@ import 'package:reflect_os/features/initiatives/screens/create_initiative_screen
 import 'package:reflect_os/features/initiatives/screens/initiative_detail_screen.dart';
 import 'package:reflect_os/features/initiatives/screens/initiatives_list_screen.dart';
 import 'package:reflect_os/features/notifications/screens/notifications_screen.dart';
+import 'package:reflect_os/features/settings/screens/privacy_settings_screen.dart';
 import 'package:reflect_os/features/settings/screens/settings_screen.dart';
 import 'routes.dart';
 
@@ -136,7 +137,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 GoRoute(
                   path: 'privacy',
                   builder: (context, state) =>
-                      const _Placeholder('Privacy Settings'),
+                      const PrivacySettingsScreen(),
                 ),
               ],
             ),
