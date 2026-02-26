@@ -90,6 +90,13 @@ class DecisionsRepository {
     return ids.where(byId.containsKey).map((id) => byId[id]!).toList();
   }
 
+  /// Exception to the no-raw-tables rule: no RPC exists for updating decisions.
+  /// Only sends the fields present in [fields] — callers diff before calling.
+  Future<void> updateDecision(String id, Map<String, dynamic> fields) async {
+    if (fields.isEmpty) return;
+    await supabase.from('decisions').update(fields).eq('id', id);
+  }
+
   Future<void> activateDecision(String id) async {
     await supabase.rpc('activate_decision', params: {'p_decision_id': id});
   }

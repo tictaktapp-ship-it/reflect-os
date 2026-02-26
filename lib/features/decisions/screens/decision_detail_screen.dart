@@ -66,6 +66,16 @@ class _DecisionDetail extends ConsumerWidget {
           decision.title,
           overflow: TextOverflow.ellipsis,
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Edit',
+            onPressed: () => context.push(
+              '/decisions/edit/${decision.id}',
+              extra: decision,
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () =>

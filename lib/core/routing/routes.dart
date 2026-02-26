@@ -14,6 +14,7 @@ abstract final class Routes {
   static const String decisionsList = '/decisions/list';
   static const String decisionsDetail = '/decisions/detail/:id';
   static const String decisionsCreate = '/decisions/create';
+  static const String decisionsEdit = '/decisions/edit/:id';
 
   // Outcomes
   static const String outcomesCreate = '/outcomes/create/:decisionId';

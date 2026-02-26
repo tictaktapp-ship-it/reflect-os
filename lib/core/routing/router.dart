@@ -10,6 +10,8 @@ import 'package:reflect_os/features/auth/screens/login_screen.dart';
 import 'package:reflect_os/features/auth/screens/register_screen.dart';
 import 'package:reflect_os/features/billing/screens/billing_subscribe_screen.dart';
 import 'package:reflect_os/features/decisions/screens/create_decision_screen.dart';
+import 'package:reflect_os/features/decisions/screens/edit_decision_screen.dart';
+import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/outcomes/screens/create_outcome_screen.dart';
 import 'package:reflect_os/features/decisions/screens/decision_detail_screen.dart';
 import 'package:reflect_os/features/decisions/screens/decisions_list_screen.dart';
@@ -65,6 +67,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(path: Routes.decisionsCreate, builder: (context, state) => const CreateDecisionScreen()),
+      GoRoute(
+        path: Routes.decisionsEdit,
+        builder: (context, state) => EditDecisionScreen(
+          decision: state.extra as Decision,
+        ),
+      ),
       GoRoute(path: Routes.initiativesCreate, builder: (context, state) => const CreateInitiativeScreen()),
       GoRoute(
         path: Routes.initiativesDetail,
