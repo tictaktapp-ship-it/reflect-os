@@ -1652,18 +1652,22 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
 
   Future<void> _add(String userId, String role) async {
     setState(() => _isLoading = true);
+    String? err;
     try {
       await ref
           .read(decisionsRepositoryProvider)
           .addStakeholder(widget.decisionId, userId, role);
       ref.invalidate(stakeholdersProvider(widget.decisionId));
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to add stakeholder: $e')));
-      }
+      err = 'Failed to add stakeholder: $e';
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        if (err != null) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(err)));
+        }
+      }
     }
   }
 
@@ -1697,12 +1701,12 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (sheetContext) => _AddStakeholderSheet(
+      builder: (_) => _AddStakeholderSheet(
         available: available,
         roles: _roles,
         currentUserId: currentUserId,
         onAdd: (userId, role) {
-          Navigator.of(sheetContext).pop();
+          Navigator.of(context).pop();
           _add(userId, role);
         },
       ),
@@ -1741,10 +1745,11 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
                         icon: const Icon(Icons.add, size: 18),
                         padding: EdgeInsets.zero,
                         tooltip: 'Add stakeholder',
-                        onPressed: stakeholdersAsync.valueOrNull != null
-                            ? () =>
-                                _showAddSheet(stakeholdersAsync.valueOrNull!)
-                            : null,
+                        onPressed: _isLoading || stakeholdersAsync.isLoading
+                            ? null
+                            : () => _showAddSheet(
+                                  stakeholdersAsync.valueOrNull ?? [],
+                                ),
                       ),
               ),
             ],
