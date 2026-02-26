@@ -8,9 +8,13 @@ import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/providers/draft_persistence_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/create_decision_input.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+import 'package:reflect_os/features/templates/data/models/decision_template.dart';
+import 'package:reflect_os/features/templates/screens/templates_screen.dart';
 
 class CreateDecisionScreen extends ConsumerStatefulWidget {
-  const CreateDecisionScreen({super.key});
+  const CreateDecisionScreen({super.key, this.initialTemplate});
+
+  final DecisionTemplate? initialTemplate;
 
   @override
   ConsumerState<CreateDecisionScreen> createState() =>
@@ -30,6 +34,35 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
   String _visibility = 'workspace';
   bool _isContinuous = false;
   bool _isSubmitting = false;
+  DecisionTemplate? _appliedTemplate;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialTemplate != null) {
+      _applyTemplate(widget.initialTemplate!);
+    }
+  }
+
+  void _applyTemplate(DecisionTemplate template) {
+    setState(() {
+      _appliedTemplate = template;
+      if (template.defaultStakes != null) _stakes = template.defaultStakes;
+      if (template.descriptionEncrypted != null &&
+          template.descriptionEncrypted!.isNotEmpty) {
+        _descriptionController.text = template.descriptionEncrypted!;
+      }
+    });
+  }
+
+  void _clearTemplate() {
+    setState(() => _appliedTemplate = null);
+  }
+
+  Future<void> _showTemplatePicker() async {
+    final template = await showTemplatePicker(context, ref);
+    if (template != null) _applyTemplate(template);
+  }
 
   @override
   void dispose() {
@@ -141,6 +174,36 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // ── Template ───────────────────────────────────────────
+            _SectionCard(
+              children: [
+                if (_appliedTemplate == null)
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.article_outlined, size: 18),
+                    label: const Text('Use a template'),
+                    onPressed: _showTemplatePicker,
+                  )
+                else
+                  Row(
+                    children: [
+                      const Icon(Icons.article_outlined, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _appliedTemplate!.name,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        tooltip: 'Remove template',
+                        onPressed: _clearTemplate,
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+
             // ── Title ──────────────────────────────────────────────
             _SectionCard(
               children: [

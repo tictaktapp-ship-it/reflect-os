@@ -25,6 +25,8 @@ import 'package:reflect_os/features/billing/screens/billing_screen.dart';
 import 'package:reflect_os/features/settings/screens/audit_log_screen.dart';
 import 'package:reflect_os/features/settings/screens/privacy_settings_screen.dart';
 import 'package:reflect_os/features/settings/screens/settings_screen.dart';
+import 'package:reflect_os/features/templates/data/models/decision_template.dart';
+import 'package:reflect_os/features/templates/screens/templates_screen.dart';
 import 'package:reflect_os/features/team/screens/team_screen.dart';
 import 'routes.dart';
 
@@ -70,7 +72,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           id: state.pathParameters['id']!,
         ),
       ),
-      GoRoute(path: Routes.decisionsCreate, builder: (context, state) => const CreateDecisionScreen()),
+      GoRoute(
+        path: Routes.decisionsCreate,
+        builder: (context, state) => CreateDecisionScreen(
+          initialTemplate: state.extra as DecisionTemplate?,
+        ),
+      ),
       GoRoute(
         path: Routes.decisionsEdit,
         builder: (context, state) => EditDecisionScreen(
@@ -149,6 +156,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 GoRoute(
                   path: 'audit-log',
                   builder: (context, state) => const AuditLogScreen(),
+                ),
+                GoRoute(
+                  path: 'templates',
+                  builder: (context, state) => const TemplatesScreen(),
                 ),
               ],
             ),

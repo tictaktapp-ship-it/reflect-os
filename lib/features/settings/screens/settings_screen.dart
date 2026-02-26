@@ -89,6 +89,19 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
 
+          // ── Templates ─────────────────────────────────────────────
+          _SectionCard(
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.article_outlined),
+                title: const Text('Templates'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push(Routes.settingsTemplates),
+              ),
+            ],
+          ),
+
           // ── Sign out ──────────────────────────────────────────────
           _SectionCard(
             children: [
