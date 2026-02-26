@@ -63,6 +63,12 @@ final checkpointsProvider =
       .getCheckpointsForDecision(decisionId);
 });
 
+/// All Scheduled checkpoints due within the next 7 days (workspace-scoped via RLS).
+final upcomingCheckpointsProvider =
+    FutureProvider<List<ReviewCheckpoint>>((ref) {
+  return ref.read(decisionsRepositoryProvider).getUpcomingCheckpoints();
+});
+
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   final workspaceId = await ref.watch(currentWorkspaceProvider.future);
   if (workspaceId == null) return [];

@@ -132,6 +132,22 @@ class DecisionsRepository {
     });
   }
 
+  /// Reads all Scheduled checkpoints due within the next 7 days across all
+  /// decisions visible to the current user. RLS limits results to the user's
+  /// workspace — no explicit workspace_id filter needed.
+  Future<List<ReviewCheckpoint>> getUpcomingCheckpoints() async {
+    final cutoff =
+        DateTime.now().toUtc().add(const Duration(days: 7)).toIso8601String();
+    final rows = await supabase
+        .from('review_checkpoints')
+        .select()
+        .eq('status', 'Scheduled')
+        .lte('due_at', cutoff)
+        .isFilter('deleted_at', null)
+        .order('due_at');
+    return rows.map((row) => ReviewCheckpoint.fromJson(row)).toList();
+  }
+
   /// RLS is SELECT-only — checkpoints are created by the activate_decision RPC.
   Future<List<ReviewCheckpoint>> getCheckpointsForDecision(
       String decisionId) async {
