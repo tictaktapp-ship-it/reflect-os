@@ -177,16 +177,41 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
               ),
             ),
             const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.group_outlined),
-              title: Text(workspaceName),
-              subtitle: const Text('Current workspace'),
-              trailing: FilledButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  _doShare(workspaceId, workspaceName);
-                },
-                child: const Text('Share'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.group_outlined),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          workspaceName,
+                          style: Theme.of(ctx).textTheme.titleMedium,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                        Text(
+                          'Current workspace',
+                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  FilledButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      _doShare(workspaceId, workspaceName);
+                    },
+                    child: const Text('Share'),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 8),
