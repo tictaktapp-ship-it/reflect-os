@@ -55,6 +55,19 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
 
+          // ── Audit Log ─────────────────────────────────────────────
+          _SectionCard(
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.history_outlined),
+                title: const Text('Audit Log'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push(Routes.settingsAuditLog),
+              ),
+            ],
+          ),
+
           // ── Sign out ──────────────────────────────────────────────
           _SectionCard(
             children: [
