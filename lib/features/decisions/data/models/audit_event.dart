@@ -12,20 +12,20 @@ class AuditEvent {
 
   final String id;
   final String workspaceId;
-  final String actorUserId;
+  final String? actorUserId;
   final String eventType;
-  final String subjectEntityType;
-  final String subjectEntityId;
+  final String? subjectEntityType;
+  final String? subjectEntityId;
   final Map<String, dynamic> metadataJsonb;
   final DateTime createdAt;
 
   factory AuditEvent.fromJson(Map<String, dynamic> json) => AuditEvent(
         id: json['id'] as String,
         workspaceId: json['workspace_id'] as String,
-        actorUserId: json['actor_user_id'] as String,
-        eventType: json['event_type'] as String,
-        subjectEntityType: json['subject_entity_type'] as String,
-        subjectEntityId: json['subject_entity_id'] as String,
+        actorUserId: json['actor_user_id'] as String?,
+        eventType: json['event_type'] as String? ?? 'unknown',
+        subjectEntityType: json['subject_entity_type'] as String?,
+        subjectEntityId: json['subject_entity_id'] as String?,
         metadataJsonb:
             (json['metadata_jsonb'] as Map<String, dynamic>?) ?? {},
         createdAt: DateTime.parse(json['created_at'] as String),

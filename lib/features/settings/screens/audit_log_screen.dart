@@ -33,8 +33,10 @@ String _formatEventType(String eventType) => switch (eventType) {
           .join(' '),
     };
 
-String _truncateId(String id) =>
-    id.length > 8 ? id.substring(0, 8) : id;
+String _truncateId(String? id) {
+  if (id == null) return '—';
+  return id.length > 8 ? id.substring(0, 8) : id;
+}
 
 String _localDateKey(DateTime dt) {
   final local = dt.toLocal();
