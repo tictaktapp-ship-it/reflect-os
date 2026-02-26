@@ -19,6 +19,9 @@ import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/features/tags/data/models/tag.dart';
 import 'package:reflect_os/features/tags/providers/tags_provider.dart';
 import 'package:reflect_os/features/outcomes/providers/outcomes_provider.dart';
+import 'package:reflect_os/features/evidence/data/models/evidence_item.dart';
+import 'package:reflect_os/features/evidence/providers/evidence_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DecisionDetailScreen extends ConsumerWidget {
   const DecisionDetailScreen({required this.id, super.key});
@@ -261,6 +264,9 @@ class _DecisionDetail extends ConsumerWidget {
           // ── Review Checkpoints ────────────────────────────────
           if (decision.state == 'Active' || decision.state == 'Closed')
             _CheckpointsSection(decisionId: decision.id),
+
+          // ── Evidence ──────────────────────────────────────────
+          _EvidenceSection(decisionId: decision.id),
 
           // ── Stakeholders ──────────────────────────────────────
           _StakeholdersSection(decisionId: decision.id),
@@ -1902,6 +1908,264 @@ class _AddStakeholderSheetState extends State<_AddStakeholderSheet> {
           }),
         const SizedBox(height: 8),
       ],
+    );
+  }
+}
+
+// ── Evidence section ───────────────────────────────────────────────────────────
+
+class _EvidenceSection extends ConsumerStatefulWidget {
+  const _EvidenceSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  ConsumerState<_EvidenceSection> createState() => _EvidenceSectionState();
+}
+
+class _EvidenceSectionState extends ConsumerState<_EvidenceSection> {
+  bool _isLoading = false;
+
+  Future<void> _confirmDelete(BuildContext context, String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Remove Evidence'),
+        content: const Text('Remove this evidence item? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+                foregroundColor: AppColors.destructive),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(evidenceRepositoryProvider).deleteEvidence(id);
+      ref.invalidate(evidenceProvider(widget.decisionId));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showAddSheet() {
+    final labelCtrl = TextEditingController();
+    final urlCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) {
+        bool saving = false;
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            Future<void> save() async {
+              final url = urlCtrl.text.trim();
+              if (url.isEmpty) return;
+              setSheetState(() => saving = true);
+              try {
+                await ref.read(evidenceRepositoryProvider).addLinkEvidence(
+                      widget.decisionId,
+                      labelCtrl.text.trim(),
+                      url,
+                    );
+                ref.invalidate(evidenceProvider(widget.decisionId));
+                if (mounted) Navigator.of(context).pop();
+              } catch (e) {
+                setSheetState(() => saving = false);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to add: $e')),
+                  );
+                }
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                20,
+                16,
+                MediaQuery.of(ctx).viewInsets.bottom + 32,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Add Link',
+                      style: Theme.of(ctx).textTheme.titleMedium),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: labelCtrl,
+                    decoration:
+                        const InputDecoration(labelText: 'Label (optional)'),
+                    textInputAction: TextInputAction.next,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: urlCtrl,
+                    decoration: const InputDecoration(labelText: 'URL'),
+                    keyboardType: TextInputType.url,
+                    autofocus: true,
+                    onSubmitted: (_) => save(),
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    onPressed: saving ? null : save,
+                    child: saving
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Add'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final evidenceAsync = ref.watch(evidenceProvider(widget.decisionId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
+          child: Row(
+            children: [
+              Text(
+                'Evidence',
+                style: Theme.of(context)
+                    .textTheme
+                    .labelMedium
+                    ?.copyWith(color: AppColors.textSecondary),
+              ),
+              const Spacer(),
+              if (_isLoading)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                IconButton(
+                  icon: const Icon(Icons.add, size: 20),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: 'Add evidence',
+                  onPressed: _showAddSheet,
+                ),
+            ],
+          ),
+        ),
+        evidenceAsync.when(
+          loading: () => const _SectionCard(
+            children: [Center(child: CircularProgressIndicator())],
+          ),
+          error: (_, _) => _SectionCard(
+            children: [
+              Text(
+                'Failed to load evidence.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: AppColors.textMuted),
+              ),
+            ],
+          ),
+          data: (items) {
+            if (items.isEmpty) {
+              return _SectionCard(
+                children: [
+                  Text(
+                    'No evidence attached.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: AppColors.textMuted),
+                  ),
+                ],
+              );
+            }
+            return _SectionCard(
+              children: items
+                  .map((item) => _EvidenceTile(
+                        item: item,
+                        onDelete: () => _confirmDelete(context, item.id),
+                      ))
+                  .toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+// ── Evidence tile ──────────────────────────────────────────────────────────────
+
+class _EvidenceTile extends StatelessWidget {
+  const _EvidenceTile({required this.item, required this.onDelete});
+
+  final EvidenceItem item;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final isLink = item.type == 'link';
+    final displayText =
+        (item.label != null && item.label!.isNotEmpty) ? item.label! : (item.url ?? '');
+
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        isLink ? Icons.link : Icons.attach_file,
+        size: 18,
+        color: AppColors.textSecondary,
+      ),
+      title: Text(
+        displayText,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: isLink ? AppColors.accentHover : AppColors.textPrimary,
+              decoration: isLink ? TextDecoration.underline : null,
+            ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      onTap: isLink && item.url != null
+          ? () async {
+              final uri = Uri.tryParse(item.url!);
+              if (uri != null) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            }
+          : null,
+      onLongPress: onDelete,
     );
   }
 }
