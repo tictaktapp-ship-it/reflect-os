@@ -6,17 +6,176 @@ import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 
-class DecisionsListScreen extends ConsumerWidget {
+enum _SortOrder { newestFirst, oldestFirst, titleAsc, titleDesc }
+
+class DecisionsListScreen extends ConsumerStatefulWidget {
   const DecisionsListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DecisionsListScreen> createState() =>
+      _DecisionsListScreenState();
+}
+
+class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
+  String? _selectedState;   // null = All
+  String? _selectedStakes;  // null = All
+  _SortOrder _sortOrder = _SortOrder.newestFirst;
+
+  bool get _filtersActive => _selectedState != null || _selectedStakes != null;
+
+  List<Decision> _applyFiltersAndSort(List<Decision> all) {
+    var result = all.where((d) {
+      if (_selectedState != null && d.state != _selectedState) return false;
+      if (_selectedStakes != null) {
+        if (d.stakes == null) return false;
+        if (d.stakes!.toLowerCase() != _selectedStakes!.toLowerCase()) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
+
+    switch (_sortOrder) {
+      case _SortOrder.newestFirst:
+        result.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      case _SortOrder.oldestFirst:
+        result.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      case _SortOrder.titleAsc:
+        result.sort((a, b) => a.title.compareTo(b.title));
+      case _SortOrder.titleDesc:
+        result.sort((a, b) => b.title.compareTo(a.title));
+    }
+
+    return result;
+  }
+
+  String _sortLabel(_SortOrder o) => switch (o) {
+        _SortOrder.newestFirst => 'Newest first',
+        _SortOrder.oldestFirst => 'Oldest first',
+        _SortOrder.titleAsc => 'A → Z',
+        _SortOrder.titleDesc => 'Z → A',
+      };
+
+  void _showSortSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Sort by',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+          ),
+          RadioGroup<_SortOrder>(
+            groupValue: _sortOrder,
+            onChanged: (v) {
+              if (v != null) {
+                setState(() => _sortOrder = v);
+                Navigator.of(context).pop();
+              }
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: _SortOrder.values
+                  .map((o) => RadioListTile<_SortOrder>(
+                        title: Text(_sortLabel(o)),
+                        value: o,
+                      ))
+                  .toList(),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _filterBar() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── State row ────────────────────────────────────────
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
+          child: Row(
+            children: [
+              for (final label in <String?>[
+                null,
+                'Draft',
+                'Active',
+                'Closed',
+                'Archived',
+              ])
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: FilterChip(
+                    label: Text(label ?? 'All'),
+                    selected: _selectedState == label,
+                    onSelected: (_) =>
+                        setState(() => _selectedState = label),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        // ── Stakes row ───────────────────────────────────────
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
+          child: Row(
+            children: [
+              for (final label in <String?>[
+                null,
+                'Low',
+                'Medium',
+                'High',
+                'Critical',
+              ])
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: FilterChip(
+                    label: Text(label ?? 'All'),
+                    selected: _selectedStakes == label,
+                    onSelected: (_) =>
+                        setState(() => _selectedStakes = label),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final decisionsAsync = ref.watch(decisionsProvider);
+
+    final allDecisions = decisionsAsync.valueOrNull ?? [];
+    final filtered = _applyFiltersAndSort(allDecisions);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Decisions'),
+        title: Text(
+          _filtersActive ? 'Decisions (${filtered.length})' : 'Decisions',
+        ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.sort),
+            tooltip: 'Sort',
+            onPressed: _showSortSheet,
+          ),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             tooltip: 'Notifications',
@@ -29,35 +188,48 @@ class DecisionsListScreen extends ConsumerWidget {
         tooltip: 'New decision',
         child: const Icon(Icons.add),
       ),
-      body: decisionsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              'Failed to load decisions: $error',
-              textAlign: TextAlign.center,
+      body: Column(
+        children: [
+          _filterBar(),
+          Expanded(
+            child: decisionsAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'Failed to load decisions: $error',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+              data: (_) {
+                if (allDecisions.isEmpty) {
+                  return const Center(child: Text('No decisions yet.'));
+                }
+                if (filtered.isEmpty) {
+                  return const Center(
+                    child: Text('No decisions match the current filters.'),
+                  );
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (_, index) =>
+                      _DecisionTile(decision: filtered[index]),
+                );
+              },
             ),
           ),
-        ),
-        data: (decisions) {
-          if (decisions.isEmpty) {
-            return const Center(
-              child: Text('No decisions yet'),
-            );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: decisions.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 8),
-            itemBuilder: (context, index) =>
-                _DecisionTile(decision: decisions[index]),
-          );
-        },
+        ],
       ),
     );
   }
 }
+
+// ── Decision tile ──────────────────────────────────────────────────────────────
 
 class _DecisionTile extends StatelessWidget {
   const _DecisionTile({required this.decision});
@@ -70,26 +242,28 @@ class _DecisionTile extends StatelessWidget {
       child: InkWell(
         onTap: () => context.push('/decisions/detail/${decision.id}'),
         child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                decision.title,
-                style: Theme.of(context).textTheme.bodyLarge,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  decision.title,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            _StatusBadge(status: decision.state),
-          ],
+              const SizedBox(width: 12),
+              _StatusBadge(status: decision.state),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
 }
+
+// ── Status badge ───────────────────────────────────────────────────────────────
 
 class _StatusBadge extends StatelessWidget {
   const _StatusBadge({required this.status});
