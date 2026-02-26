@@ -3,6 +3,7 @@ import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/features/decisions/data/decisions_repository.dart';
 import 'package:reflect_os/features/decisions/data/models/category.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
+import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
 import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
 
 final decisionsRepositoryProvider = Provider<DecisionsRepository>(
@@ -21,6 +22,13 @@ final decisionDetailProvider =
 final searchProvider =
     FutureProvider.family<List<Decision>, String>((ref, query) {
   return ref.read(decisionsRepositoryProvider).searchDecisions(query);
+});
+
+final auditEventsProvider =
+    FutureProvider.family<List<AuditEvent>, String>((ref, decisionId) {
+  return ref
+      .read(decisionsRepositoryProvider)
+      .getAuditEventsForDecision(decisionId);
 });
 
 final checkpointsProvider =

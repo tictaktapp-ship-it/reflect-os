@@ -2,6 +2,7 @@ import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/category.dart';
 import 'package:reflect_os/features/decisions/data/models/create_decision_input.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
+import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
 import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
 
 class DecisionsRepository {
@@ -132,6 +133,20 @@ class DecisionsRepository {
         .order('due_at');
 
     return rows.map((row) => ReviewCheckpoint.fromJson(row)).toList();
+  }
+
+  /// SELECT-only — audit_events_select_owner RLS policy gates access.
+  Future<List<AuditEvent>> getAuditEventsForDecision(
+      String decisionId) async {
+    final rows = await supabase
+        .from('audit_events')
+        .select()
+        .eq('subject_entity_id', decisionId)
+        .eq('subject_entity_type', 'decision')
+        .order('created_at', ascending: false)
+        .limit(20);
+
+    return rows.map((row) => AuditEvent.fromJson(row)).toList();
   }
 
   /// Exception to the no-raw-tables rule: there is no user_visible_categories

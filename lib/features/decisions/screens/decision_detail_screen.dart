@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
@@ -218,6 +219,9 @@ class _DecisionDetail extends ConsumerWidget {
           // ── Review Checkpoints ────────────────────────────────
           if (decision.state == 'Active' || decision.state == 'Closed')
             _CheckpointsSection(decisionId: decision.id),
+
+          // ── Activity ──────────────────────────────────────────
+          _ActivitySection(decisionId: decision.id),
 
           const SizedBox(height: 80), // clear the FAB
         ],
@@ -1181,6 +1185,178 @@ class _CheckpointRow extends StatelessWidget {
                     color: color,
                     fontWeight: FontWeight.w600,
                   ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Activity section ───────────────────────────────────────────────────────────
+
+class _ActivitySection extends ConsumerWidget {
+  const _ActivitySection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final eventsAsync = ref.watch(auditEventsProvider(decisionId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
+          child: Text(
+            'Activity',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+          ),
+        ),
+        _SectionCard(
+          children: [
+            eventsAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Text(
+                'Failed to load activity.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: AppColors.textMuted),
+              ),
+              data: (events) {
+                if (events.isEmpty) {
+                  return Text(
+                    'No activity recorded.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: AppColors.textMuted),
+                  );
+                }
+                return Column(
+                  children: [
+                    for (int i = 0; i < events.length; i++)
+                      _ActivityEventRow(
+                        event: events[i],
+                        isLast: i == events.length - 1,
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ActivityEventRow extends StatelessWidget {
+  const _ActivityEventRow({required this.event, required this.isLast});
+
+  final AuditEvent event;
+  final bool isLast;
+
+  static String _formatEventType(String type) {
+    switch (type) {
+      case 'decision_created':
+        return 'Created';
+      case 'decision_updated':
+        return 'Updated';
+      case 'decision_activated':
+        return 'Activated';
+      case 'decision_closed':
+        return 'Closed';
+      case 'decision_archived':
+        return 'Archived';
+      case 'decision_unarchived':
+        return 'Unarchived';
+      case 'decision_reopened':
+        return 'Reopened';
+      case 'outcome_update_created':
+        return 'Outcome recorded';
+      default:
+        return type
+            .split('_')
+            .map((w) =>
+                w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
+            .join(' ');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final transition =
+        event.metadataJsonb['transition'] as String?;
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Timeline spine
+          Column(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.accentPrimary,
+                ),
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    color: AppColors.borderSubtle,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 12),
+          // Event content
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _formatEventType(event.eventType),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                      Text(
+                        DateFormat('d MMM yyyy').format(event.createdAt),
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                  if (transition != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        transition,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: AppColors.textMuted),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ],
