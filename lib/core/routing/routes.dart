@@ -43,6 +43,9 @@ abstract final class Routes {
   static const String settingsAuditLog = '/settings/audit-log';
   static const String settingsTemplates = '/settings/templates';
 
+  // Import
+  static const String import = '/import';
+
   // Share links management (authenticated)
   static const String decisionsShareLinks = '/decisions/:id/share-links';
 

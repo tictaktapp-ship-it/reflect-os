@@ -25,6 +25,7 @@ import 'package:reflect_os/features/billing/screens/billing_screen.dart';
 import 'package:reflect_os/features/settings/screens/audit_log_screen.dart';
 import 'package:reflect_os/features/settings/screens/privacy_settings_screen.dart';
 import 'package:reflect_os/features/settings/screens/settings_screen.dart';
+import 'package:reflect_os/features/import/screens/import_screen.dart';
 import 'package:reflect_os/features/sharing/screens/public_decision_view.dart';
 import 'package:reflect_os/features/sharing/screens/share_links_screen.dart';
 import 'package:reflect_os/features/templates/data/models/decision_template.dart';
@@ -99,6 +100,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => CreateOutcomeScreen(
           decisionId: state.pathParameters['decisionId']!,
         ),
+      ),
+
+      // Bulk import — push above shell
+      GoRoute(
+        path: Routes.import,
+        builder: (context, state) => const ImportScreen(),
       ),
 
       // Share links management — authenticated, push above shell

@@ -102,6 +102,20 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
 
+          // ── Import ────────────────────────────────────────────────
+          _SectionCard(
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.upload_file_outlined),
+                title: const Text('Bulk Import'),
+                subtitle: const Text('Import decisions from a CSV file'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push(Routes.import),
+              ),
+            ],
+          ),
+
           // ── Sign out ──────────────────────────────────────────────
           _SectionCard(
             children: [
