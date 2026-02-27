@@ -29,6 +29,7 @@ import 'package:reflect_os/features/settings/screens/settings_screen.dart';
 import 'package:reflect_os/features/calendar/screens/calendar_settings_screen.dart';
 import 'package:reflect_os/features/import/screens/import_screen.dart';
 import 'package:reflect_os/features/coaching/screens/coach_dashboard_screen.dart';
+import 'package:reflect_os/features/investment/screens/assets_screen.dart';
 import 'package:reflect_os/features/settings/screens/vertical_settings_screen.dart';
 import 'package:reflect_os/features/settings/screens/workspace_branding_screen.dart';
 import 'package:reflect_os/features/sharing/screens/public_decision_view.dart';
@@ -121,6 +122,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.import,
         builder: (context, state) => const ImportScreen(),
+      ),
+
+      // Portfolio assets — push above shell
+      GoRoute(
+        path: Routes.investmentAssets,
+        builder: (context, state) => const AssetsScreen(),
       ),
 
       // Share links management — authenticated, push above shell

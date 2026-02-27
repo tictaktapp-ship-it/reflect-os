@@ -59,6 +59,9 @@ abstract final class Routes {
   // Coaching
   static const String coachingDashboard = '/coaching/dashboard';
 
+  // Investment / Portfolio
+  static const String investmentAssets = '/investment/assets';
+
   // Share links management (authenticated)
   static const String decisionsShareLinks = '/decisions/:id/share-links';
 

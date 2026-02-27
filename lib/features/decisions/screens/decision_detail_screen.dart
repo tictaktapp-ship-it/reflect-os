@@ -29,6 +29,9 @@ import 'package:reflect_os/features/risk/providers/risk_provider.dart';
 import 'package:reflect_os/features/calendar/providers/calendar_provider.dart';
 import 'package:reflect_os/features/coaching/data/models/coach_note.dart';
 import 'package:reflect_os/features/coaching/providers/coaching_provider.dart';
+import 'package:reflect_os/features/investment/data/models/asset.dart';
+import 'package:reflect_os/features/investment/data/models/ic_vote.dart';
+import 'package:reflect_os/features/investment/providers/investment_provider.dart';
 import 'package:reflect_os/features/debrief/data/models/decision_debrief.dart';
 import 'package:reflect_os/features/debrief/providers/debrief_provider.dart';
 import 'package:web/web.dart' as web;
@@ -526,6 +529,12 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
 
           // ── Coach Notes ───────────────────────────────────────
           _CoachNotesSection(decisionId: decision.id),
+
+          // ── Linked Assets ─────────────────────────────────────
+          _LinkedAssetsSection(decisionId: decision.id),
+
+          // ── IC Vote ───────────────────────────────────────────
+          _IcVoteSection(decisionId: decision.id),
 
           // ── Evidence ──────────────────────────────────────────
           _EvidenceSection(decisionId: decision.id),
@@ -4310,6 +4319,458 @@ class _CoachNoteRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Linked Assets Section ──────────────────────────────────────────────────────
+
+class _LinkedAssetsSection extends ConsumerStatefulWidget {
+  const _LinkedAssetsSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  ConsumerState<_LinkedAssetsSection> createState() =>
+      _LinkedAssetsSectionState();
+}
+
+class _LinkedAssetsSectionState extends ConsumerState<_LinkedAssetsSection> {
+  Future<void> _unlink(String assetId) async {
+    try {
+      await ref.read(investmentRepositoryProvider).unlinkAsset(
+            decisionId: widget.decisionId,
+            assetId: assetId,
+          );
+      ref.invalidate(linkedAssetsProvider(widget.decisionId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to unlink asset: $e')),
+        );
+      }
+    }
+  }
+
+  void _showLinkSheet(List<Asset> linked) {
+    final allAsync = ref.read(workspaceAssetsProvider);
+    final all = allAsync.valueOrNull ?? [];
+    final linkedIds = linked.map((a) => a.id).toSet();
+    final available = all.where((a) => !linkedIds.contains(a.id)).toList();
+
+    if (available.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('All portfolio assets are already linked.')),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Link Asset',
+              style: Theme.of(ctx).textTheme.titleMedium,
+            ),
+          ),
+          ...available.map(
+            (a) => ListTile(
+              leading: const Icon(Icons.business_outlined),
+              title: Text(a.name),
+              subtitle: [a.sector, a.stage, a.geography]
+                          .whereType<String>()
+                          .isNotEmpty
+                  ? Text([a.sector, a.stage, a.geography]
+                      .whereType<String>()
+                      .join(' · '))
+                  : null,
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                try {
+                  await ref.read(investmentRepositoryProvider).linkAsset(
+                        decisionId: widget.decisionId,
+                        assetId: a.id,
+                      );
+                  ref.invalidate(linkedAssetsProvider(widget.decisionId));
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to link asset: $e')),
+                    );
+                  }
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final linkedAsync = ref.watch(linkedAssetsProvider(widget.decisionId));
+
+    return linkedAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (err, st) => const SizedBox.shrink(),
+      data: (linked) => _SectionCard(
+        children: [
+          Row(
+            children: [
+              Text(
+                'Linked Assets',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.add_link, size: 18),
+                tooltip: 'Link asset',
+                onPressed: () => _showLinkSheet(linked),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (linked.isEmpty)
+            Text(
+              'No assets linked.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.4),
+                  ),
+            )
+          else
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: linked
+                  .map(
+                    (a) => Chip(
+                      label: Text(a.name),
+                      deleteIcon: const Icon(Icons.close, size: 14),
+                      onDeleted: () => _unlink(a.id),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  )
+                  .toList(),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── IC Vote Section ────────────────────────────────────────────────────────────
+
+class _IcVoteSection extends ConsumerStatefulWidget {
+  const _IcVoteSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  ConsumerState<_IcVoteSection> createState() => _IcVoteSectionState();
+}
+
+class _IcVoteSectionState extends ConsumerState<_IcVoteSection> {
+  bool _isSaving = false;
+
+  void _showVoteSheet(IcVote? existing) {
+    String selectedVote = existing?.vote ?? 'Yes';
+    final notesCtrl = TextEditingController(text: existing?.dissentNotes ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSS) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            20,
+            16,
+            MediaQuery.of(ctx).viewInsets.bottom + 32,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                existing == null ? 'Cast IC Vote' : 'Update IC Vote',
+                style: Theme.of(ctx).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 16),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'Yes', label: Text('Yes')),
+                  ButtonSegment(value: 'No', label: Text('No')),
+                  ButtonSegment(value: 'Abstain', label: Text('Abstain')),
+                ],
+                selected: {selectedVote},
+                onSelectionChanged: (s) => setSS(() => selectedVote = s.first),
+              ),
+              if (selectedVote == 'No' || selectedVote == 'Abstain') ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesCtrl,
+                  minLines: 3,
+                  maxLines: 6,
+                  decoration: const InputDecoration(
+                    labelText: 'Dissent notes (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () async {
+                  Navigator.of(ctx).pop();
+                  setState(() => _isSaving = true);
+                  try {
+                    await ref
+                        .read(investmentRepositoryProvider)
+                        .castVote(
+                          decisionId: widget.decisionId,
+                          vote: selectedVote,
+                          dissentNotes: notesCtrl.text.trim().isEmpty
+                              ? null
+                              : notesCtrl.text.trim(),
+                        );
+                    ref.invalidate(
+                        icVotesForDecisionProvider(widget.decisionId));
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to save vote: $e')),
+                      );
+                    }
+                  } finally {
+                    if (mounted) setState(() => _isSaving = false);
+                  }
+                },
+                child: const Text('Save Vote'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final votesAsync = ref.watch(icVotesForDecisionProvider(widget.decisionId));
+    final uid = supabase.auth.currentUser?.id;
+
+    return votesAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (err, st) => const SizedBox.shrink(),
+      data: (votes) {
+        final yes = votes.where((v) => v.vote == 'Yes').length;
+        final no = votes.where((v) => v.vote == 'No').length;
+        final abstain = votes.where((v) => v.vote == 'Abstain').length;
+        final myVote =
+            uid != null ? votes.where((v) => v.voterUserId == uid).firstOrNull : null;
+
+        return _SectionCard(
+          children: [
+            Row(
+              children: [
+                Text(
+                  'IC Votes',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                      ),
+                ),
+                const Spacer(),
+                if (_isSaving)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  TextButton.icon(
+                    onPressed: () => _showVoteSheet(myVote),
+                    icon: Icon(
+                      myVote == null ? Icons.how_to_vote_outlined : Icons.edit_outlined,
+                      size: 16,
+                    ),
+                    label: Text(myVote == null ? 'Cast Vote' : 'Update Vote'),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Tally row
+            Row(
+              children: [
+                _VoteBadge(label: 'Yes', count: yes, color: AppColors.success),
+                const SizedBox(width: 8),
+                _VoteBadge(label: 'No', count: no, color: AppColors.destructive),
+                const SizedBox(width: 8),
+                _VoteBadge(label: 'Abstain', count: abstain, color: AppColors.textMuted),
+              ],
+            ),
+            if (votes.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ...votes.map((v) => _IcVoteRow(vote: v)),
+            ] else ...[
+              const SizedBox(height: 8),
+              Text(
+                'No votes cast yet.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.4),
+                    ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ── Vote badge ─────────────────────────────────────────────────────────────────
+
+class _VoteBadge extends StatelessWidget {
+  const _VoteBadge({
+    required this.label,
+    required this.count,
+    required this.color,
+  });
+
+  final String label;
+  final int count;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        '$label $count',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
+  }
+}
+
+// ── IC vote row ────────────────────────────────────────────────────────────────
+
+class _IcVoteRow extends StatelessWidget {
+  const _IcVoteRow({required this.vote});
+
+  final IcVote vote;
+
+  Color _colorForVote(String v) => switch (v) {
+        'Yes' => AppColors.success,
+        'No' => AppColors.destructive,
+        _ => AppColors.textMuted,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final shortId = vote.voterUserId.length > 8
+        ? vote.voterUserId.substring(0, 8)
+        : vote.voterUserId;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                shortId,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _colorForVote(vote.vote).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  vote.vote,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: _colorForVote(vote.vote),
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                DateFormat('d MMM yyyy').format(vote.votedAt.toLocal()),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.5),
+                    ),
+              ),
+            ],
+          ),
+          if (vote.dissentNotes != null && vote.dissentNotes!.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              vote.dissentNotes!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
+                  ),
+            ),
+          ],
+        ],
       ),
     );
   }

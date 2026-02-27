@@ -6,6 +6,7 @@ import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/core/providers/theme_provider.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
+import 'package:reflect_os/features/settings/providers/vertical_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -15,6 +16,9 @@ class SettingsScreen extends ConsumerWidget {
     final email = supabase.auth.currentUser?.email ?? '—';
     final isSigningOut = ref.watch(authActionProvider).isLoading;
     final themeMode = ref.watch(themeModeProvider);
+    final verticalAsync = ref.watch(currentVerticalProvider);
+    final isInvesting =
+        verticalAsync.valueOrNull?.verticalName == 'investing';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -158,6 +162,21 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ],
           ),
+
+          // ── Portfolio (investing vertical only) ───────────────
+          if (isInvesting)
+            _SectionCard(
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.business_outlined),
+                  title: const Text('Portfolio'),
+                  subtitle: const Text('Manage investment assets'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push(Routes.investmentAssets),
+                ),
+              ],
+            ),
 
           // ── Sign out ──────────────────────────────────────────────
           _SectionCard(
