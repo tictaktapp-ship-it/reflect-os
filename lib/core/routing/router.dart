@@ -29,6 +29,7 @@ import 'package:reflect_os/features/calendar/screens/calendar_settings_screen.da
 import 'package:reflect_os/features/import/screens/import_screen.dart';
 import 'package:reflect_os/features/coaching/screens/coach_dashboard_screen.dart';
 import 'package:reflect_os/features/settings/screens/vertical_settings_screen.dart';
+import 'package:reflect_os/features/settings/screens/workspace_branding_screen.dart';
 import 'package:reflect_os/features/sharing/screens/public_decision_view.dart';
 import 'package:reflect_os/features/sharing/screens/share_links_screen.dart';
 import 'package:reflect_os/features/templates/data/models/decision_template.dart';
@@ -195,6 +196,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                   path: 'vertical',
                   builder: (context, state) =>
                       const VerticalSettingsScreen(),
+                ),
+                GoRoute(
+                  path: 'branding',
+                  builder: (context, state) =>
+                      const WorkspaceBrandingScreen(),
                 ),
               ],
             ),

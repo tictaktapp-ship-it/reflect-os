@@ -52,6 +52,9 @@ abstract final class Routes {
   // Vertical
   static const String settingsVertical = '/settings/vertical';
 
+  // Branding
+  static const String settingsBranding = '/settings/branding';
+
   // Coaching
   static const String coachingDashboard = '/coaching/dashboard';
 

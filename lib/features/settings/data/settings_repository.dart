@@ -1,6 +1,7 @@
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
 import 'package:reflect_os/features/settings/data/models/notification_preferences.dart';
+import 'package:reflect_os/features/settings/data/models/workspace_branding.dart';
 
 class SettingsRepository {
   const SettingsRepository();
@@ -49,5 +50,34 @@ class SettingsRepository {
       },
       onConflict: 'user_id',
     );
+  }
+
+  Future<WorkspaceBranding?> getWorkspaceBranding(String workspaceId) async {
+    final row = await supabase
+        .from('workspace_branding')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .maybeSingle();
+    if (row == null) return null;
+    return WorkspaceBranding.fromJson(row);
+  }
+
+  Future<void> upsertWorkspaceBranding({
+    required String workspaceId,
+    String? companyName,
+    String? tagline,
+    String? primaryColorHex,
+    String? secondaryColorHex,
+    String? logoFileUrl,
+  }) async {
+    final data = <String, dynamic>{'workspace_id': workspaceId};
+    if (companyName != null) data['company_name'] = companyName;
+    if (tagline != null) data['company_tagline'] = tagline;
+    if (primaryColorHex != null) data['primary_color_hex'] = primaryColorHex;
+    if (secondaryColorHex != null) data['secondary_color_hex'] = secondaryColorHex;
+    if (logoFileUrl != null) data['logo_file_url'] = logoFileUrl;
+    await supabase
+        .from('workspace_branding')
+        .upsert(data, onConflict: 'workspace_id');
   }
 }
