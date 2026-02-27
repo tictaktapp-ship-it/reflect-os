@@ -14,9 +14,17 @@ import 'package:reflect_os/features/templates/data/models/decision_template.dart
 import 'package:reflect_os/features/templates/screens/templates_screen.dart';
 
 class CreateDecisionScreen extends ConsumerStatefulWidget {
-  const CreateDecisionScreen({super.key, this.initialTemplate});
+  const CreateDecisionScreen({
+    super.key,
+    this.initialTemplate,
+    this.meetingCapture,
+  });
 
   final DecisionTemplate? initialTemplate;
+
+  /// Pre-filled fields from meeting-note extraction.
+  /// Keys: title, description, stakes, category (all String?), fromMeeting (bool).
+  final Map<String, dynamic>? meetingCapture;
 
   @override
   ConsumerState<CreateDecisionScreen> createState() =>
@@ -40,6 +48,10 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
   DecisionTemplate? _appliedTemplate;
   final Set<String> _selectedSuggestedTags = {};
 
+  // Meeting capture banner state
+  bool _showMeetingBanner = false;
+  String? _meetingCategoryName;
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +60,15 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
       _appliedTemplate = t;
       if (t.defaultStakes != null) _stakes = t.defaultStakes;
       _requiresApproval = t.requiresApproval;
+    }
+    final mc = widget.meetingCapture;
+    if (mc != null && mc['fromMeeting'] == true) {
+      _titleController.text = mc['title'] as String? ?? '';
+      _descriptionController.text = mc['description'] as String? ?? '';
+      final stakes = mc['stakes'] as String?;
+      if (stakes != null) _stakes = stakes;
+      _meetingCategoryName = mc['category'] as String?;
+      _showMeetingBanner = true;
     }
   }
 
@@ -167,6 +188,19 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
     final suggestedTagNames = vertical?.suggestedTags ?? [];
     final suggestedCategoryNames = vertical?.suggestedCategories ?? [];
 
+    // Resolve meeting-extracted category name → ID once categories load.
+    if (_meetingCategoryName != null && _categoryId == null) {
+      ref.listen(categoriesProvider, (_, next) {
+        if (next.hasValue && _meetingCategoryName != null && _categoryId == null) {
+          final match = next.value
+              ?.where((c) =>
+                  c.name.toLowerCase() == _meetingCategoryName!.toLowerCase())
+              .firstOrNull;
+          if (match != null) setState(() => _categoryId = match.id);
+        }
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -202,6 +236,43 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // ── Meeting capture banner ──────────────────────────────
+            if (_showMeetingBanner)
+              Dismissible(
+                key: const ValueKey('meeting-banner'),
+                direction: DismissDirection.horizontal,
+                onDismissed: (_) =>
+                    setState(() => _showMeetingBanner = false),
+                child: Card(
+                  color: Colors.teal.withValues(alpha: 0.1),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(
+                        color: Colors.teal.withValues(alpha: 0.3)),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.auto_awesome_outlined,
+                      color: Colors.teal,
+                      size: 18,
+                    ),
+                    title: const Text(
+                      'Pre-filled from meeting notes',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.close, size: 16),
+                      onPressed: () =>
+                          setState(() => _showMeetingBanner = false),
+                    ),
+                    dense: true,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                ),
+              ),
+
             // ── Template ───────────────────────────────────────────
             _SectionCard(
               children: [

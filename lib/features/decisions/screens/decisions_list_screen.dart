@@ -317,10 +317,25 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/decisions/create'),
-        tooltip: 'New decision',
-        child: const Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.small(
+            heroTag: 'fab-meeting',
+            onPressed: () =>
+                context.push(Routes.decisionsMeetingCapture),
+            tooltip: 'Capture from Meeting',
+            child: const Icon(Icons.notes_outlined),
+          ),
+          const SizedBox(height: 10),
+          FloatingActionButton(
+            heroTag: 'fab-new',
+            onPressed: () => context.push(Routes.decisionsCreate),
+            tooltip: 'New decision',
+            child: const Icon(Icons.add),
+          ),
+        ],
       ),
       body: Column(
         children: [

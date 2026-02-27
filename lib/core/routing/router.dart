@@ -11,6 +11,7 @@ import 'package:reflect_os/features/auth/screens/register_screen.dart';
 import 'package:reflect_os/features/billing/screens/billing_subscribe_screen.dart';
 import 'package:reflect_os/features/decisions/screens/create_decision_screen.dart';
 import 'package:reflect_os/features/decisions/screens/edit_decision_screen.dart';
+import 'package:reflect_os/features/decisions/screens/meeting_capture_screen.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/outcomes/screens/create_outcome_screen.dart';
 import 'package:reflect_os/features/decisions/screens/decision_detail_screen.dart';
@@ -81,9 +82,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: Routes.decisionsCreate,
-        builder: (context, state) => CreateDecisionScreen(
-          initialTemplate: state.extra as DecisionTemplate?,
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is DecisionTemplate) {
+            return CreateDecisionScreen(initialTemplate: extra);
+          } else if (extra is Map<String, dynamic>) {
+            return CreateDecisionScreen(meetingCapture: extra);
+          }
+          return const CreateDecisionScreen();
+        },
+      ),
+      GoRoute(
+        path: Routes.decisionsMeetingCapture,
+        builder: (context, state) => const MeetingCaptureScreen(),
       ),
       GoRoute(
         path: Routes.decisionsEdit,
