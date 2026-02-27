@@ -308,6 +308,25 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
             tooltip: 'Delete',
             onPressed: onDeleteTapped,
           ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'More options',
+            onSelected: (value) {
+              if (value == 'share_links') {
+                context.push('/decisions/${decision.id}/share-links');
+              }
+            },
+            itemBuilder: (ctx) => [
+              const PopupMenuItem(
+                value: 'share_links',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.link_outlined),
+                  title: Text('Manage Share Links'),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(

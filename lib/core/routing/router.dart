@@ -25,6 +25,8 @@ import 'package:reflect_os/features/billing/screens/billing_screen.dart';
 import 'package:reflect_os/features/settings/screens/audit_log_screen.dart';
 import 'package:reflect_os/features/settings/screens/privacy_settings_screen.dart';
 import 'package:reflect_os/features/settings/screens/settings_screen.dart';
+import 'package:reflect_os/features/sharing/screens/public_decision_view.dart';
+import 'package:reflect_os/features/sharing/screens/share_links_screen.dart';
 import 'package:reflect_os/features/templates/data/models/decision_template.dart';
 import 'package:reflect_os/features/templates/screens/templates_screen.dart';
 import 'package:reflect_os/features/team/screens/team_screen.dart';
@@ -99,8 +101,21 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
+      // Share links management — authenticated, push above shell
+      GoRoute(
+        path: Routes.decisionsShareLinks,
+        builder: (context, state) => ShareLinksScreen(
+          decisionId: state.pathParameters['id']!,
+        ),
+      ),
+
       // Public share entry — outside the shell, no auth required
-      GoRoute(path: Routes.share, builder: (context, state) => const _Placeholder('Share')),
+      GoRoute(
+        path: Routes.share,
+        builder: (context, state) => PublicDecisionView(
+          token: state.pathParameters['token']!,
+        ),
+      ),
 
       // Billing gate — outside the shell
       GoRoute(path: Routes.billingSubscribe, builder: (context, state) => const BillingSubscribeScreen()),
@@ -177,12 +192,3 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-class _Placeholder extends StatelessWidget {
-  const _Placeholder(this.label);
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(body: Center(child: Text(label)));
-  }
-}

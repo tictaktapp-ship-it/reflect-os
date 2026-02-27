@@ -43,6 +43,9 @@ abstract final class Routes {
   static const String settingsAuditLog = '/settings/audit-log';
   static const String settingsTemplates = '/settings/templates';
 
+  // Share links management (authenticated)
+  static const String decisionsShareLinks = '/decisions/:id/share-links';
+
   // Share
   // Must work without authentication — this is the public share link entry point.
   static const String share = '/share/:token';
