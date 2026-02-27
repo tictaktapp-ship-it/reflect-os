@@ -26,6 +26,7 @@ import 'package:reflect_os/features/evidence/data/models/evidence_item.dart';
 import 'package:reflect_os/features/evidence/providers/evidence_provider.dart';
 import 'package:reflect_os/features/risk/data/models/risk_assessment.dart';
 import 'package:reflect_os/features/risk/providers/risk_provider.dart';
+import 'package:reflect_os/features/calendar/providers/calendar_provider.dart';
 import 'package:reflect_os/features/debrief/data/models/decision_debrief.dart';
 import 'package:reflect_os/features/debrief/providers/debrief_provider.dart';
 import 'package:web/web.dart' as web;
@@ -1467,7 +1468,7 @@ class _CheckpointsSection extends ConsumerWidget {
   }
 }
 
-class _CheckpointRow extends StatelessWidget {
+class _CheckpointRow extends ConsumerWidget {
   const _CheckpointRow({required this.checkpoint});
 
   final ReviewCheckpoint checkpoint;
@@ -1509,12 +1510,16 @@ class _CheckpointRow extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final displayDate =
         checkpoint.status == 'Snoozed' && checkpoint.snoozedUntil != null
             ? checkpoint.snoozedUntil!
             : checkpoint.dueAt;
     final color = _statusColor(checkpoint.status);
+    final eventLinks =
+        ref.watch(calendarEventLinksProvider(checkpoint.id));
+    final hasCalendarEvent =
+        eventLinks.valueOrNull?.isNotEmpty ?? false;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1528,11 +1533,29 @@ class _CheckpointRow extends StatelessWidget {
                   _formatType(checkpoint.checkpointType),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                Text(
-                  DateFormat('d MMM yyyy').format(displayDate),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                Row(
+                  children: [
+                    Text(
+                      DateFormat('d MMM yyyy').format(displayDate),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                    ),
+                    if (hasCalendarEvent) ...[
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.event_outlined,
+                        size: 13,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.45),
                       ),
+                    ],
+                  ],
                 ),
               ],
             ),

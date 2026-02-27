@@ -25,6 +25,7 @@ import 'package:reflect_os/features/billing/screens/billing_screen.dart';
 import 'package:reflect_os/features/settings/screens/audit_log_screen.dart';
 import 'package:reflect_os/features/settings/screens/privacy_settings_screen.dart';
 import 'package:reflect_os/features/settings/screens/settings_screen.dart';
+import 'package:reflect_os/features/calendar/screens/calendar_settings_screen.dart';
 import 'package:reflect_os/features/import/screens/import_screen.dart';
 import 'package:reflect_os/features/sharing/screens/public_decision_view.dart';
 import 'package:reflect_os/features/sharing/screens/share_links_screen.dart';
@@ -182,6 +183,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                 GoRoute(
                   path: 'templates',
                   builder: (context, state) => const TemplatesScreen(),
+                ),
+                GoRoute(
+                  path: 'calendar',
+                  builder: (context, state) =>
+                      const CalendarSettingsScreen(),
                 ),
               ],
             ),

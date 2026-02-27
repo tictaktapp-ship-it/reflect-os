@@ -46,6 +46,9 @@ abstract final class Routes {
   // Import
   static const String import = '/import';
 
+  // Calendar
+  static const String settingsCalendar = '/settings/calendar';
+
   // Share links management (authenticated)
   static const String decisionsShareLinks = '/decisions/:id/share-links';
 

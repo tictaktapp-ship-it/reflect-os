@@ -116,6 +116,20 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
 
+          // ── Calendar ──────────────────────────────────────────────
+          _SectionCard(
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.calendar_today_outlined),
+                title: const Text('Calendar'),
+                subtitle: const Text('Connect Google Calendar or Outlook'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push(Routes.settingsCalendar),
+              ),
+            ],
+          ),
+
           // ── Sign out ──────────────────────────────────────────────
           _SectionCard(
             children: [
