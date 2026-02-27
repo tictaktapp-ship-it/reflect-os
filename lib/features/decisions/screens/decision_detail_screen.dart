@@ -26,6 +26,8 @@ import 'package:reflect_os/features/evidence/data/models/evidence_item.dart';
 import 'package:reflect_os/features/evidence/providers/evidence_provider.dart';
 import 'package:reflect_os/features/risk/data/models/risk_assessment.dart';
 import 'package:reflect_os/features/risk/providers/risk_provider.dart';
+import 'package:reflect_os/features/debrief/data/models/decision_debrief.dart';
+import 'package:reflect_os/features/debrief/providers/debrief_provider.dart';
 import 'package:web/web.dart' as web;
 
 class DecisionDetailScreen extends ConsumerWidget {
@@ -515,6 +517,10 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
           // ── Risk Assessment ───────────────────────────────────
           _RiskAssessmentSection(decisionId: decision.id),
 
+          // ── Debrief (Closed / Archived only) ──────────────────
+          if (decision.state == 'Closed' || decision.state == 'Archived')
+            _DebriefSection(decisionId: decision.id),
+
           // ── Evidence ──────────────────────────────────────────
           _EvidenceSection(decisionId: decision.id),
 
@@ -728,6 +734,28 @@ class _StateTransitionBarState extends ConsumerState<_StateTransitionBar> {
     }
   }
 
+  Future<void> _closeWithDebriefPrompt(String id) async {
+    final repo = ref.read(decisionsRepositoryProvider);
+    await _run(() => repo.closeDecision(id));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Decision closed.'),
+        duration: const Duration(seconds: 8),
+        action: SnackBarAction(
+          label: 'Generate Debrief',
+          onPressed: () {
+            ref
+                .read(debriefRepositoryProvider)
+                .generateDebrief(id)
+                .then((_) => ref.invalidate(debriefProvider(id)))
+                .catchError((_) {});
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _showUnarchiveSheet() async {
     final newState = await showModalBottomSheet<String>(
       context: context,
@@ -803,7 +831,7 @@ class _StateTransitionBarState extends ConsumerState<_StateTransitionBar> {
       'Active' => <Widget>[
           OutlinedButton(
             onPressed:
-                _isLoading ? null : () => _run(() => repo.closeDecision(id)),
+                _isLoading ? null : () => _closeWithDebriefPrompt(id),
             style:
                 OutlinedButton.styleFrom(foregroundColor: AppColors.success),
             child: const Text('Close'),
@@ -3500,6 +3528,432 @@ class _RiskCard extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+// ── Debrief section ────────────────────────────────────────────────────────────
+
+enum _DebriefFeedback { up, down }
+
+class _DebriefSection extends ConsumerStatefulWidget {
+  const _DebriefSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  ConsumerState<_DebriefSection> createState() => _DebriefSectionState();
+}
+
+class _DebriefSectionState extends ConsumerState<_DebriefSection> {
+  bool _isGenerating = false;
+  _DebriefFeedback? _userFeedback;
+
+  static Color _verdictColor(String? verdict) => switch (verdict?.toLowerCase()) {
+        'good' => AppColors.success,
+        'mixed' => const Color(0xFFFFC107),
+        'poor' => AppColors.destructive,
+        _ => AppColors.textSecondary,
+      };
+
+  static Color _trajectoryColor(String? trajectory) =>
+      switch (trajectory?.toLowerCase()) {
+        'improving' => AppColors.success,
+        'stable' => AppColors.textSecondary,
+        'declining' => AppColors.destructive,
+        _ => AppColors.textSecondary,
+      };
+
+  Future<void> _generate() async {
+    setState(() => _isGenerating = true);
+    try {
+      await ref
+          .read(debriefRepositoryProvider)
+          .generateDebrief(widget.decisionId);
+      ref.invalidate(debriefProvider(widget.decisionId));
+    } catch (e) {
+      if (!mounted) return;
+      final isNetworkError = e.toString().contains('Failed to fetch') ||
+          e.toString().contains('XMLHttpRequest');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isNetworkError
+                ? 'Debrief unavailable in this network environment.'
+                : 'Failed to generate debrief: $e',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isGenerating = false);
+    }
+  }
+
+  Future<void> _saveFeedback(String debriefId, _DebriefFeedback feedback) async {
+    setState(() => _userFeedback = feedback);
+    try {
+      await ref
+          .read(debriefRepositoryProvider)
+          .saveFeedback(debriefId, feedback == _DebriefFeedback.up ? 'up' : 'down');
+    } catch (_) {
+      // Feedback save is best-effort; silently ignore errors.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final debriefAsync = ref.watch(debriefProvider(widget.decisionId));
+
+    return _SectionCard(
+      children: [
+        // ── Header ──────────────────────────────────────────────
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Decision Debrief',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
+              ),
+            ),
+            if (!_isGenerating)
+              IconButton(
+                icon: const Icon(Icons.auto_awesome_outlined, size: 20),
+                tooltip: 'Generate debrief',
+                onPressed: _generate,
+              ),
+          ],
+        ),
+
+        // ── Body ────────────────────────────────────────────────
+        if (_isGenerating)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Text('Generating debrief…'),
+              ],
+            ),
+          )
+        else
+          debriefAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: LinearProgressIndicator(),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Failed to load debrief.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: AppColors.destructive),
+              ),
+            ),
+            data: (debrief) => debrief == null
+                ? _DebriefEmptyState(onGenerate: _generate)
+                : _DebriefBody(
+                    debrief: debrief,
+                    userFeedback: _userFeedback,
+                    onFeedback: (f) => _saveFeedback(debrief.id, f),
+                    onRegenerate: _generate,
+                    verdictColor: _verdictColor,
+                    trajectoryColor: _trajectoryColor,
+                  ),
+          ),
+      ],
+    );
+  }
+}
+
+class _DebriefEmptyState extends StatelessWidget {
+  const _DebriefEmptyState({required this.onGenerate});
+  final VoidCallback onGenerate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'No debrief generated yet.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.auto_awesome_outlined, size: 16),
+            label: const Text('Generate Debrief'),
+            onPressed: onGenerate,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DebriefBody extends StatelessWidget {
+  const _DebriefBody({
+    required this.debrief,
+    required this.userFeedback,
+    required this.onFeedback,
+    required this.onRegenerate,
+    required this.verdictColor,
+    required this.trajectoryColor,
+  });
+
+  final DecisionDebrief debrief;
+  final _DebriefFeedback? userFeedback;
+  final ValueChanged<_DebriefFeedback> onFeedback;
+  final VoidCallback onRegenerate;
+  final Color Function(String?) verdictColor;
+  final Color Function(String?) trajectoryColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final verdict = debrief.verdict;
+    final vColor = verdictColor(verdict);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Verdict badge + trajectory ─────────────────────────
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: [
+            if (verdict != null)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: vColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  verdict,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: vColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+            if (debrief.qualityTrajectory != null)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: trajectoryColor(debrief.qualityTrajectory)
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  debrief.qualityTrajectory!,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: trajectoryColor(debrief.qualityTrajectory),
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ),
+            if (debrief.confidenceCalibration != null)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  debrief.confidenceCalibration!,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+              ),
+          ],
+        ),
+
+        // ── Summary ────────────────────────────────────────────
+        if (debrief.summary != null) ...[
+          const SizedBox(height: 10),
+          Text(
+            debrief.summary!,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+
+        // ── Key lessons ────────────────────────────────────────
+        if (debrief.keyLessons.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _DebriefList(
+            title: 'Key Lessons',
+            items: debrief.keyLessons,
+            icon: Icons.lightbulb_outline,
+            iconColor: const Color(0xFFFFC107),
+          ),
+        ],
+
+        // ── What worked ────────────────────────────────────────
+        if (debrief.whatWorked.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _DebriefList(
+            title: 'What Worked',
+            items: debrief.whatWorked,
+            icon: Icons.check_circle_outline,
+            iconColor: AppColors.success,
+          ),
+        ],
+
+        // ── What to improve ────────────────────────────────────
+        if (debrief.whatToImprove.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _DebriefList(
+            title: 'What to Improve',
+            items: debrief.whatToImprove,
+            icon: Icons.trending_up_outlined,
+            iconColor: AppColors.warning,
+          ),
+        ],
+
+        // ── Pattern flags ──────────────────────────────────────
+        if (debrief.patternFlags.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _DebriefList(
+            title: 'Pattern Flags',
+            items: debrief.patternFlags,
+            icon: Icons.flag_outlined,
+            iconColor: AppColors.destructive,
+          ),
+        ],
+
+        // ── Feedback + regenerate row ───────────────────────────
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Text(
+              'Helpful?',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: Icon(
+                Icons.thumb_up_outlined,
+                size: 18,
+                color: userFeedback == _DebriefFeedback.up
+                    ? AppColors.success
+                    : null,
+              ),
+              onPressed: () => onFeedback(_DebriefFeedback.up),
+            ),
+            IconButton(
+              icon: Icon(
+                Icons.thumb_down_outlined,
+                size: 18,
+                color: userFeedback == _DebriefFeedback.down
+                    ? AppColors.destructive
+                    : null,
+              ),
+              onPressed: () => onFeedback(_DebriefFeedback.down),
+            ),
+            const Spacer(),
+            TextButton.icon(
+              icon: const Icon(Icons.refresh, size: 14),
+              label: const Text('Regenerate'),
+              onPressed: onRegenerate,
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.textSecondary,
+                textStyle: Theme.of(context).textTheme.labelSmall,
+              ),
+            ),
+          ],
+        ),
+
+        // AI disclaimer
+        Text(
+          'Generated by AI · Always verify independently',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppColors.textMuted,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DebriefList extends StatelessWidget {
+  const _DebriefList({
+    required this.title,
+    required this.items,
+    required this.icon,
+    required this.iconColor,
+  });
+
+  final String title;
+  final List<String> items;
+  final IconData icon;
+  final Color iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 14, color: iconColor),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ...items.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 3),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '• ',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+                Expanded(
+                  child: Text(
+                    item,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
