@@ -1,5 +1,6 @@
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
+import 'package:reflect_os/features/settings/data/models/gdpr_request.dart';
 import 'package:reflect_os/features/settings/data/models/notification_preferences.dart';
 import 'package:reflect_os/features/settings/data/models/workspace_branding.dart';
 
@@ -60,6 +61,59 @@ class SettingsRepository {
         .maybeSingle();
     if (row == null) return null;
     return WorkspaceBranding.fromJson(row);
+  }
+
+  // ── GDPR ──────────────────────────────────────────────────────────────────
+
+  Future<List<GdprRequest>> getGdprRequests() async {
+    final rows = await supabase
+        .from('gdpr_requests')
+        .select()
+        .order('created_at', ascending: false);
+    return rows.map(GdprRequest.fromJson).toList();
+  }
+
+  Future<void> createDeletionRequest(String reason) async {
+    await supabase.rpc('create_gdpr_request', params: {
+      'p_request_type': 'deletion',
+      'p_reason': reason,
+    });
+  }
+
+  Future<void> createExportRequest() async {
+    await supabase.rpc('create_gdpr_request', params: {
+      'p_request_type': 'export',
+      'p_reason': null,
+    });
+  }
+
+  Future<void> cancelGdprRequest(String requestId) async {
+    await supabase.rpc('cancel_gdpr_request', params: {
+      'p_request_id': requestId,
+    });
+  }
+
+  // ── Recently deleted decisions ─────────────────────────────────────────────
+
+  /// Returns decisions soft-deleted within the last 30 days for the current user.
+  /// Queries the decisions table directly — RLS enforces user ownership.
+  Future<List<Map<String, dynamic>>> getRecentlyDeletedDecisions() async {
+    final cutoff = DateTime.now()
+        .subtract(const Duration(days: 30))
+        .toIso8601String();
+    final rows = await supabase
+        .from('decisions')
+        .select('id, title, deleted_at')
+        .not('deleted_at', 'is', null)
+        .gte('deleted_at', cutoff)
+        .order('deleted_at', ascending: false);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<void> restoreDecision(String id) async {
+    await supabase
+        .from('decisions')
+        .update({'deleted_at': null}).eq('id', id);
   }
 
   Future<void> upsertWorkspaceBranding({

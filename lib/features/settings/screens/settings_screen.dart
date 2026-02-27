@@ -145,6 +145,20 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
 
+          // ── Data & Privacy ───────────────────────────────────────
+          _SectionCard(
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.privacy_tip_outlined),
+                title: const Text('Data & Privacy'),
+                subtitle: const Text('GDPR requests, data export, delete account'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push(Routes.settingsDataPrivacy),
+              ),
+            ],
+          ),
+
           // ── Workspace Branding ────────────────────────────────────
           _SectionCard(
             children: [

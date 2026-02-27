@@ -37,6 +37,7 @@ abstract final class Routes {
   // Settings
   static const String settings = '/settings';
   static const String settingsPrivacy = '/settings/privacy';
+  static const String settingsDataPrivacy = '/settings/data-privacy';
 
   // Billing
   static const String billingSubscribe = '/billing/subscribe';
