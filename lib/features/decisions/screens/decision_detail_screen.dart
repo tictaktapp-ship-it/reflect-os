@@ -24,6 +24,8 @@ import 'package:reflect_os/features/outcomes/providers/outcomes_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/decision_relationship.dart';
 import 'package:reflect_os/features/evidence/data/models/evidence_item.dart';
 import 'package:reflect_os/features/evidence/providers/evidence_provider.dart';
+import 'package:reflect_os/features/risk/data/models/risk_assessment.dart';
+import 'package:reflect_os/features/risk/providers/risk_provider.dart';
 import 'package:web/web.dart' as web;
 
 class DecisionDetailScreen extends ConsumerWidget {
@@ -509,6 +511,9 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
 
           // ── Related Decisions ─────────────────────────────────
           _RelatedDecisionsSection(decisionId: decision.id),
+
+          // ── Risk Assessment ───────────────────────────────────
+          _RiskAssessmentSection(decisionId: decision.id),
 
           // ── Evidence ──────────────────────────────────────────
           _EvidenceSection(decisionId: decision.id),
@@ -3128,6 +3133,372 @@ class _RelationshipTile extends StatelessWidget {
             Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Risk Assessment section ────────────────────────────────────────────────────
+
+enum _RiskFeedback { up, down }
+
+class _RiskAssessmentSection extends ConsumerStatefulWidget {
+  const _RiskAssessmentSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  ConsumerState<_RiskAssessmentSection> createState() =>
+      _RiskAssessmentSectionState();
+}
+
+class _RiskAssessmentSectionState
+    extends ConsumerState<_RiskAssessmentSection> {
+  bool _isGenerating = false;
+  _RiskFeedback? _userFeedback;
+
+  static Color _riskColor(String? level) => switch (level?.toLowerCase()) {
+        'low' => AppColors.success,
+        'medium' => const Color(0xFFFFC107),
+        'high' => const Color(0xFFFF9800),
+        'critical' => AppColors.destructive,
+        _ => AppColors.textSecondary,
+      };
+
+  Future<void> _generate() async {
+    setState(() => _isGenerating = true);
+    try {
+      await ref
+          .read(riskRepositoryProvider)
+          .generateRiskAssessment(widget.decisionId);
+      ref.invalidate(riskAssessmentProvider(widget.decisionId));
+    } catch (e) {
+      if (!mounted) return;
+      final isNetworkError = e.toString().contains('Failed to fetch') ||
+          e.toString().contains('XMLHttpRequest');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isNetworkError
+                ? 'Risk assessment unavailable in this network environment.'
+                : 'Failed to generate risk assessment: $e',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isGenerating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final assessmentAsync =
+        ref.watch(riskAssessmentProvider(widget.decisionId));
+
+    return _SectionCard(
+      children: [
+        // ── Header ──────────────────────────────────────────────
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Risk Assessment',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
+              ),
+            ),
+            if (!_isGenerating)
+              IconButton(
+                icon: const Icon(Icons.auto_awesome_outlined, size: 20),
+                tooltip: 'Generate risk assessment',
+                onPressed: _generate,
+              ),
+          ],
+        ),
+
+        // ── Body ────────────────────────────────────────────────
+        if (_isGenerating)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Text('Analysing decision…'),
+              ],
+            ),
+          )
+        else
+          assessmentAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: LinearProgressIndicator(),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Failed to load assessment.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: AppColors.destructive),
+              ),
+            ),
+            data: (assessment) => assessment == null
+                ? _EmptyState(onGenerate: _generate)
+                : _AssessmentBody(
+                    assessment: assessment,
+                    userFeedback: _userFeedback,
+                    onFeedback: (f) => setState(() => _userFeedback = f),
+                    onRegenerate: _generate,
+                  ),
+          ),
+      ],
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.onGenerate});
+  final VoidCallback onGenerate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'No risk assessment yet.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.auto_awesome_outlined, size: 16),
+            label: const Text('Generate'),
+            onPressed: onGenerate,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AssessmentBody extends StatelessWidget {
+  const _AssessmentBody({
+    required this.assessment,
+    required this.userFeedback,
+    required this.onFeedback,
+    required this.onRegenerate,
+  });
+
+  final RiskAssessment assessment;
+  final _RiskFeedback? userFeedback;
+  final ValueChanged<_RiskFeedback> onFeedback;
+  final VoidCallback onRegenerate;
+
+  @override
+  Widget build(BuildContext context) {
+    final level = assessment.overallRiskLevel;
+    final color = _RiskAssessmentSectionState._riskColor(level);
+    final confidence = assessment.confidence;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Overall risk badge + confidence
+        Row(
+          children: [
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                level ?? '—',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+            if (confidence != null) ...[
+              const SizedBox(width: 8),
+              Text(
+                '${(confidence * 100).round()}% confidence',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+              ),
+            ],
+          ],
+        ),
+
+        // Summary
+        if (assessment.summary != null) ...[
+          const SizedBox(height: 10),
+          Text(
+            assessment.summary!,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+
+        // Individual risks
+        if (assessment.risks.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          ...assessment.risks.map((risk) => _RiskCard(risk: risk)),
+        ],
+
+        // Feedback + regenerate row
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Text(
+              'Helpful?',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: Icon(
+                Icons.thumb_up_outlined,
+                size: 18,
+                color: userFeedback == _RiskFeedback.up
+                    ? AppColors.success
+                    : null,
+              ),
+              onPressed: () => onFeedback(_RiskFeedback.up),
+            ),
+            IconButton(
+              icon: Icon(
+                Icons.thumb_down_outlined,
+                size: 18,
+                color: userFeedback == _RiskFeedback.down
+                    ? AppColors.destructive
+                    : null,
+              ),
+              onPressed: () => onFeedback(_RiskFeedback.down),
+            ),
+            const Spacer(),
+            TextButton.icon(
+              icon: const Icon(Icons.refresh, size: 14),
+              label: const Text('Regenerate'),
+              onPressed: onRegenerate,
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.textSecondary,
+                textStyle: Theme.of(context).textTheme.labelSmall,
+              ),
+            ),
+          ],
+        ),
+
+        // AI disclaimer
+        Text(
+          'Generated by AI · Always verify independently',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppColors.textMuted,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RiskCard extends StatelessWidget {
+  const _RiskCard({required this.risk});
+  final Map<String, dynamic> risk;
+
+  @override
+  Widget build(BuildContext context) {
+    final category = risk['category'] as String?;
+    final severity = risk['severity'] as String?;
+    final description = risk['description'] as String?;
+    final mitigation = risk['mitigation'] as String?;
+    final severityColor = _RiskAssessmentSectionState._riskColor(severity);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (category != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    category,
+                    style:
+                        Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                  ),
+                ),
+              if (category != null && severity != null)
+                const SizedBox(width: 6),
+              if (severity != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: severityColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    severity,
+                    style:
+                        Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: severityColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                  ),
+                ),
+            ],
+          ),
+          if (description != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              description,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+          if (mitigation != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Mitigation: $mitigation',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+            ),
+          ],
+        ],
       ),
     );
   }
