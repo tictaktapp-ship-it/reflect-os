@@ -223,8 +223,8 @@ return $default(_that.id,_that.title,_that.state,_that.stakes,_that.initialConfi
 /// @nodoc
 @JsonSerializable()
 
-class _Decision implements Decision {
-  const _Decision({required this.id, required this.title, required this.state, this.stakes, @JsonKey(name: 'initial_confidence') this.initialConfidence, @JsonKey(name: 'category_name') this.categoryName, @JsonKey(name: 'description_encrypted') this.descriptionEncrypted, @JsonKey(name: 'health_state') this.healthState, @JsonKey(name: 'decision_deadline') this.decisionDeadline, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') required this.updatedAt, @JsonKey(name: 'requires_approval') this.requiresApproval = false, @JsonKey(name: 'source_decision_id') this.sourceDecisionId, @JsonKey(name: 'shared_to_team_at') this.sharedToTeamAt, @JsonKey(name: 'shared_from_personal_at') this.sharedFromPersonalAt});
+class _Decision extends Decision {
+  const _Decision({required this.id, required this.title, required this.state, this.stakes, @JsonKey(name: 'initial_confidence') this.initialConfidence, @JsonKey(name: 'category_name') this.categoryName, @JsonKey(name: 'description_encrypted') this.descriptionEncrypted, @JsonKey(name: 'health_state') this.healthState, @JsonKey(name: 'decision_deadline') this.decisionDeadline, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') required this.updatedAt, @JsonKey(name: 'requires_approval') this.requiresApproval = false, @JsonKey(name: 'source_decision_id') this.sourceDecisionId, @JsonKey(name: 'shared_to_team_at') this.sharedToTeamAt, @JsonKey(name: 'shared_from_personal_at') this.sharedFromPersonalAt}): super._();
   factory _Decision.fromJson(Map<String, dynamic> json) => _$DecisionFromJson(json);
 
 @override final  String id;

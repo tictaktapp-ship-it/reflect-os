@@ -6,6 +6,8 @@ part 'decision.g.dart';
 
 @freezed
 abstract class Decision with _$Decision {
+  const Decision._();
+
   const factory Decision({
     required String id,
     required String title,
@@ -27,4 +29,7 @@ abstract class Decision with _$Decision {
 
   factory Decision.fromJson(Map<String, dynamic> json) =>
       _$DecisionFromJson(json);
+
+  bool get isActive => state == 'Active';
+  bool get isDraft => state == 'Draft';
 }

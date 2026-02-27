@@ -133,7 +133,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text("Don't have an account?"),
+                        const Flexible(
+                          child: Text("Don't have an account?"),
+                        ),
                         TextButton(
                           onPressed: () => context.push(Routes.register),
                           child: const Text('Register'),
