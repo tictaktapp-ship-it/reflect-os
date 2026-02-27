@@ -48,25 +48,18 @@ class _BillingSubscribeScreenState
     });
   }
 
-  String _baseUrl() {
-    final port = Uri.base.port;
-    final portStr = port != 0 ? ':$port' : '';
-    return 'http://localhost$portStr';
-  }
-
   Future<void> _subscribe(String priceId) async {
     final workspaceId = await ref.read(currentWorkspaceProvider.future);
     if (workspaceId == null) return;
 
     setState(() => _isCheckingOut = true);
     try {
-      final base = _baseUrl();
       final url =
           await ref.read(billingRepositoryProvider).createCheckoutSession(
                 priceId: priceId,
                 workspaceId: workspaceId,
-                successUrl: '$base/#/billing/subscribe?success=true',
-                cancelUrl: '$base/#/billing/subscribe',
+                successUrl: 'https://app.reflect-os.com/#/settings/billing?success=true',
+                cancelUrl: 'https://app.reflect-os.com/#/settings/billing',
               );
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } catch (e) {

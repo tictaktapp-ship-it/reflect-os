@@ -54,21 +54,14 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
     });
   }
 
-  String _baseUrl() {
-    final port = Uri.base.port;
-    final portStr = port != 0 ? ':$port' : '';
-    return 'http://localhost$portStr';
-  }
-
   Future<void> _subscribe(String priceId, String workspaceId) async {
     setState(() => _isCheckingOut = true);
     try {
-      final base = _baseUrl();
       final url = await ref.read(billingRepositoryProvider).createCheckoutSession(
             priceId: priceId,
             workspaceId: workspaceId,
-            successUrl: '$base/#/settings/billing?success=true',
-            cancelUrl: '$base/#/settings/billing',
+            successUrl: 'https://app.reflect-os.com/#/settings/billing?success=true',
+            cancelUrl: 'https://app.reflect-os.com/#/settings/billing',
           );
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } catch (e) {
@@ -93,10 +86,9 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
   Future<void> _manage(String workspaceId) async {
     setState(() => _isManaging = true);
     try {
-      final base = _baseUrl();
       final url = await ref.read(billingRepositoryProvider).manageSubscription(
             workspaceId: workspaceId,
-            returnUrl: '$base/#/settings/billing',
+            returnUrl: 'https://app.reflect-os.com/#/settings/billing',
           );
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } catch (e) {
