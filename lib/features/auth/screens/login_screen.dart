@@ -112,6 +112,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 40),
+                    // TODO: remove — debug only
+                    Text(
+                      'URL: ${const String.fromEnvironment('SUPABASE_URL').substring(0, 20)}',
+                      style: const TextStyle(color: Colors.red, fontSize: 10),
+                    ),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
