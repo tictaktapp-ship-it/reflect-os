@@ -21,4 +21,42 @@ class BillingRepository {
     if (row == null) return null;
     return Subscription.fromJson(row);
   }
+
+  /// Calls the create-checkout-session Edge Function and returns the
+  /// Stripe-hosted checkout URL.
+  Future<String> createCheckoutSession({
+    required String priceId,
+    required String workspaceId,
+    required String successUrl,
+    required String cancelUrl,
+  }) async {
+    final response = await supabase.functions.invoke(
+      'create-checkout-session',
+      body: {
+        'price_id': priceId,
+        'workspace_id': workspaceId,
+        'success_url': successUrl,
+        'cancel_url': cancelUrl,
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    return data['url'] as String;
+  }
+
+  /// Calls the manage-subscription Edge Function and returns the
+  /// Stripe Customer Portal URL.
+  Future<String> manageSubscription({
+    required String workspaceId,
+    required String returnUrl,
+  }) async {
+    final response = await supabase.functions.invoke(
+      'manage-subscription',
+      body: {
+        'workspace_id': workspaceId,
+        'return_url': returnUrl,
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    return data['url'] as String;
+  }
 }

@@ -3,24 +3,124 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/core/providers/current_workspace_provider.dart';
+import 'package:reflect_os/core/providers/subscription_status_provider.dart';
 import 'package:reflect_os/features/billing/data/models/subscription.dart';
 import 'package:reflect_os/features/billing/providers/billing_provider.dart';
+import 'package:web/web.dart' as web;
+
+// ── Price IDs (injected at build time) ────────────────────────────────────────
+
+const _individualMonthly =
+    String.fromEnvironment('STRIPE_INDIVIDUAL_MONTHLY_PRICE_ID');
+const _individualAnnual =
+    String.fromEnvironment('STRIPE_INDIVIDUAL_ANNUAL_PRICE_ID');
+const _teamMonthly =
+    String.fromEnvironment('STRIPE_TEAM_MONTHLY_PRICE_ID');
+const _teamAnnual =
+    String.fromEnvironment('STRIPE_TEAM_ANNUAL_PRICE_ID');
 
 final _dateFmt = DateFormat('d MMM yyyy');
 
-class BillingScreen extends ConsumerWidget {
+// ── BillingScreen ──────────────────────────────────────────────────────────────
+
+class BillingScreen extends ConsumerStatefulWidget {
   const BillingScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BillingScreen> createState() => _BillingScreenState();
+}
+
+class _BillingScreenState extends ConsumerState<BillingScreen> {
+  bool _annualBilling = false;
+  bool _isCheckingOut = false;
+  bool _isManaging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (Uri.base.queryParameters['success'] == 'true') {
+        ref.invalidate(subscriptionProvider);
+        ref.invalidate(subscriptionStatusProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Subscription activated! Welcome to Reflect OS.'),
+            ),
+          );
+        }
+      }
+    });
+  }
+
+  String _baseUrl() {
+    final port = Uri.base.port;
+    final portStr = port != 0 ? ':$port' : '';
+    return 'http://localhost$portStr';
+  }
+
+  Future<void> _subscribe(String priceId, String workspaceId) async {
+    setState(() => _isCheckingOut = true);
+    try {
+      final base = _baseUrl();
+      final url = await ref.read(billingRepositoryProvider).createCheckoutSession(
+            priceId: priceId,
+            workspaceId: workspaceId,
+            successUrl: '$base/#/settings/billing?success=true',
+            cancelUrl: '$base/#/settings/billing',
+          );
+      web.window.open(url, '_blank');
+    } catch (e) {
+      if (!mounted) return;
+      final isNetwork = e.toString().contains('Failed to fetch') ||
+          e.toString().contains('XMLHttpRequest') ||
+          e.toString().contains('NetworkError');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isNetwork
+                ? 'Stripe checkout unavailable in this network environment'
+                : 'Failed to start checkout: $e',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isCheckingOut = false);
+    }
+  }
+
+  Future<void> _manage(String workspaceId) async {
+    setState(() => _isManaging = true);
+    try {
+      final base = _baseUrl();
+      final url = await ref.read(billingRepositoryProvider).manageSubscription(
+            workspaceId: workspaceId,
+            returnUrl: '$base/#/settings/billing',
+          );
+      web.window.open(url, '_blank');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to open billing portal: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isManaging = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final subscriptionAsync = ref.watch(subscriptionProvider);
+    final workspaceId = ref.watch(currentWorkspaceProvider).valueOrNull;
 
     return Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
             SvgPicture.asset(
-              Theme.of(context).brightness == Brightness.dark
+              isDark
                   ? 'assets/images/reflect-icon-dark.svg'
                   : 'assets/images/reflect-icon-light.svg',
               height: 40,
@@ -39,29 +139,138 @@ class BillingScreen extends ConsumerWidget {
                 textAlign: TextAlign.center),
           ),
         ),
-        data: (sub) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _CurrentPlanCard(subscription: sub),
-            const SizedBox(height: 24),
-            _PlansSection(currentTier: sub?.tier),
-          ],
-        ),
+        data: (sub) {
+          final hasActiveSub = sub != null &&
+              (sub.status == 'active' || sub.status == 'trialing');
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              if (hasActiveSub) ...[
+                _ActivePlanCard(
+                  subscription: sub,
+                  isManaging: _isManaging,
+                  onManage: workspaceId != null
+                      ? () => _manage(workspaceId)
+                      : null,
+                ),
+              ] else ...[
+                // ── Monthly / Annual toggle ──────────────────────
+                Card(
+                  color: Theme.of(context).colorScheme.surface,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 4),
+                    child: Row(
+                      children: [
+                        const Text('Monthly'),
+                        const Spacer(),
+                        Switch(
+                          value: _annualBilling,
+                          onChanged: (v) =>
+                              setState(() => _annualBilling = v),
+                        ),
+                        const SizedBox(width: 4),
+                        const Text('Annual'),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Save ~17%',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ── Individual plan ──────────────────────────────
+                _PricingCard(
+                  name: 'Individual',
+                  price: _annualBilling ? '£490/yr' : '£49/mo',
+                  priceNote: _annualBilling
+                      ? '£40.83/mo billed annually'
+                      : 'Billed monthly',
+                  features: const [
+                    'Personal decisions',
+                    'AI risk assessment & debrief',
+                    'PDF export',
+                    'Share links',
+                  ],
+                  isLoading: _isCheckingOut,
+                  onSubscribe: workspaceId == null
+                      ? null
+                      : () => _subscribe(
+                            _annualBilling
+                                ? _individualAnnual
+                                : _individualMonthly,
+                            workspaceId,
+                          ),
+                ),
+                const SizedBox(height: 12),
+
+                // ── Team plan ────────────────────────────────────
+                _PricingCard(
+                  name: 'Team',
+                  price: _annualBilling ? '£1,490/yr' : '£149/mo',
+                  priceNote: _annualBilling
+                      ? '£124.17/mo billed annually — min 5 seats'
+                      : 'Billed monthly — min 5 seats',
+                  features: const [
+                    'Everything in Individual',
+                    'Team workspace',
+                    'Approval workflows',
+                    'Audit log',
+                    'Workspace branding',
+                  ],
+                  isHighlighted: true,
+                  isLoading: _isCheckingOut,
+                  onSubscribe: workspaceId == null
+                      ? null
+                      : () => _subscribe(
+                            _annualBilling ? _teamAnnual : _teamMonthly,
+                            workspaceId,
+                          ),
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-// ── Current Plan Card ─────────────────────────────────────────────────────────
+// ── Active Plan Card ───────────────────────────────────────────────────────────
 
-class _CurrentPlanCard extends StatelessWidget {
-  const _CurrentPlanCard({required this.subscription});
+class _ActivePlanCard extends StatelessWidget {
+  const _ActivePlanCard({
+    required this.subscription,
+    required this.isManaging,
+    this.onManage,
+  });
 
-  final Subscription? subscription;
+  final Subscription subscription;
+  final bool isManaging;
+  final VoidCallback? onManage;
 
   @override
   Widget build(BuildContext context) {
     final sub = subscription;
+    final periodLabel = sub.cancelAtPeriodEnd ? 'Cancels' : 'Renews';
 
     return Card(
       color: Theme.of(context).colorScheme.surface,
@@ -72,72 +281,72 @@ class _CurrentPlanCard extends StatelessWidget {
           children: [
             Text(
               'CURRENT PLAN',
-              style: Theme.of(context)
-                  .textTheme
-                  .labelMedium
-                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
+                  ),
             ),
             const SizedBox(height: 12),
-            if (sub == null)
-              Text('No active subscription',
-                  style: Theme.of(context).textTheme.bodyMedium)
-            else ...[
-              Row(
-                children: [
-                  _TierBadge(tier: sub.tierDisplayName),
-                  const SizedBox(width: 8),
-                  _StatusBadge(status: sub.status),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Renews ${_dateFmt.format(sub.currentPeriodEnd.toLocal())}',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
-              ),
-              if (sub.isCancelling) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color: AppColors.warning.withValues(alpha: 0.4)),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.warning_amber_outlined,
-                          size: 16, color: AppColors.warning),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Cancels on ${_dateFmt.format(sub.currentPeriodEnd.toLocal())} — your access continues until then.',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: AppColors.warning),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            Row(
+              children: [
+                _TierBadge(tier: sub.tierDisplayName),
+                const SizedBox(width: 8),
+                _StatusBadge(status: sub.status),
               ],
-              const SizedBox(height: 16),
-              Tooltip(
-                message: sub.stripeCustomerId == null
-                    ? 'Stripe not configured'
-                    : '',
-                child: FilledButton.icon(
-                  onPressed: sub.stripeCustomerId != null ? () {} : null,
-                  icon: const Icon(Icons.open_in_new, size: 16),
-                  label: const Text('Manage Billing'),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$periodLabel ${_dateFmt.format(sub.currentPeriodEnd.toLocal())}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
+                  ),
+            ),
+            if (sub.isCancelling) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: AppColors.warning.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.warning_amber_outlined,
+                        size: 16, color: AppColors.warning),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Cancels on ${_dateFmt.format(sub.currentPeriodEnd.toLocal())} — your access continues until then.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.warning,
+                            ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: isManaging ? null : onManage,
+              icon: isManaging
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.open_in_new, size: 16),
+              label: const Text('Manage Subscription'),
+            ),
           ],
         ),
       ),
@@ -145,88 +354,26 @@ class _CurrentPlanCard extends StatelessWidget {
   }
 }
 
-// ── Plans Section ─────────────────────────────────────────────────────────────
+// ── Pricing Card ───────────────────────────────────────────────────────────────
 
-class _PlansSection extends StatelessWidget {
-  const _PlansSection({required this.currentTier});
-
-  final String? currentTier;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              'PLANS',
-              style: Theme.of(context)
-                  .textTheme
-                  .labelMedium
-                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
-            ),
-            const Spacer(),
-            Text(
-              'Save 15% with annual billing',
-              style: Theme.of(context)
-                  .textTheme
-                  .labelSmall
-                  ?.copyWith(color: AppColors.accentHover),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _PlanCard(
-          tier: 'individual',
-          displayName: 'Individual',
-          monthlyPrice: '£49/mo',
-          annualPrice: '£490/yr',
-          description: 'For solo decision-makers.',
-          currentTier: currentTier,
-        ),
-        const SizedBox(height: 10),
-        _PlanCard(
-          tier: 'team',
-          displayName: 'Team',
-          monthlyPrice: '£149/mo',
-          annualPrice: '£1,490/yr',
-          description: 'For teams. Minimum 5 seats.',
-          currentTier: currentTier,
-        ),
-        const SizedBox(height: 10),
-        _PlanCard(
-          tier: 'enterprise',
-          displayName: 'Enterprise',
-          monthlyPrice: 'Custom pricing',
-          annualPrice: null,
-          description: 'Unlimited seats, SSO, dedicated support.',
-          currentTier: currentTier,
-        ),
-      ],
-    );
-  }
-}
-
-class _PlanCard extends StatelessWidget {
-  const _PlanCard({
-    required this.tier,
-    required this.displayName,
-    required this.monthlyPrice,
-    this.annualPrice,
-    required this.description,
-    required this.currentTier,
+class _PricingCard extends StatelessWidget {
+  const _PricingCard({
+    required this.name,
+    required this.price,
+    required this.priceNote,
+    required this.features,
+    required this.isLoading,
+    this.onSubscribe,
+    this.isHighlighted = false,
   });
 
-  final String tier;
-  final String displayName;
-  final String monthlyPrice;
-  final String? annualPrice;
-  final String description;
-  final String? currentTier;
-
-  bool get _isCurrent =>
-      currentTier?.toLowerCase() == tier.toLowerCase();
+  final String name;
+  final String price;
+  final String priceNote;
+  final List<String> features;
+  final bool isLoading;
+  final VoidCallback? onSubscribe;
+  final bool isHighlighted;
 
   @override
   Widget build(BuildContext context) {
@@ -234,24 +381,24 @@ class _PlanCard extends StatelessWidget {
       color: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: _isCurrent
+        side: isHighlighted
             ? const BorderSide(color: AppColors.accentPrimary, width: 2)
             : BorderSide.none,
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Text(
-                  displayName,
+                  name,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
-                if (_isCurrent) ...[
+                if (isHighlighted) ...[
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -261,7 +408,7 @@ class _PlanCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'Current',
+                      'Popular',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: AppColors.accentHover,
                             fontWeight: FontWeight.w600,
@@ -271,33 +418,52 @@ class _PlanCard extends StatelessWidget {
                 ],
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
-              annualPrice != null
-                  ? '$monthlyPrice  ·  $annualPrice'
-                  : monthlyPrice,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              price,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
             ),
-            const SizedBox(height: 4),
             Text(
-              description,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+              priceNote,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
+                  ),
             ),
-            if (!_isCurrent) ...[
-              const SizedBox(height: 12),
-              Tooltip(
-                message: 'Contact support to upgrade',
-                child: FilledButton.tonal(
-                  onPressed: null,
-                  child: const Text('Upgrade'),
+            const SizedBox(height: 14),
+            ...features.map(
+              (f) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle_outline,
+                        size: 16, color: AppColors.success),
+                    const SizedBox(width: 8),
+                    Text(f,
+                        style: Theme.of(context).textTheme.bodySmall),
+                  ],
                 ),
               ),
-            ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: isLoading ? null : onSubscribe,
+                child: isLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Subscribe'),
+              ),
+            ),
           ],
         ),
       ),
@@ -305,7 +471,7 @@ class _PlanCard extends StatelessWidget {
   }
 }
 
-// ── Badges ────────────────────────────────────────────────────────────────────
+// ── Badges ─────────────────────────────────────────────────────────────────────
 
 class _TierBadge extends StatelessWidget {
   const _TierBadge({required this.tier});
@@ -336,19 +502,27 @@ class _StatusBadge extends StatelessWidget {
 
   Color get _bg => switch (status.toLowerCase()) {
         'active' => AppColors.success.withValues(alpha: 0.2),
-        'cancelled' || 'canceled' => AppColors.destructive.withValues(alpha: 0.2),
+        'trialing' => Colors.blue.withValues(alpha: 0.2),
+        'past_due' => AppColors.warning.withValues(alpha: 0.2),
+        'canceled' || 'cancelled' || 'unpaid' =>
+          AppColors.destructive.withValues(alpha: 0.2),
         _ => AppColors.textMuted.withValues(alpha: 0.2),
       };
 
   Color get _fg => switch (status.toLowerCase()) {
         'active' => AppColors.success,
-        'cancelled' || 'canceled' => AppColors.destructive,
+        'trialing' => Colors.blue,
+        'past_due' => AppColors.warning,
+        'canceled' || 'cancelled' || 'unpaid' => AppColors.destructive,
         _ => AppColors.textSecondary,
       };
 
   String get _label => switch (status.toLowerCase()) {
         'active' => 'Active',
-        'cancelled' || 'canceled' => 'Cancelled',
+        'trialing' => 'Trialing',
+        'past_due' => 'Past Due',
+        'canceled' || 'cancelled' => 'Cancelled',
+        'unpaid' => 'Unpaid',
         _ => status,
       };
 
