@@ -49,6 +49,9 @@ abstract final class Routes {
   // Calendar
   static const String settingsCalendar = '/settings/calendar';
 
+  // Vertical
+  static const String settingsVertical = '/settings/vertical';
+
   // Share links management (authenticated)
   static const String decisionsShareLinks = '/decisions/:id/share-links';
 

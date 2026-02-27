@@ -27,6 +27,7 @@ import 'package:reflect_os/features/settings/screens/privacy_settings_screen.dar
 import 'package:reflect_os/features/settings/screens/settings_screen.dart';
 import 'package:reflect_os/features/calendar/screens/calendar_settings_screen.dart';
 import 'package:reflect_os/features/import/screens/import_screen.dart';
+import 'package:reflect_os/features/settings/screens/vertical_settings_screen.dart';
 import 'package:reflect_os/features/sharing/screens/public_decision_view.dart';
 import 'package:reflect_os/features/sharing/screens/share_links_screen.dart';
 import 'package:reflect_os/features/templates/data/models/decision_template.dart';
@@ -188,6 +189,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                   path: 'calendar',
                   builder: (context, state) =>
                       const CalendarSettingsScreen(),
+                ),
+                GoRoute(
+                  path: 'vertical',
+                  builder: (context, state) =>
+                      const VerticalSettingsScreen(),
                 ),
               ],
             ),

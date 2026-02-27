@@ -8,6 +8,8 @@ import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/providers/draft_persistence_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/create_decision_input.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+import 'package:reflect_os/features/settings/providers/vertical_provider.dart';
+import 'package:reflect_os/features/tags/providers/tags_provider.dart';
 import 'package:reflect_os/features/templates/data/models/decision_template.dart';
 import 'package:reflect_os/features/templates/screens/templates_screen.dart';
 
@@ -36,6 +38,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
   bool _isContinuous = false;
   bool _isSubmitting = false;
   DecisionTemplate? _appliedTemplate;
+  final Set<String> _selectedSuggestedTags = {};
 
   @override
   void initState() {
@@ -105,6 +108,21 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
           .read(decisionsRepositoryProvider)
           .createDecision(input);
 
+      // Apply suggested tags selected by the user.
+      if (_selectedSuggestedTags.isNotEmpty) {
+        final existingTags =
+            ref.read(workspaceTagsProvider).valueOrNull ?? [];
+        final tagsRepo = ref.read(tagsRepositoryProvider);
+        for (final tagName in _selectedSuggestedTags) {
+          var tag = existingTags
+              .where((t) =>
+                  t.name.toLowerCase() == tagName.toLowerCase())
+              .firstOrNull;
+          tag ??= await tagsRepo.createTag(workspaceId, tagName);
+          await tagsRepo.addTagToDecision(id, tag.id);
+        }
+      }
+
       // Clean up any locally persisted draft for this id.
       await ref.read(draftPersistenceServiceProvider).deleteDraft(id);
 
@@ -144,6 +162,10 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesProvider);
+    final verticalAsync = ref.watch(currentVerticalProvider);
+    final vertical = verticalAsync.valueOrNull;
+    final suggestedTagNames = vertical?.suggestedTags ?? [];
+    final suggestedCategoryNames = vertical?.suggestedCategories ?? [];
 
     return Scaffold(
       appBar: AppBar(
@@ -227,24 +249,39 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                     child: LinearProgressIndicator(),
                   ),
                   error: (e, st) => const SizedBox.shrink(),
-                  data: (categories) => DropdownButtonFormField<String>(
-                    initialValue: _categoryId,
-                    decoration: const InputDecoration(labelText: 'Category'),
-                    hint: const Text('Select a category'),
-                    items: [
-                      const DropdownMenuItem(
-                        value: null,
-                        child: Text('None'),
-                      ),
-                      ...categories.map(
-                        (c) => DropdownMenuItem(
-                          value: c.id,
-                          child: Text(c.name),
+                  data: (categories) {
+                    // Sort: vertical's suggested categories first, then rest
+                    // alphabetically.
+                    final sorted = [...categories]..sort((a, b) {
+                        final aIdx = suggestedCategoryNames.indexWhere(
+                            (s) => s.toLowerCase() == a.name.toLowerCase());
+                        final bIdx = suggestedCategoryNames.indexWhere(
+                            (s) => s.toLowerCase() == b.name.toLowerCase());
+                        if (aIdx != -1 && bIdx == -1) return -1;
+                        if (aIdx == -1 && bIdx != -1) return 1;
+                        return a.name.compareTo(b.name);
+                      });
+                    return DropdownButtonFormField<String>(
+                      initialValue: _categoryId,
+                      decoration:
+                          const InputDecoration(labelText: 'Category'),
+                      hint: const Text('Select a category'),
+                      items: [
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text('None'),
                         ),
-                      ),
-                    ],
-                    onChanged: (value) => setState(() => _categoryId = value),
-                  ),
+                        ...sorted.map(
+                          (c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.name),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) =>
+                          setState(() => _categoryId = value),
+                    );
+                  },
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
@@ -263,6 +300,53 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                 ),
               ],
             ),
+
+            // ── Suggested Tags (from vertical) ──────────────────────
+            if (suggestedTagNames.isNotEmpty)
+              _SectionCard(
+                children: [
+                  Text(
+                    'Suggested Tags',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: suggestedTagNames.map((tagName) {
+                      final selected =
+                          _selectedSuggestedTags.contains(tagName);
+                      return FilterChip(
+                        label: Text(tagName),
+                        selected: selected,
+                        selectedColor: Colors.teal.withValues(alpha: 0.15),
+                        checkmarkColor: Colors.teal,
+                        labelStyle: TextStyle(
+                          color:
+                              selected ? Colors.teal : AppColors.textSecondary,
+                        ),
+                        side: BorderSide(
+                          color: selected
+                              ? Colors.teal
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.2),
+                        ),
+                        onSelected: (on) => setState(() {
+                          if (on) {
+                            _selectedSuggestedTags.add(tagName);
+                          } else {
+                            _selectedSuggestedTags.remove(tagName);
+                          }
+                        }),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
 
             // ── Initial Confidence ──────────────────────────────────
             _SectionCard(

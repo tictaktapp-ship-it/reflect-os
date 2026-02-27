@@ -130,6 +130,21 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
 
+          // ── Workspace Vertical ────────────────────────────────────
+          _SectionCard(
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.tune_outlined),
+                title: const Text('Workspace Vertical'),
+                subtitle: const Text(
+                    'Customise tags, categories, and checkpoints'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push(Routes.settingsVertical),
+              ),
+            ],
+          ),
+
           // ── Sign out ──────────────────────────────────────────────
           _SectionCard(
             children: [
