@@ -27,6 +27,8 @@ import 'package:reflect_os/features/evidence/providers/evidence_provider.dart';
 import 'package:reflect_os/features/risk/data/models/risk_assessment.dart';
 import 'package:reflect_os/features/risk/providers/risk_provider.dart';
 import 'package:reflect_os/features/calendar/providers/calendar_provider.dart';
+import 'package:reflect_os/features/coaching/data/models/coach_note.dart';
+import 'package:reflect_os/features/coaching/providers/coaching_provider.dart';
 import 'package:reflect_os/features/debrief/data/models/decision_debrief.dart';
 import 'package:reflect_os/features/debrief/providers/debrief_provider.dart';
 import 'package:web/web.dart' as web;
@@ -521,6 +523,9 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
           // ── Debrief (Closed / Archived only) ──────────────────
           if (decision.state == 'Closed' || decision.state == 'Archived')
             _DebriefSection(decisionId: decision.id),
+
+          // ── Coach Notes ───────────────────────────────────────
+          _CoachNotesSection(decisionId: decision.id),
 
           // ── Evidence ──────────────────────────────────────────
           _EvidenceSection(decisionId: decision.id),
@@ -3977,6 +3982,335 @@ class _DebriefList extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Coach Notes section ────────────────────────────────────────────────────────
+
+class _CoachNotesSection extends ConsumerStatefulWidget {
+  const _CoachNotesSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  ConsumerState<_CoachNotesSection> createState() =>
+      _CoachNotesSectionState();
+}
+
+class _CoachNotesSectionState extends ConsumerState<_CoachNotesSection> {
+  bool _isDeleting = false;
+
+  Future<void> _deleteNote(String noteId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Note'),
+        content: const Text('Delete this coach note? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style:
+                TextButton.styleFrom(foregroundColor: AppColors.destructive),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _isDeleting = true);
+    try {
+      await ref.read(coachingRepositoryProvider).deleteNote(noteId);
+      ref.invalidate(coachNotesForDecisionProvider(widget.decisionId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete note: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDeleting = false);
+    }
+  }
+
+  void _showAddNoteSheet(List<String> clientUserIds) {
+    final noteController = TextEditingController();
+    String? selectedClientId =
+        clientUserIds.length == 1 ? clientUserIds.first : null;
+    bool isSaving = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (sheetCtx, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: SvgPicture.asset(
+                        Theme.of(sheetCtx).brightness == Brightness.dark
+                            ? 'assets/images/reflect-icon-dark.svg'
+                            : 'assets/images/reflect-icon-light.svg',
+                        height: 32,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Add Coach Note',
+                      style: Theme.of(sheetCtx).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 12),
+                    if (clientUserIds.length > 1) ...[
+                      DropdownButtonFormField<String>(
+                        decoration:
+                            const InputDecoration(labelText: 'Client'),
+                        initialValue: selectedClientId,
+                        items: clientUserIds
+                            .map((id) => DropdownMenuItem(
+                                  value: id,
+                                  child: Text(
+                                    id.length > 8
+                                        ? id.substring(0, 8)
+                                        : id,
+                                  ),
+                                ))
+                            .toList(),
+                        onChanged: (v) =>
+                            setSheetState(() => selectedClientId = v),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    TextField(
+                      controller: noteController,
+                      autofocus: true,
+                      maxLines: 5,
+                      minLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Note',
+                        hintText:
+                            'Observations, recommendations, patterns…',
+                        alignLabelWithHint: true,
+                      ),
+                      textCapitalization: TextCapitalization.sentences,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: (isSaving || selectedClientId == null)
+                          ? null
+                          : () async {
+                              final text = noteController.text.trim();
+                              if (text.isEmpty) return;
+                              setSheetState(() => isSaving = true);
+                              try {
+                                await ref
+                                    .read(coachingRepositoryProvider)
+                                    .addNote(
+                                      widget.decisionId,
+                                      selectedClientId!,
+                                      text,
+                                    );
+                                ref.invalidate(coachNotesForDecisionProvider(
+                                    widget.decisionId));
+                                if (ctx.mounted) Navigator.of(ctx).pop();
+                              } catch (e) {
+                                if (ctx.mounted) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    SnackBar(
+                                        content:
+                                            Text('Failed to add note: $e')),
+                                  );
+                                  Navigator.of(ctx).pop();
+                                }
+                              } finally {
+                                setSheetState(() => isSaving = false);
+                              }
+                            },
+                      child: isSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Save note'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clientsAsync = ref.watch(myClientsProvider);
+    final coachesAsync = ref.watch(myCoachesProvider);
+
+    final clients = clientsAsync.valueOrNull ?? [];
+    final coaches = coachesAsync.valueOrNull ?? [];
+
+    // Only show this section when the user is in an active coaching
+    // relationship (as a coach or as a client).
+    if (clientsAsync.isLoading || coachesAsync.isLoading) {
+      return const SizedBox.shrink();
+    }
+    if (clients.isEmpty && coaches.isEmpty) return const SizedBox.shrink();
+
+    final isCoach = clients.isNotEmpty;
+    final clientUserIds = clients.map((c) => c.clientUserId).toList();
+
+    final notesAsync =
+        ref.watch(coachNotesForDecisionProvider(widget.decisionId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Coach Notes',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                      ),
+                ),
+              ),
+              if (isCoach && !_isDeleting)
+                SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: IconButton(
+                    icon: const Icon(Icons.add, size: 18),
+                    padding: EdgeInsets.zero,
+                    tooltip: 'Add coach note',
+                    onPressed: () => _showAddNoteSheet(clientUserIds),
+                  ),
+                ),
+            ],
+          ),
+        ),
+
+        // Notes content
+        _SectionCard(
+          children: [
+            notesAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Text(
+                'Failed to load coach notes.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.4),
+                    ),
+              ),
+              data: (notes) {
+                if (notes.isEmpty) {
+                  return Text(
+                    'No coach notes yet.',
+                    style:
+                        Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.4),
+                            ),
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: notes
+                      .map((note) => _CoachNoteRow(
+                            note: note,
+                            isCoach: isCoach,
+                            onDelete: () => _deleteNote(note.id),
+                          ))
+                      .toList(),
+                );
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _CoachNoteRow extends StatelessWidget {
+  const _CoachNoteRow({
+    required this.note,
+    required this.isCoach,
+    required this.onDelete,
+  });
+
+  final CoachNote note;
+  final bool isCoach;
+  final VoidCallback onDelete;
+
+  String get _shortCoachId =>
+      note.coachUserId.length > 8
+          ? note.coachUserId.substring(0, 8)
+          : note.coachUserId;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onLongPress: isCoach ? onDelete : null,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              note.noteEncrypted,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'By $_shortCoachId · '
+              '${DateFormat('d MMM yyyy').format(note.createdAt.toLocal())}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
+                  ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

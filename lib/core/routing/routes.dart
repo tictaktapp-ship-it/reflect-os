@@ -52,6 +52,9 @@ abstract final class Routes {
   // Vertical
   static const String settingsVertical = '/settings/vertical';
 
+  // Coaching
+  static const String coachingDashboard = '/coaching/dashboard';
+
   // Share links management (authenticated)
   static const String decisionsShareLinks = '/decisions/:id/share-links';
 

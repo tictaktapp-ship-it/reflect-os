@@ -135,6 +135,11 @@ class _WideShell extends StatelessWidget {
                 selectedIcon: Icon(Icons.group),
                 label: Text('Team'),
               ),
+              NavigationRailDestination(
+                icon: Icon(Icons.psychology_outlined),
+                selectedIcon: Icon(Icons.psychology),
+                label: Text('Coach'),
+              ),
             ],
           ),
           const VerticalDivider(thickness: 1, width: 1),
@@ -204,6 +209,11 @@ class _NarrowShell extends StatelessWidget {
             icon: Icon(Icons.group_outlined),
             selectedIcon: Icon(Icons.group),
             label: 'Team',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.psychology_outlined),
+            selectedIcon: Icon(Icons.psychology),
+            label: 'Coach',
           ),
         ],
       ),

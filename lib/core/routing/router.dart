@@ -27,6 +27,7 @@ import 'package:reflect_os/features/settings/screens/privacy_settings_screen.dar
 import 'package:reflect_os/features/settings/screens/settings_screen.dart';
 import 'package:reflect_os/features/calendar/screens/calendar_settings_screen.dart';
 import 'package:reflect_os/features/import/screens/import_screen.dart';
+import 'package:reflect_os/features/coaching/screens/coach_dashboard_screen.dart';
 import 'package:reflect_os/features/settings/screens/vertical_settings_screen.dart';
 import 'package:reflect_os/features/sharing/screens/public_decision_view.dart';
 import 'package:reflect_os/features/sharing/screens/share_links_screen.dart';
@@ -203,6 +204,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(
               path: Routes.team,
               builder: (context, state) => const TeamScreen(),
+            ),
+          ]),
+          // 6 — Coaching
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.coachingDashboard,
+              builder: (context, state) => const CoachDashboardScreen(),
             ),
           ]),
         ],
