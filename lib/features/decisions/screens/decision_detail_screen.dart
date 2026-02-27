@@ -32,6 +32,8 @@ import 'package:reflect_os/features/coaching/providers/coaching_provider.dart';
 import 'package:reflect_os/features/investment/data/models/asset.dart';
 import 'package:reflect_os/features/investment/data/models/ic_vote.dart';
 import 'package:reflect_os/features/investment/providers/investment_provider.dart';
+import 'package:reflect_os/features/engineering/data/models/engineering_artifact_link.dart';
+import 'package:reflect_os/features/engineering/providers/engineering_provider.dart';
 import 'package:reflect_os/features/debrief/data/models/decision_debrief.dart';
 import 'package:reflect_os/features/debrief/providers/debrief_provider.dart';
 import 'package:web/web.dart' as web;
@@ -538,6 +540,9 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
 
           // ── Evidence ──────────────────────────────────────────
           _EvidenceSection(decisionId: decision.id),
+
+          // ── Engineering Artifacts ─────────────────────────────
+          _EngineeringArtifactsSection(decisionId: decision.id),
 
           // ── Stakeholders ──────────────────────────────────────
           _StakeholdersSection(decisionId: decision.id),
@@ -4771,6 +4776,315 @@ class _IcVoteRow extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+// ── Engineering Artifacts Section ─────────────────────────────────────────────
+
+const _kArtifactTypes = [
+  'RFC',
+  'ADR',
+  'PR',
+  'Ticket',
+  'Incident',
+  'Runbook',
+  'Other',
+];
+
+IconData _iconForArtifactType(String type) => switch (type) {
+      'RFC' => Icons.description_outlined,
+      'ADR' => Icons.architecture_outlined,
+      'PR' => Icons.merge_outlined,
+      'Ticket' => Icons.confirmation_number_outlined,
+      'Incident' => Icons.warning_amber_outlined,
+      'Runbook' => Icons.menu_book_outlined,
+      _ => Icons.link_outlined,
+    };
+
+class _EngineeringArtifactsSection extends ConsumerStatefulWidget {
+  const _EngineeringArtifactsSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  ConsumerState<_EngineeringArtifactsSection> createState() =>
+      _EngineeringArtifactsSectionState();
+}
+
+class _EngineeringArtifactsSectionState
+    extends ConsumerState<_EngineeringArtifactsSection> {
+  Future<void> _delete(String artifactId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove Artifact'),
+        content: const Text('Remove this engineering artifact link?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style:
+                TextButton.styleFrom(foregroundColor: AppColors.destructive),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref
+          .read(engineeringRepositoryProvider)
+          .deleteArtifact(artifactId);
+      ref.invalidate(engineeringArtifactsProvider(widget.decisionId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to remove artifact: $e')),
+        );
+      }
+    }
+  }
+
+  void _showAddSheet(String workspaceId) {
+    String selectedType = 'RFC';
+    final urlCtrl = TextEditingController();
+    final labelCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSS) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            20,
+            16,
+            MediaQuery.of(ctx).viewInsets.bottom + 32,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Add Engineering Artifact',
+                style: Theme.of(ctx).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                decoration:
+                    const InputDecoration(labelText: 'Artifact type'),
+                initialValue: selectedType,
+                items: _kArtifactTypes
+                    .map((t) => DropdownMenuItem(
+                          value: t,
+                          child: Row(
+                            children: [
+                              Icon(_iconForArtifactType(t), size: 18),
+                              const SizedBox(width: 8),
+                              Text(t),
+                            ],
+                          ),
+                        ))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) setSS(() => selectedType = v);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: urlCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'URL *',
+                  hintText: 'https://',
+                ),
+                keyboardType: TextInputType.url,
+                autocorrect: false,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: labelCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Label (optional)',
+                  hintText: 'e.g. RFC-042: Auth redesign',
+                ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () async {
+                  final url = urlCtrl.text.trim();
+                  if (url.isEmpty) return;
+                  Navigator.of(ctx).pop();
+                  try {
+                    await ref
+                        .read(engineeringRepositoryProvider)
+                        .addArtifact(
+                          decisionId: widget.decisionId,
+                          workspaceId: workspaceId,
+                          artifactType: selectedType,
+                          url: url,
+                          label: labelCtrl.text.trim().isEmpty
+                              ? null
+                              : labelCtrl.text.trim(),
+                        );
+                    ref.invalidate(
+                        engineeringArtifactsProvider(widget.decisionId));
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text('Failed to add artifact: $e')),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Add Artifact'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final artifactsAsync =
+        ref.watch(engineeringArtifactsProvider(widget.decisionId));
+    final workspaceId =
+        ref.watch(currentWorkspaceProvider).valueOrNull;
+
+    return artifactsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (err, st) => const SizedBox.shrink(),
+      data: (artifacts) => _SectionCard(
+        children: [
+          Row(
+            children: [
+              Text(
+                'Engineering Artifacts',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.add_link, size: 18),
+                tooltip: 'Add artifact',
+                onPressed: workspaceId == null
+                    ? null
+                    : () => _showAddSheet(workspaceId),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (artifacts.isEmpty)
+            Text(
+              'No engineering artifacts linked.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.4),
+                  ),
+            )
+          else
+            ...artifacts.map(
+              (a) => _ArtifactRow(
+                artifact: a,
+                onDelete: () => _delete(a.id),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Artifact row ───────────────────────────────────────────────────────────────
+
+class _ArtifactRow extends StatelessWidget {
+  const _ArtifactRow({required this.artifact, required this.onDelete});
+
+  final EngineeringArtifactLink artifact;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayText =
+        artifact.label ?? artifact.url;
+
+    return GestureDetector(
+      onLongPress: onDelete,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Row(
+          children: [
+            Icon(
+              _iconForArtifactType(artifact.artifactType),
+              size: 18,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                artifact.artifactType,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                displayText,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.open_in_new, size: 16),
+              tooltip: 'Open',
+              onPressed: () =>
+                  web.window.open(artifact.url, '_blank'),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
       ),
     );
   }
