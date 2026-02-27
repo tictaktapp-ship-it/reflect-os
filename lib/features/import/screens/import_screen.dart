@@ -1,9 +1,8 @@
-import 'dart:js_interop';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
@@ -11,7 +10,6 @@ import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/category.dart';
 import 'package:reflect_os/features/decisions/data/models/create_decision_input.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
-import 'package:web/web.dart' as web;
 
 // ── Column mapping targets ─────────────────────────────────────────────────────
 
@@ -68,37 +66,18 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
   // ── File picker ───────────────────────────────────────────────────────────
 
-  void _pickFile() {
-    final input =
-        web.document.createElement('input') as web.HTMLInputElement;
-    input.type = 'file';
-    input.accept = '.csv,text/csv';
-
-    void onLoad(web.ProgressEvent _) {
-      final result = input.files?.item(0);
-      if (result == null) return;
-    }
-
-    void onChange(web.Event _) {
-      final files = input.files;
-      if (files == null || files.length == 0) return;
-      final file = files.item(0)!;
-      final reader = web.FileReader();
-
-      void onLoaded(web.ProgressEvent _) {
-        final text = reader.result?.dartify() as String?;
-        if (text != null && mounted) {
-          _parseCSV(file.name, text);
-        }
-      }
-
-      reader.addEventListener('load', onLoaded.toJS);
-      reader.readAsText(file);
-    }
-
-    input.addEventListener('change', onChange.toJS);
-    onLoad; // suppress unused warning
-    input.click();
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.single;
+    final bytes = file.bytes;
+    if (bytes == null) return;
+    final text = String.fromCharCodes(bytes);
+    if (mounted) _parseCSV(file.name, text);
   }
 
   // ── CSV parsing ───────────────────────────────────────────────────────────

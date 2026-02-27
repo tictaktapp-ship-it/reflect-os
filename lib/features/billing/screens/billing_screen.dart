@@ -7,7 +7,7 @@ import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/providers/subscription_status_provider.dart';
 import 'package:reflect_os/features/billing/data/models/subscription.dart';
 import 'package:reflect_os/features/billing/providers/billing_provider.dart';
-import 'package:web/web.dart' as web;
+import 'package:url_launcher/url_launcher.dart';
 
 // ── Price IDs (injected at build time) ────────────────────────────────────────
 
@@ -70,7 +70,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
             successUrl: '$base/#/settings/billing?success=true',
             cancelUrl: '$base/#/settings/billing',
           );
-      web.window.open(url, '_blank');
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } catch (e) {
       if (!mounted) return;
       final isNetwork = e.toString().contains('Failed to fetch') ||
@@ -98,7 +98,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
             workspaceId: workspaceId,
             returnUrl: '$base/#/settings/billing',
           );
-      web.window.open(url, '_blank');
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

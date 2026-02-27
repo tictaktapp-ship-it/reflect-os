@@ -6,7 +6,7 @@ import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/providers/subscription_status_provider.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
 import 'package:reflect_os/features/billing/providers/billing_provider.dart';
-import 'package:web/web.dart' as web;
+import 'package:url_launcher/url_launcher.dart';
 
 const _individualMonthly =
     String.fromEnvironment('STRIPE_INDIVIDUAL_MONTHLY_PRICE_ID');
@@ -68,7 +68,7 @@ class _BillingSubscribeScreenState
                 successUrl: '$base/#/billing/subscribe?success=true',
                 cancelUrl: '$base/#/billing/subscribe',
               );
-      web.window.open(url, '_blank');
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } catch (e) {
       if (!mounted) return;
       final isNetwork = e.toString().contains('Failed to fetch') ||

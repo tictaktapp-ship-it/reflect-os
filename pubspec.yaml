@@ -45,6 +45,7 @@ dependencies:
   url_launcher: ^6.3.0
   web: ^1.1.1
   shared_preferences: ^2.5.4
+  file_picker: ^8.1.2
 
 dev_dependencies:
   flutter_test:

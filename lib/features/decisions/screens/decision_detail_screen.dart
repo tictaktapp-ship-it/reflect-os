@@ -36,7 +36,7 @@ import 'package:reflect_os/features/engineering/data/models/engineering_artifact
 import 'package:reflect_os/features/engineering/providers/engineering_provider.dart';
 import 'package:reflect_os/features/debrief/data/models/decision_debrief.dart';
 import 'package:reflect_os/features/debrief/providers/debrief_provider.dart';
-import 'package:web/web.dart' as web;
+import 'package:url_launcher/url_launcher.dart';
 
 class DecisionDetailScreen extends ConsumerWidget {
   const DecisionDetailScreen({required this.id, super.key});
@@ -116,7 +116,7 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
       );
       final downloadUrl = response.data?['download_url'] as String?;
       if (downloadUrl == null) throw Exception('No download_url in response');
-      web.window.open(downloadUrl, '_blank');
+      await launchUrl(Uri.parse(downloadUrl), mode: LaunchMode.externalApplication);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -2522,7 +2522,7 @@ class _EvidenceTile extends StatelessWidget {
       onTap: isLink && item.url != null
           ? () {
               // TODO: verify link opening works in production (may be blocked by corporate network in dev)
-              web.window.open(item.url!, '_blank');
+              launchUrl(Uri.parse(item.url!), mode: LaunchMode.externalApplication).ignore();
             }
           : null,
       onLongPress: onDelete,
@@ -5077,8 +5077,9 @@ class _ArtifactRow extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.open_in_new, size: 16),
               tooltip: 'Open',
-              onPressed: () =>
-                  web.window.open(artifact.url, '_blank'),
+              onPressed: () => launchUrl(
+                  Uri.parse(artifact.url),
+                  mode: LaunchMode.externalApplication).ignore(),
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),

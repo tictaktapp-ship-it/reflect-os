@@ -1,6 +1,4 @@
 import 'dart:convert';
-// ignore: avoid_web_libraries_in_flutter, deprecated_member_use
-import 'dart:html' as html;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
+import 'package:reflect_os/core/utils/csv_downloader.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 
@@ -100,14 +99,7 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
     final csv = _toCsv(decisions);
     // utf-8 BOM so Excel opens it correctly
     final bytes = [0xEF, 0xBB, 0xBF, ...utf8.encode(csv)];
-    final blob = html.Blob([bytes], 'text/csv');
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    html.AnchorElement(href: url)
-      ..setAttribute(
-          'download',
-          'decisions_${DateTime.now().millisecondsSinceEpoch}.csv')
-      ..click();
-    html.Url.revokeObjectUrl(url);
+    downloadCsv(bytes, 'decisions_${DateTime.now().millisecondsSinceEpoch}.csv');
 
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(

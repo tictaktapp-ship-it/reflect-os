@@ -1,12 +1,11 @@
 import 'dart:convert';
-// ignore: avoid_web_libraries_in_flutter, deprecated_member_use
-import 'dart:html' as html;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/core/utils/csv_downloader.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:reflect_os/features/settings/data/models/gdpr_request.dart';
 import 'package:reflect_os/features/settings/providers/settings_provider.dart';
@@ -57,14 +56,7 @@ class _DataPrivacyScreenState extends ConsumerState<DataPrivacyScreen> {
     }
 
     final bytes = [0xEF, 0xBB, 0xBF, ...utf8.encode(buf.toString())];
-    final blob = html.Blob([bytes], 'text/csv');
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    html.AnchorElement(href: url)
-      ..setAttribute(
-          'download',
-          'decisions_${DateTime.now().millisecondsSinceEpoch}.csv')
-      ..click();
-    html.Url.revokeObjectUrl(url);
+    downloadCsv(bytes, 'decisions_${DateTime.now().millisecondsSinceEpoch}.csv');
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
