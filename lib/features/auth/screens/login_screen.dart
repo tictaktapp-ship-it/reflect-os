@@ -5,9 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
 
-// TODO: remove — debug only
-const _kDebugSupabaseUrl = String.fromEnvironment('SUPABASE_URL');
-
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -30,63 +27,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    try {
-      await ref.read(authActionProvider.notifier).signIn(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-          );
-      if (!mounted) return;
-      final asyncVal = ref.read(authActionProvider);
-      if (asyncVal.hasError) {
-        final err = asyncVal.error!;
-        final st = asyncVal.stackTrace;
-        _showErrorDialog(err, st);
-      }
-    } catch (err, st) {
-      if (!mounted) return;
-      _showErrorDialog(err, st);
+    await ref.read(authActionProvider.notifier).signIn(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+    if (!mounted) return;
+    final error = ref.read(authActionProvider).error;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
     }
-  }
-
-  void _showErrorDialog(Object err, StackTrace? st) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Sign-in error'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Type: ${err.runtimeType}',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text('Message: $err'),
-              const SizedBox(height: 12),
-              const Text('Stack trace:',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(
-                st?.toString() ?? '(no stack trace)',
-                style: const TextStyle(fontSize: 10, fontFamily: 'monospace'),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isLoading =
-        ref.watch(authActionProvider).isLoading;
+    final isLoading = ref.watch(authActionProvider).isLoading;
 
     return Scaffold(
       body: SafeArea(
@@ -112,11 +68,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    // TODO: remove — debug only
-                    Text(
-                      'URL: ${const String.fromEnvironment('SUPABASE_URL').substring(0, 20)}',
-                      style: const TextStyle(color: Colors.red, fontSize: 10),
-                    ),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -191,13 +142,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ],
                     ),
                     const SizedBox(height: 48),
-                    // TODO: remove — debug only
-                    Text(
-                      'Supabase: $_kDebugSupabaseUrl',
-                      style: const TextStyle(fontSize: 10, color: Colors.grey),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
                   ],
                 ),
               ),
