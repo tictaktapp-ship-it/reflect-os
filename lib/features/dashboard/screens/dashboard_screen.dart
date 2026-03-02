@@ -415,7 +415,7 @@ class _QualityDial extends StatelessWidget {
                           children: [
                             Text(
                               hasData
-                                  ? q.toStringAsFixed(1)
+                                  ? '${(q * 10).round()}%'
                                   : '—',
                               style: Theme.of(context)
                                   .textTheme
@@ -426,7 +426,7 @@ class _QualityDial extends StatelessWidget {
                                   ),
                             ),
                             Text(
-                              '/ 10',
+                              'Quality Score',
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
