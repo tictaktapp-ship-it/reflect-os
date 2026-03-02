@@ -88,6 +88,7 @@ class _DecisionDetail extends ConsumerStatefulWidget {
 
 class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
   bool _isGenerating = false;
+  bool _outcomesExpanded = false;
 
   String _formatDate(DateTime dt) =>
       DateFormat('d MMM yyyy').format(dt.toLocal());
@@ -354,28 +355,28 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
           _StateTransitionBar(decision: decision),
 
           // ── State & health ────────────────────────────────────────
-          _SectionCard(
-            children: [
-              Row(
-                children: [
-                  _StateBadge(state: decision.state),
-                  if (decision.healthState != null) ...[
-                    const SizedBox(width: 8),
-                    _HealthBadge(healthState: decision.healthState!),
-                  ],
-                  if (decision.sharedToTeamAt != null) ...[
-                    const SizedBox(width: 8),
-                    Chip(
-                      avatar: const Icon(Icons.share_outlined, size: 14),
-                      label: const Text('Shared to team'),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ],
+          _CollapsibleSection(
+            title: 'State & Health',
+            initiallyExpanded: true,
+            child: Row(
+              children: [
+                _StateBadge(state: decision.state),
+                if (decision.healthState != null) ...[
+                  const SizedBox(width: 8),
+                  _HealthBadge(healthState: decision.healthState!),
                 ],
-              ),
-            ],
+                if (decision.sharedToTeamAt != null) ...[
+                  const SizedBox(width: 8),
+                  Chip(
+                    avatar: const Icon(Icons.share_outlined, size: 14),
+                    label: const Text('Shared to team'),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ],
+            ),
           ),
 
           // ── Approvals (requires_approval decisions only) ──────────
@@ -384,130 +385,154 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
 
           // ── Shared from (forked decisions only) ───────────────────
           if (decision.sourceDecisionId != null)
-            _SectionCard(
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.call_received_outlined,
-                      size: 16,
-                      color: AppColors.textSecondary,
+            _CollapsibleSection(
+              title: 'Shared From',
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.call_received_outlined,
+                    size: 16,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Shared from another workspace'
+                      '${decision.sharedFromPersonalAt != null ? ' on ${_formatDate(decision.sharedFromPersonalAt!)}' : ''}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Shared from another workspace'
-                        '${decision.sharedFromPersonalAt != null ? ' on ${_formatDate(decision.sharedFromPersonalAt!)}' : ''}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
 
           // ── Overview ──────────────────────────────────────────────
-          _SectionCard(
-            children: [
-              if (decision.stakes != null)
-                _DetailRow(label: 'Stakes', value: decision.stakes!),
-              if (decision.categoryName != null)
-                _DetailRow(label: 'Category', value: decision.categoryName!),
-              if (decision.initialConfidence != null)
-                _DetailRow(
-                  label: 'Initial confidence',
-                  value: '${decision.initialConfidence} / 10',
-                ),
-            ],
+          _CollapsibleSection(
+            title: 'Overview',
+            initiallyExpanded: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (decision.stakes != null)
+                  _DetailRow(label: 'Stakes', value: decision.stakes!),
+                if (decision.categoryName != null)
+                  _DetailRow(label: 'Category', value: decision.categoryName!),
+                if (decision.initialConfidence != null)
+                  _DetailRow(
+                    label: 'Initial confidence',
+                    value: '${decision.initialConfidence} / 10',
+                  ),
+              ],
+            ),
           ),
 
           // ── Description ───────────────────────────────────────────
           if (decision.descriptionEncrypted != null)
-            _SectionCard(
-              children: [
-                _DetailRow(
-                  label: 'Description',
-                  value: decision.descriptionEncrypted!,
-                  valueMaxLines: null,
-                ),
-              ],
+            _CollapsibleSection(
+              title: 'Description',
+              child: _DetailRow(
+                label: 'Description',
+                value: decision.descriptionEncrypted!,
+                valueMaxLines: null,
+              ),
             ),
 
           // ── Dates ─────────────────────────────────────────────────
-          _SectionCard(
-            children: [
-              if (decision.decisionDeadline != null)
+          _CollapsibleSection(
+            title: 'Dates',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (decision.decisionDeadline != null)
+                  _DetailRow(
+                    label: 'Deadline',
+                    value: _formatDate(decision.decisionDeadline!),
+                  ),
                 _DetailRow(
-                  label: 'Deadline',
-                  value: _formatDate(decision.decisionDeadline!),
+                  label: 'Created',
+                  value: _formatDate(decision.createdAt),
                 ),
-              _DetailRow(
-                label: 'Created',
-                value: _formatDate(decision.createdAt),
-              ),
-              _DetailRow(
-                label: 'Updated',
-                value: _formatDate(decision.updatedAt),
-              ),
-            ],
+                _DetailRow(
+                  label: 'Updated',
+                  value: _formatDate(decision.updatedAt),
+                ),
+              ],
+            ),
           ),
 
           // ── Outcomes ──────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.only(left: 4, top: 8, bottom: 8),
-            child: Text(
-              'Outcomes',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          InkWell(
+            onTap: () => setState(() => _outcomesExpanded = !_outcomesExpanded),
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Outcomes',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                    ),
+                  ),
+                  Icon(
+                    _outcomesExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    size: 20,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
+                ],
+              ),
             ),
           ),
-          ...outcomesAsync.when(
-            loading: () => [
-              _SectionCard(
-                children: const [
-                  Center(child: CircularProgressIndicator()),
-                ],
-              ),
-            ],
-            error: (e, _) => [
-              _SectionCard(
-                children: [
-                  Text(
-                    'Failed to load outcomes.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+          if (_outcomesExpanded)
+            ...outcomesAsync.when(
+              loading: () => [
+                _SectionCard(
+                  children: const [
+                    Center(child: CircularProgressIndicator()),
+                  ],
+                ),
+              ],
+              error: (e, _) => [
+                _SectionCard(
+                  children: [
+                    Text(
+                      'Failed to load outcomes.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                          ),
+                    ),
+                  ],
+                ),
+              ],
+              data: (outcomes) {
+                if (outcomes.isEmpty) {
+                  return [
+                    _SectionCard(
+                      children: [
+                        Text(
+                          'No outcomes recorded yet.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                              ),
                         ),
-                  ),
-                ],
-              ),
-            ],
-            data: (outcomes) {
-              if (outcomes.isEmpty) {
-                return [
-                  _SectionCard(
-                    children: [
-                      Text(
-                        'No outcomes recorded yet.',
-                        style:
-                            Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                                ),
-                      ),
-                    ],
-                  ),
-                ];
-              }
-              return outcomes
-                  .map((o) => _OutcomeCard(
-                        outcome: o,
-                        formatDate: _formatDate,
-                      ))
-                  .toList();
-            },
-          ),
+                      ],
+                    ),
+                  ];
+                }
+                return outcomes
+                    .map((o) => _OutcomeCard(
+                          outcome: o,
+                          formatDate: _formatDate,
+                        ))
+                    .toList();
+              },
+            ),
 
           // ── Initiatives ───────────────────────────────────────
           _InitiativesSection(decisionId: decision.id),
@@ -676,6 +701,84 @@ class _SectionCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: nonEmpty,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Collapsible section wrapper ───────────────────────────────────────────────
+
+class _CollapsibleSection extends StatefulWidget {
+  const _CollapsibleSection({
+    required this.title,
+    required this.child,
+    this.initiallyExpanded = false,
+    this.trailing,
+  });
+
+  final String title;
+  final Widget child;
+  final bool initiallyExpanded;
+  final Widget? trailing;
+
+  @override
+  State<_CollapsibleSection> createState() => _CollapsibleSectionState();
+}
+
+class _CollapsibleSectionState extends State<_CollapsibleSection> {
+  late bool _expanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = widget.initiallyExpanded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Theme.of(context).colorScheme.surface,
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _expanded = !_expanded),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.title,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
+                    if (widget.trailing != null) widget.trailing!,
+                    const SizedBox(width: 4),
+                    Icon(
+                      _expanded
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_expanded) ...[
+              const SizedBox(height: 12),
+              widget.child,
+            ],
+          ],
         ),
       ),
     );
@@ -1110,83 +1213,57 @@ class _InitiativesSectionState extends ConsumerState<_InitiativesSection> {
     final initiativesAsync =
         ref.watch(initiativesForDecisionProvider(widget.decisionId));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section header
-        Padding(
-          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Initiatives',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                ),
+    return _CollapsibleSection(
+      title: 'Initiatives',
+      trailing: SizedBox(
+        width: 32,
+        height: 32,
+        child: _isLoading
+            ? const Padding(
+                padding: EdgeInsets.all(8),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : IconButton(
+                icon: const Icon(Icons.add, size: 18),
+                padding: EdgeInsets.zero,
+                tooltip: 'Link initiative',
+                onPressed: _showAddSheet,
               ),
-              SizedBox(
-                width: 32,
-                height: 32,
-                child: _isLoading
-                    ? const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : IconButton(
-                        icon: const Icon(Icons.add, size: 18),
-                        padding: EdgeInsets.zero,
-                        tooltip: 'Link initiative',
-                        onPressed: _showAddSheet,
-                      ),
-              ),
-            ],
-          ),
+      ),
+      child: initiativesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Text(
+          'Failed to load initiatives.',
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
         ),
-
-        // Content
-        _SectionCard(
-          children: [
-            initiativesAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text(
-                'Failed to load initiatives.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-              ),
-              data: (initiatives) {
-                if (initiatives.isEmpty) {
-                  return Text(
-                    'No initiatives linked.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-                  );
-                }
-                return Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: initiatives
-                      .map(
-                        (i) => Chip(
-                          label: Text(i.name),
-                          deleteIcon: const Icon(Icons.close, size: 16),
-                          onDeleted:
-                              _isLoading ? null : () => _unlink(i.id),
-                        ),
-                      )
-                      .toList(),
-                );
-              },
-            ),
-          ],
-        ),
-      ],
+        data: (initiatives) {
+          if (initiatives.isEmpty) {
+            return Text(
+              'No initiatives linked.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+            );
+          }
+          return Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: initiatives
+                .map(
+                  (i) => Chip(
+                    label: Text(i.name),
+                    deleteIcon: const Icon(Icons.close, size: 16),
+                    onDeleted: _isLoading ? null : () => _unlink(i.id),
+                  ),
+                )
+                .toList(),
+          );
+        },
+      ),
     );
   }
 }
@@ -1343,84 +1420,59 @@ class _TagsSectionState extends ConsumerState<_TagsSection> {
   Widget build(BuildContext context) {
     final tagsAsync = ref.watch(decisionTagsProvider(widget.decisionId));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section header
-        Padding(
-          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Tags',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                ),
+    return _CollapsibleSection(
+      title: 'Tags',
+      trailing: SizedBox(
+        width: 32,
+        height: 32,
+        child: _isLoading
+            ? const Padding(
+                padding: EdgeInsets.all(8),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : IconButton(
+                icon: const Icon(Icons.add, size: 18),
+                padding: EdgeInsets.zero,
+                tooltip: 'Add tag',
+                onPressed: tagsAsync.valueOrNull != null
+                    ? () => _showAddSheet(tagsAsync.valueOrNull!)
+                    : null,
               ),
-              SizedBox(
-                width: 32,
-                height: 32,
-                child: _isLoading
-                    ? const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : IconButton(
-                        icon: const Icon(Icons.add, size: 18),
-                        padding: EdgeInsets.zero,
-                        tooltip: 'Add tag',
-                        onPressed: tagsAsync.valueOrNull != null
-                            ? () => _showAddSheet(tagsAsync.valueOrNull!)
-                            : null,
-                      ),
-              ),
-            ],
-          ),
+      ),
+      child: tagsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Text(
+          'Failed to load tags.',
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
         ),
-
-        // Content
-        _SectionCard(
-          children: [
-            tagsAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text(
-                'Failed to load tags.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-              ),
-              data: (tags) {
-                if (tags.isEmpty) {
-                  return Text(
-                    'No tags.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-                  );
-                }
-                return Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: tags
-                      .map(
-                        (t) => Chip(
-                          label: Text(t.name),
-                          deleteIcon: const Icon(Icons.close, size: 16),
-                          onDeleted: _isLoading ? null : () => _remove(t.id),
-                        ),
-                      )
-                      .toList(),
-                );
-              },
-            ),
-          ],
-        ),
-      ],
+        data: (tags) {
+          if (tags.isEmpty) {
+            return Text(
+              'No tags.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+            );
+          }
+          return Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: tags
+                .map(
+                  (t) => Chip(
+                    label: Text(t.name),
+                    deleteIcon: const Icon(Icons.close, size: 16),
+                    onDeleted: _isLoading ? null : () => _remove(t.id),
+                  ),
+                )
+                .toList(),
+          );
+        },
+      ),
     );
   }
 }
@@ -1436,53 +1488,37 @@ class _CheckpointsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final checkpointsAsync = ref.watch(checkpointsProvider(decisionId));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
-          child: Text(
-            'Review Checkpoints',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-          ),
+    return _CollapsibleSection(
+      title: 'Review Checkpoints',
+      child: checkpointsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Text(
+          'Failed to load checkpoints.',
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
         ),
-        _SectionCard(
-          children: [
-            checkpointsAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text(
-                'Failed to load checkpoints.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-              ),
-              data: (checkpoints) {
-                if (checkpoints.isEmpty) {
-                  return Text(
-                    'No checkpoints scheduled.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-                  );
-                }
-                return Column(
-                  children: [
-                    for (int i = 0; i < checkpoints.length; i++) ...[
-                      if (i > 0) const Divider(height: 1),
-                      _CheckpointRow(checkpoint: checkpoints[i]),
-                    ],
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ],
+        data: (checkpoints) {
+          if (checkpoints.isEmpty) {
+            return Text(
+              'No checkpoints scheduled.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+            );
+          }
+          return Column(
+            children: [
+              for (int i = 0; i < checkpoints.length; i++) ...[
+                if (i > 0) const Divider(height: 1),
+                _CheckpointRow(checkpoint: checkpoints[i]),
+              ],
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -1612,54 +1648,38 @@ class _ActivitySection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final eventsAsync = ref.watch(auditEventsProvider(decisionId));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
-          child: Text(
-            'Activity',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+    return _CollapsibleSection(
+      title: 'Activity',
+      child: eventsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, _) => Text(
+          'No activity recorded.',
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+        ),
+        data: (events) {
+          if (events.isEmpty) {
+            return Text(
+              'No activity recorded.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+            );
+          }
+          return Column(
+            children: [
+              for (int i = 0; i < events.length; i++)
+                _ActivityEventRow(
+                  event: events[i],
+                  isLast: i == events.length - 1,
                 ),
-          ),
-        ),
-        _SectionCard(
-          children: [
-            eventsAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (_, _) => Text(
-                'No activity recorded.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-              ),
-              data: (events) {
-                if (events.isEmpty) {
-                  return Text(
-                    'No activity recorded.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-                  );
-                }
-                return Column(
-                  children: [
-                    for (int i = 0; i < events.length; i++)
-                      _ActivityEventRow(
-                        event: events[i],
-                        isLast: i == events.length - 1,
-                      ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ],
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -1817,69 +1837,49 @@ class _CommentsSectionState extends ConsumerState<_CommentsSection> {
     final threadAsync =
         ref.watch(commentThreadProvider(widget.decisionId));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
-          child: Text(
-            'Comments',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-          ),
+    return _CollapsibleSection(
+      title: 'Comments',
+      child: threadAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, _) => Text(
+          'Comments available once decision is activated.',
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
         ),
-        threadAsync.when(
-          loading: () => const _SectionCard(
-            children: [Center(child: CircularProgressIndicator())],
-          ),
-          error: (_, _) => _SectionCard(
-            children: [
-              Text(
-                'Comments available once decision is activated.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-              ),
-            ],
-          ),
-          data: (thread) {
-            if (thread == null) {
-              return _SectionCard(
-                children: [
-                  Text(
-                    'Comments available once decision is activated.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-                  ),
-                ],
-              );
-            }
-            return _CommentsThreadView(
-              thread: thread,
-              onSend: _send,
-              controller: _controller,
-              isSending: _isSending,
+        data: (thread) {
+          if (thread == null) {
+            return Text(
+              'Comments available once decision is activated.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
             );
-          },
-        ),
-      ],
+          }
+          return _CommentsThreadBody(
+            thread: thread,
+            onSend: _send,
+            controller: _controller,
+            isSending: _isSending,
+          );
+        },
+      ),
     );
   }
 }
 
-class _CommentsThreadView extends ConsumerWidget {
-  const _CommentsThreadView({
+// Body-only variant used inside _CollapsibleSection (no outer Card).
+class _CommentsThreadBody extends ConsumerWidget {
+  const _CommentsThreadBody({
     required this.thread,
     required this.onSend,
     required this.controller,
     required this.isSending,
   });
 
-  final dynamic thread; // CommentThread
+  final dynamic thread;
   final Future<void> Function(String threadId) onSend;
   final TextEditingController controller;
   final bool isSending;
@@ -1888,7 +1888,8 @@ class _CommentsThreadView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final commentsAsync = ref.watch(commentsProvider(thread.id as String));
 
-    return _SectionCard(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         commentsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -1911,9 +1912,7 @@ class _CommentsThreadView extends ConsumerWidget {
             }
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: comments
-                  .map((c) => _CommentRow(comment: c))
-                  .toList(),
+              children: comments.map((c) => _CommentRow(comment: c)).toList(),
             );
           },
         ),
@@ -1926,11 +1925,8 @@ class _CommentsThreadView extends ConsumerWidget {
                 controller: controller,
                 minLines: 1,
                 maxLines: 4,
-                decoration: const InputDecoration(
-                  hintText: 'Add a comment…',
-                ),
-                onSubmitted:
-                    isSending ? null : (_) => onSend(thread.id as String),
+                decoration: const InputDecoration(hintText: 'Add a comment…'),
+                onSubmitted: isSending ? null : (_) => onSend(thread.id as String),
               ),
             ),
             const SizedBox(width: 8),
@@ -2077,95 +2073,70 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
     final stakeholdersAsync =
         ref.watch(stakeholdersProvider(widget.decisionId));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Stakeholders',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
+    return _CollapsibleSection(
+      title: 'Stakeholders',
+      trailing: SizedBox(
+        width: 32,
+        height: 32,
+        child: _isLoading
+            ? const Padding(
+                padding: EdgeInsets.all(8),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : IconButton(
+                icon: const Icon(Icons.add, size: 18),
+                padding: EdgeInsets.zero,
+                tooltip: 'Add stakeholder',
+                onPressed: _isLoading || stakeholdersAsync.isLoading
+                    ? null
+                    : () => _showAddSheet(stakeholdersAsync.valueOrNull ?? []),
+              ),
+      ),
+      child: stakeholdersAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, _) => Text(
+          'No stakeholders added.',
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+        ),
+        data: (stakeholders) {
+          if (stakeholders.isEmpty) {
+            return Text(
+              'No stakeholders added.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+            );
+          }
+          return Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: stakeholders.map((s) {
+              final color = _roleColor(s.stakeholderRole);
+              final shortId = s.userId.length >= 8
+                  ? s.userId.substring(0, 8)
+                  : s.userId;
+              return Chip(
+                backgroundColor: color.withValues(alpha: 0.12),
+                label: Text(
+                  '${s.stakeholderRole} · $shortId',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-              SizedBox(
-                width: 32,
-                height: 32,
-                child: _isLoading
-                    ? const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : IconButton(
-                        icon: const Icon(Icons.add, size: 18),
-                        padding: EdgeInsets.zero,
-                        tooltip: 'Add stakeholder',
-                        onPressed: _isLoading || stakeholdersAsync.isLoading
-                            ? null
-                            : () => _showAddSheet(
-                                  stakeholdersAsync.valueOrNull ?? [],
-                                ),
-                      ),
-              ),
-            ],
-          ),
-        ),
-        _SectionCard(
-          children: [
-            stakeholdersAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (_, _) => Text(
-                'No stakeholders added.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-              ),
-              data: (stakeholders) {
-                if (stakeholders.isEmpty) {
-                  return Text(
-                    'No stakeholders added.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-                  );
-                }
-                return Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: stakeholders.map((s) {
-                    final color = _roleColor(s.stakeholderRole);
-                    final shortId = s.userId.length >= 8
-                        ? s.userId.substring(0, 8)
-                        : s.userId;
-                    return Chip(
-                      backgroundColor: color.withValues(alpha: 0.12),
-                      label: Text(
-                        '${s.stakeholderRole} · $shortId',
-                        style: TextStyle(
-                          color: color,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'monospace',
-                          fontSize: 12,
-                        ),
-                      ),
-                      deleteIcon: Icon(Icons.close, size: 14, color: color),
-                      onDeleted:
-                          _isLoading ? null : () => _remove(s.userId),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ],
-        ),
-      ],
+                deleteIcon: Icon(Icons.close, size: 14, color: color),
+                onDeleted: _isLoading ? null : () => _remove(s.userId),
+              );
+            }).toList(),
+          );
+        },
+      ),
     );
   }
 }
@@ -2412,78 +2383,50 @@ class _EvidenceSectionState extends ConsumerState<_EvidenceSection> {
   Widget build(BuildContext context) {
     final evidenceAsync = ref.watch(evidenceProvider(widget.decisionId));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
-          child: Row(
-            children: [
-              Text(
-                'Evidence',
-                style: Theme.of(context)
-                    .textTheme
-                    .labelMedium
-                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
-              ),
-              const Spacer(),
-              if (_isLoading)
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else
-                IconButton(
-                  icon: const Icon(Icons.add, size: 20),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  tooltip: 'Add evidence',
-                  onPressed: _showAddSheet,
-                ),
-            ],
-          ),
+    return _CollapsibleSection(
+      title: 'Evidence',
+      trailing: _isLoading
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : IconButton(
+              icon: const Icon(Icons.add, size: 20),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              tooltip: 'Add evidence',
+              onPressed: _showAddSheet,
+            ),
+      child: evidenceAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, _) => Text(
+          'Failed to load evidence.',
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
         ),
-        evidenceAsync.when(
-          loading: () => const _SectionCard(
-            children: [Center(child: CircularProgressIndicator())],
-          ),
-          error: (_, _) => _SectionCard(
-            children: [
-              Text(
-                'Failed to load evidence.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-              ),
-            ],
-          ),
-          data: (items) {
-            if (items.isEmpty) {
-              return _SectionCard(
-                children: [
-                  Text(
-                    'No evidence attached.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-                  ),
-                ],
-              );
-            }
-            return _SectionCard(
-              children: items
-                  .map((item) => _EvidenceTile(
-                        item: item,
-                        onDelete: () => _confirmDelete(context, item.id),
-                      ))
-                  .toList(),
+        data: (items) {
+          if (items.isEmpty) {
+            return Text(
+              'No evidence attached.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
             );
-          },
-        ),
-      ],
+          }
+          return Column(
+            children: items
+                .map((item) => _EvidenceTile(
+                      item: item,
+                      onDelete: () => _confirmDelete(context, item.id),
+                    ))
+                .toList(),
+          );
+        },
+      ),
     );
   }
 }
@@ -2738,82 +2681,54 @@ class _RelatedDecisionsSectionState
     final allDecisions = ref.watch(decisionsProvider).valueOrNull ?? [];
     final decisionMap = {for (final d in allDecisions) d.id: d};
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
-          child: Row(
-            children: [
-              Text(
-                'Related Decisions',
-                style: Theme.of(context)
-                    .textTheme
-                    .labelMedium
-                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
-              ),
-              const Spacer(),
-              if (_isSaving)
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  tooltip: 'Add related decision',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => _showAddSheet(allDecisions),
-                ),
-            ],
-          ),
+    return _CollapsibleSection(
+      title: 'Related Decisions',
+      trailing: _isSaving
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: 'Add related decision',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => _showAddSheet(allDecisions),
+            ),
+      child: relsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Text(
+          'Failed to load relationships.',
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
         ),
-        relsAsync.when(
-          loading: () => const _SectionCard(
-            children: [Center(child: CircularProgressIndicator())],
-          ),
-          error: (e, _) => _SectionCard(
-            children: [
-              Text(
-                'Failed to load relationships.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-              ),
-            ],
-          ),
-          data: (rels) {
-            if (rels.isEmpty) {
-              return _SectionCard(
-                children: [
-                  Text(
-                    'No related decisions.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-                  ),
-                ],
-              );
-            }
-            return _SectionCard(
-              children: [
-                for (int i = 0; i < rels.length; i++) ...[
-                  if (i > 0) const Divider(height: 1),
-                  _RelationshipTile(
-                    relationship: rels[i],
-                    currentDecisionId: widget.decisionId,
-                    decisionMap: decisionMap,
-                    onLongPress: () => _confirmRemove(context, rels[i]),
-                  ),
-                ],
-              ],
+        data: (rels) {
+          if (rels.isEmpty) {
+            return Text(
+              'No related decisions.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
             );
-          },
-        ),
-      ],
+          }
+          return Column(
+            children: [
+              for (int i = 0; i < rels.length; i++) ...[
+                if (i > 0) const Divider(height: 1),
+                _RelationshipTile(
+                  relationship: rels[i],
+                  currentDecisionId: widget.decisionId,
+                  decisionMap: decisionMap,
+                  onLongPress: () => _confirmRemove(context, rels[i]),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -2964,91 +2879,58 @@ class _ApprovalsSectionState extends ConsumerState<_ApprovalsSection> {
     final approvalsAsync = ref.watch(approvalRecordsProvider(widget.decisionId));
     final currentUserId = supabase.auth.currentUser?.id;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
-          child: Row(
+    return _CollapsibleSection(
+      title: 'Approvals',
+      trailing: SizedBox(
+        width: 32,
+        height: 32,
+        child: _isLoading
+            ? const Padding(
+                padding: EdgeInsets.all(8),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : IconButton(
+                icon: const Icon(Icons.add, size: 18),
+                padding: EdgeInsets.zero,
+                tooltip: 'Request approval',
+                onPressed: approvalsAsync.isLoading
+                    ? null
+                    : () => _showRequestSheet(approvalsAsync.valueOrNull ?? []),
+              ),
+      ),
+      child: approvalsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Text(
+          'Failed to load approvals.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
+        ),
+        data: (approvals) {
+          if (approvals.isEmpty) {
+            return Text(
+              'No approvals requested.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                  ),
+            );
+          }
+          return Column(
             children: [
-              Expanded(
-                child: Text(
-                  'Approvals',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
-                      ),
+              for (int i = 0; i < approvals.length; i++) ...[
+                if (i > 0) const Divider(height: 1),
+                _ApprovalRecordRow(
+                  record: approvals[i],
+                  isCurrentUser: approvals[i].approverUserId == currentUserId,
+                  isLoading: _isLoading,
+                  onApprove: () => _approve(approvals[i].id),
+                  onReject: () => _reject(approvals[i].id),
                 ),
-              ),
-              SizedBox(
-                width: 32,
-                height: 32,
-                child: _isLoading
-                    ? const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : IconButton(
-                        icon: const Icon(Icons.add, size: 18),
-                        padding: EdgeInsets.zero,
-                        tooltip: 'Request approval',
-                        onPressed: approvalsAsync.isLoading
-                            ? null
-                            : () => _showRequestSheet(
-                                approvalsAsync.valueOrNull ?? []),
-                      ),
-              ),
+              ],
             ],
-          ),
-        ),
-        _SectionCard(
-          children: [
-            approvalsAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text(
-                'Failed to load approvals.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.4),
-                    ),
-              ),
-              data: (approvals) {
-                if (approvals.isEmpty) {
-                  return Text(
-                    'No approvals requested.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.4),
-                        ),
-                  );
-                }
-                return Column(
-                  children: [
-                    for (int i = 0; i < approvals.length; i++) ...[
-                      if (i > 0) const Divider(height: 1),
-                      _ApprovalRecordRow(
-                        record: approvals[i],
-                        isCurrentUser:
-                            approvals[i].approverUserId == currentUserId,
-                        isLoading: _isLoading,
-                        onApprove: () => _approve(approvals[i].id),
-                        onReject: () => _reject(approvals[i].id),
-                      ),
-                    ],
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ],
+          );
+        },
+      ),
     );
   }
 }
@@ -3265,73 +3147,54 @@ class _RiskAssessmentSectionState
     final assessmentAsync =
         ref.watch(riskAssessmentProvider(widget.decisionId));
 
-    return _SectionCard(
-      children: [
-        // ── Header ──────────────────────────────────────────────
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Risk Assessment',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                    ),
-              ),
+    return _CollapsibleSection(
+      title: 'Risk Assessment',
+      trailing: _isGenerating
+          ? null
+          : IconButton(
+              icon: const Icon(Icons.auto_awesome_outlined, size: 20),
+              tooltip: 'Generate risk assessment',
+              onPressed: _generate,
             ),
-            if (!_isGenerating)
-              IconButton(
-                icon: const Icon(Icons.auto_awesome_outlined, size: 20),
-                tooltip: 'Generate risk assessment',
-                onPressed: _generate,
-              ),
-          ],
-        ),
-
-        // ── Body ────────────────────────────────────────────────
-        if (_isGenerating)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                SizedBox(width: 12),
-                Text('Analysing decision…'),
-              ],
-            ),
-          )
-        else
-          assessmentAsync.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: LinearProgressIndicator(),
-            ),
-            error: (e, _) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Failed to load assessment.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: AppColors.destructive),
-              ),
-            ),
-            data: (assessment) => assessment == null
-                ? _EmptyState(onGenerate: _generate)
-                : _AssessmentBody(
-                    assessment: assessment,
-                    userFeedback: _userFeedback,
-                    onFeedback: (f) => setState(() => _userFeedback = f),
-                    onRegenerate: _generate,
+      child: _isGenerating
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-          ),
-      ],
+                  SizedBox(width: 12),
+                  Text('Analysing decision…'),
+                ],
+              ),
+            )
+          : assessmentAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: LinearProgressIndicator(),
+              ),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Failed to load assessment.',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: AppColors.destructive),
+                ),
+              ),
+              data: (assessment) => assessment == null
+                  ? _EmptyState(onGenerate: _generate)
+                  : _AssessmentBody(
+                      assessment: assessment,
+                      userFeedback: _userFeedback,
+                      onFeedback: (f) => setState(() => _userFeedback = f),
+                      onRegenerate: _generate,
+                    ),
+            ),
     );
   }
 }
@@ -3646,75 +3509,56 @@ class _DebriefSectionState extends ConsumerState<_DebriefSection> {
   Widget build(BuildContext context) {
     final debriefAsync = ref.watch(debriefProvider(widget.decisionId));
 
-    return _SectionCard(
-      children: [
-        // ── Header ──────────────────────────────────────────────
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Decision Debrief',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                    ),
-              ),
+    return _CollapsibleSection(
+      title: 'Decision Debrief',
+      trailing: _isGenerating
+          ? null
+          : IconButton(
+              icon: const Icon(Icons.auto_awesome_outlined, size: 20),
+              tooltip: 'Generate debrief',
+              onPressed: _generate,
             ),
-            if (!_isGenerating)
-              IconButton(
-                icon: const Icon(Icons.auto_awesome_outlined, size: 20),
-                tooltip: 'Generate debrief',
-                onPressed: _generate,
-              ),
-          ],
-        ),
-
-        // ── Body ────────────────────────────────────────────────
-        if (_isGenerating)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                SizedBox(width: 12),
-                Text('Generating debrief…'),
-              ],
-            ),
-          )
-        else
-          debriefAsync.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: LinearProgressIndicator(),
-            ),
-            error: (e, _) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Failed to load debrief.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: AppColors.destructive),
-              ),
-            ),
-            data: (debrief) => debrief == null
-                ? _DebriefEmptyState(onGenerate: _generate)
-                : _DebriefBody(
-                    debrief: debrief,
-                    userFeedback: _userFeedback,
-                    onFeedback: (f) => _saveFeedback(debrief.id, f),
-                    onRegenerate: _generate,
-                    verdictColor: _verdictColor,
-                    trajectoryColor: _trajectoryColor,
+      child: _isGenerating
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-          ),
-      ],
+                  SizedBox(width: 12),
+                  Text('Generating debrief…'),
+                ],
+              ),
+            )
+          : debriefAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: LinearProgressIndicator(),
+              ),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Failed to load debrief.',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: AppColors.destructive),
+                ),
+              ),
+              data: (debrief) => debrief == null
+                  ? _DebriefEmptyState(onGenerate: _generate)
+                  : _DebriefBody(
+                      debrief: debrief,
+                      userFeedback: _userFeedback,
+                      onFeedback: (f) => _saveFeedback(debrief.id, f),
+                      onRegenerate: _generate,
+                      verdictColor: _verdictColor,
+                      trajectoryColor: _trajectoryColor,
+                    ),
+            ),
     );
   }
 }
@@ -4201,83 +4045,49 @@ class _CoachNotesSectionState extends ConsumerState<_CoachNotesSection> {
     final notesAsync =
         ref.watch(coachNotesForDecisionProvider(widget.decisionId));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header
-        Padding(
-          padding: const EdgeInsets.only(left: 4, top: 8, bottom: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Coach Notes',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
-                      ),
-                ),
+    return _CollapsibleSection(
+      title: 'Coach Notes',
+      trailing: (isCoach && !_isDeleting)
+          ? SizedBox(
+              width: 32,
+              height: 32,
+              child: IconButton(
+                icon: const Icon(Icons.add, size: 18),
+                padding: EdgeInsets.zero,
+                tooltip: 'Add coach note',
+                onPressed: () => _showAddNoteSheet(clientUserIds),
               ),
-              if (isCoach && !_isDeleting)
-                SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: IconButton(
-                    icon: const Icon(Icons.add, size: 18),
-                    padding: EdgeInsets.zero,
-                    tooltip: 'Add coach note',
-                    onPressed: () => _showAddNoteSheet(clientUserIds),
+            )
+          : null,
+      child: notesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Text(
+          'Failed to load coach notes.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
+        ),
+        data: (notes) {
+          if (notes.isEmpty) {
+            return Text(
+              'No coach notes yet.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
-                ),
-            ],
-          ),
-        ),
-
-        // Notes content
-        _SectionCard(
-          children: [
-            notesAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text(
-                'Failed to load coach notes.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.4),
-                    ),
-              ),
-              data: (notes) {
-                if (notes.isEmpty) {
-                  return Text(
-                    'No coach notes yet.',
-                    style:
-                        Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.4),
-                            ),
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: notes
-                      .map((note) => _CoachNoteRow(
-                            note: note,
-                            isCoach: isCoach,
-                            onDelete: () => _deleteNote(note.id),
-                          ))
-                      .toList(),
-                );
-              },
-            ),
-          ],
-        ),
-      ],
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: notes
+                .map((note) => _CoachNoteRow(
+                      note: note,
+                      isCoach: isCoach,
+                      onDelete: () => _deleteNote(note.id),
+                    ))
+                .toList(),
+          );
+        },
+      ),
     );
   }
 }
@@ -4430,58 +4240,38 @@ class _LinkedAssetsSectionState extends ConsumerState<_LinkedAssetsSection> {
     return linkedAsync.when(
       loading: () => const SizedBox.shrink(),
       error: (err, st) => const SizedBox.shrink(),
-      data: (linked) => _SectionCard(
-        children: [
-          Row(
-            children: [
-              Text(
-                'Linked Assets',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
+      data: (linked) => _CollapsibleSection(
+        title: 'Linked Assets',
+        trailing: IconButton(
+          icon: const Icon(Icons.add_link, size: 18),
+          tooltip: 'Link asset',
+          onPressed: () => _showLinkSheet(linked),
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+        child: linked.isEmpty
+            ? Text(
+                'No assets linked.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                     ),
+              )
+            : Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: linked
+                    .map(
+                      (a) => Chip(
+                        label: Text(a.name),
+                        deleteIcon: const Icon(Icons.close, size: 14),
+                        onDeleted: () => _unlink(a.id),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    )
+                    .toList(),
               ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.add_link, size: 18),
-                tooltip: 'Link asset',
-                onPressed: () => _showLinkSheet(linked),
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (linked.isEmpty)
-            Text(
-              'No assets linked.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.4),
-                  ),
-            )
-          else
-            Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: linked
-                  .map(
-                    (a) => Chip(
-                      label: Text(a.name),
-                      deleteIcon: const Icon(Icons.close, size: 14),
-                      onDeleted: () => _unlink(a.id),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  )
-                  .toList(),
-            ),
-        ],
       ),
     );
   }
@@ -4604,68 +4394,52 @@ class _IcVoteSectionState extends ConsumerState<_IcVoteSection> {
         final myVote =
             uid != null ? votes.where((v) => v.voterUserId == uid).firstOrNull : null;
 
-        return _SectionCard(
-          children: [
-            Row(
-              children: [
+        return _CollapsibleSection(
+          title: 'IC Votes',
+          trailing: _isSaving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : TextButton.icon(
+                  onPressed: () => _showVoteSheet(myVote),
+                  icon: Icon(
+                    myVote == null ? Icons.how_to_vote_outlined : Icons.edit_outlined,
+                    size: 16,
+                  ),
+                  label: Text(myVote == null ? 'Cast Vote' : 'Update Vote'),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _VoteBadge(label: 'Yes', count: yes, color: AppColors.success),
+                  const SizedBox(width: 8),
+                  _VoteBadge(label: 'No', count: no, color: AppColors.destructive),
+                  const SizedBox(width: 8),
+                  _VoteBadge(label: 'Abstain', count: abstain, color: AppColors.textMuted),
+                ],
+              ),
+              if (votes.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                ...votes.map((v) => _IcVoteRow(vote: v)),
+              ] else ...[
+                const SizedBox(height: 8),
                 Text(
-                  'IC Votes',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
+                  'No votes cast yet.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                 ),
-                const Spacer(),
-                if (_isSaving)
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                else
-                  TextButton.icon(
-                    onPressed: () => _showVoteSheet(myVote),
-                    icon: Icon(
-                      myVote == null ? Icons.how_to_vote_outlined : Icons.edit_outlined,
-                      size: 16,
-                    ),
-                    label: Text(myVote == null ? 'Cast Vote' : 'Update Vote'),
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                  ),
               ],
-            ),
-            const SizedBox(height: 8),
-            // Tally row
-            Row(
-              children: [
-                _VoteBadge(label: 'Yes', count: yes, color: AppColors.success),
-                const SizedBox(width: 8),
-                _VoteBadge(label: 'No', count: no, color: AppColors.destructive),
-                const SizedBox(width: 8),
-                _VoteBadge(label: 'Abstain', count: abstain, color: AppColors.textMuted),
-              ],
-            ),
-            if (votes.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              ...votes.map((v) => _IcVoteRow(vote: v)),
-            ] else ...[
-              const SizedBox(height: 8),
-              Text(
-                'No votes cast yet.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.4),
-                    ),
-              ),
             ],
-          ],
+          ),
         );
       },
     );
@@ -4962,57 +4736,36 @@ class _EngineeringArtifactsSectionState
   Widget build(BuildContext context) {
     final artifactsAsync =
         ref.watch(engineeringArtifactsProvider(widget.decisionId));
-    final workspaceId =
-        ref.watch(currentWorkspaceProvider).valueOrNull;
+    final workspaceId = ref.watch(currentWorkspaceProvider).valueOrNull;
 
     return artifactsAsync.when(
       loading: () => const SizedBox.shrink(),
       error: (err, st) => const SizedBox.shrink(),
-      data: (artifacts) => _SectionCard(
-        children: [
-          Row(
-            children: [
-              Text(
-                'Engineering Artifacts',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
+      data: (artifacts) => _CollapsibleSection(
+        title: 'Engineering Artifacts',
+        trailing: IconButton(
+          icon: const Icon(Icons.add_link, size: 18),
+          tooltip: 'Add artifact',
+          onPressed: workspaceId == null ? null : () => _showAddSheet(workspaceId),
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+        child: artifacts.isEmpty
+            ? Text(
+                'No engineering artifacts linked.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                     ),
+              )
+            : Column(
+                children: artifacts
+                    .map((a) => _ArtifactRow(
+                          artifact: a,
+                          onDelete: () => _delete(a.id),
+                        ))
+                    .toList(),
               ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.add_link, size: 18),
-                tooltip: 'Add artifact',
-                onPressed: workspaceId == null
-                    ? null
-                    : () => _showAddSheet(workspaceId),
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (artifacts.isEmpty)
-            Text(
-              'No engineering artifacts linked.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.4),
-                  ),
-            )
-          else
-            ...artifacts.map(
-              (a) => _ArtifactRow(
-                artifact: a,
-                onDelete: () => _delete(a.id),
-              ),
-            ),
-        ],
       ),
     );
   }
