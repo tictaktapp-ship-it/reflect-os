@@ -119,6 +119,53 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
+      // Search — push above shell (accessed from top bar icon)
+      GoRoute(
+        path: Routes.search,
+        builder: (context, state) => const SearchScreen(),
+      ),
+
+      // Settings — push above shell (accessed from top bar icon)
+      // Sub-routes remain nested so /settings/privacy etc. continue to work.
+      GoRoute(
+        path: Routes.settings,
+        builder: (context, state) => const SettingsScreen(),
+        routes: [
+          GoRoute(
+            path: 'privacy',
+            builder: (context, state) => const PrivacySettingsScreen(),
+          ),
+          GoRoute(
+            path: 'billing',
+            builder: (context, state) => const BillingScreen(),
+          ),
+          GoRoute(
+            path: 'audit-log',
+            builder: (context, state) => const AuditLogScreen(),
+          ),
+          GoRoute(
+            path: 'templates',
+            builder: (context, state) => const TemplatesScreen(),
+          ),
+          GoRoute(
+            path: 'calendar',
+            builder: (context, state) => const CalendarSettingsScreen(),
+          ),
+          GoRoute(
+            path: 'vertical',
+            builder: (context, state) => const VerticalSettingsScreen(),
+          ),
+          GoRoute(
+            path: 'branding',
+            builder: (context, state) => const WorkspaceBrandingScreen(),
+          ),
+          GoRoute(
+            path: 'data-privacy',
+            builder: (context, state) => const DataPrivacyScreen(),
+          ),
+        ],
+      ),
+
       // Bulk import — push above shell
       GoRoute(
         path: Routes.import,
@@ -150,92 +197,41 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Billing gate — outside the shell
       GoRoute(path: Routes.billingSubscribe, builder: (context, state) => const BillingSubscribeScreen()),
 
-      // Main app shell — wraps the four primary destinations
+      // Main app shell — five primary destinations.
+      // Branch index maps directly to NavigationBar/NavigationRail tab index.
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
         branches: [
-          // 0 — Decisions
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.decisionsList,
-              builder: (context, state) => const DecisionsListScreen(),
-            ),
-          ]),
-          // 1 — Search
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.search,
-              builder: (context, state) => const SearchScreen(),
-            ),
-          ]),
-          // 2 — Dashboard
+          // 0 — Home (Dashboard)
           StatefulShellBranch(routes: [
             GoRoute(
               path: Routes.dashboard,
               builder: (context, state) => const DashboardScreen(),
             ),
           ]),
-          // 3 — Initiatives
+          // 1 — Decisions
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.decisionsList,
+              builder: (context, state) => const DecisionsListScreen(),
+            ),
+          ]),
+          // 2 — Initiatives
           StatefulShellBranch(routes: [
             GoRoute(
               path: Routes.initiativesList,
               builder: (context, state) => const InitiativesListScreen(),
             ),
           ]),
-          // 4 — Settings (privacy is a nested sub-route within this branch)
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.settings,
-              builder: (context, state) => const SettingsScreen(),
-              routes: [
-                GoRoute(
-                  path: 'privacy',
-                  builder: (context, state) =>
-                      const PrivacySettingsScreen(),
-                ),
-                GoRoute(
-                  path: 'billing',
-                  builder: (context, state) => const BillingScreen(),
-                ),
-                GoRoute(
-                  path: 'audit-log',
-                  builder: (context, state) => const AuditLogScreen(),
-                ),
-                GoRoute(
-                  path: 'templates',
-                  builder: (context, state) => const TemplatesScreen(),
-                ),
-                GoRoute(
-                  path: 'calendar',
-                  builder: (context, state) =>
-                      const CalendarSettingsScreen(),
-                ),
-                GoRoute(
-                  path: 'vertical',
-                  builder: (context, state) =>
-                      const VerticalSettingsScreen(),
-                ),
-                GoRoute(
-                  path: 'branding',
-                  builder: (context, state) =>
-                      const WorkspaceBrandingScreen(),
-                ),
-                GoRoute(
-                  path: 'data-privacy',
-                  builder: (context, state) => const DataPrivacyScreen(),
-                ),
-              ],
-            ),
-          ]),
-          // 5 — Team
+          // 3 — Team
           StatefulShellBranch(routes: [
             GoRoute(
               path: Routes.team,
               builder: (context, state) => const TeamScreen(),
             ),
           ]),
-          // 6 — Coaching
+          // 4 — Coach
           StatefulShellBranch(routes: [
             GoRoute(
               path: Routes.coachingDashboard,
@@ -247,4 +243,3 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
-

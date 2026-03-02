@@ -216,64 +216,108 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
     );
   }
 
-  // ── Filter bar ───────────────────────────────────────────────────────────────
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          // Updates both the parent list and the sheet chips simultaneously.
+          void updateFilter(VoidCallback fn) {
+            setState(fn);
+            setSheetState(fn);
+          }
 
-  Widget _filterBar() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── State row ────────────────────────────────────────
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
-          child: Row(
-            children: [
-              for (final label in <String?>[
-                null,
-                'Draft',
-                'Active',
-                'Closed',
-                'Archived',
-              ])
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: FilterChip(
-                    label: Text(label ?? 'All'),
-                    selected: _selectedState == label,
-                    onSelected: (_) =>
-                        setState(() => _selectedState = label),
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag handle
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
-                ),
-            ],
-          ),
-        ),
-        // ── Stakes row ───────────────────────────────────────
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
-          child: Row(
-            children: [
-              for (final label in <String?>[
-                null,
-                'Low',
-                'Medium',
-                'High',
-                'Critical',
-              ])
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: FilterChip(
-                    label: Text(label ?? 'All'),
-                    selected: _selectedStakes == label,
-                    onSelected: (_) =>
-                        setState(() => _selectedStakes = label),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Text(
+                        'Filter',
+                        style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const Spacer(),
+                      if (_filtersActive)
+                        TextButton(
+                          onPressed: () => updateFilter(() {
+                            _selectedState = null;
+                            _selectedStakes = null;
+                          }),
+                          child: const Text('Clear all'),
+                        ),
+                    ],
                   ),
-                ),
-            ],
-          ),
-        ),
-        const Divider(height: 1),
-      ],
+                  const SizedBox(height: 16),
+                  Text(
+                    'STATUS',
+                    style: Theme.of(ctx).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5),
+                          letterSpacing: 0.8,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: <String?>[null, 'Draft', 'Active', 'Closed', 'Archived']
+                        .map((s) => FilterChip(
+                              label: Text(s ?? 'All'),
+                              selected: _selectedState == s,
+                              onSelected: (_) =>
+                                  updateFilter(() => _selectedState = s),
+                            ))
+                        .toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'PRIORITY',
+                    style: Theme.of(ctx).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5),
+                          letterSpacing: 0.8,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: <String?>[null, 'Low', 'Medium', 'High', 'Critical']
+                        .map((s) => FilterChip(
+                              label: Text(s ?? 'All'),
+                              selected: _selectedStakes == s,
+                              onSelected: (_) =>
+                                  updateFilter(() => _selectedStakes = s),
+                            ))
+                        .toList(),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -286,10 +330,23 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _filtersActive ? 'Decisions (${filtered.length})' : 'Decisions',
-        ),
+        automaticallyImplyLeading: false,
         actions: [
+          // Meeting capture — moved from secondary FAB
+          IconButton(
+            icon: const Icon(Icons.notes_outlined),
+            tooltip: 'Capture from Meeting',
+            onPressed: () => context.push(Routes.decisionsMeetingCapture),
+          ),
+          // Filter — badge lights up when any filter is active
+          IconButton(
+            icon: Badge(
+              isLabelVisible: _filtersActive,
+              child: const Icon(Icons.tune_outlined),
+            ),
+            tooltip: 'Filter',
+            onPressed: _showFilterSheet,
+          ),
           IconButton(
             icon: const Icon(Icons.download_outlined),
             tooltip: 'Export CSV',
@@ -309,62 +366,39 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
           ),
         ],
       ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          FloatingActionButton.small(
-            heroTag: 'fab-meeting',
-            onPressed: () =>
-                context.push(Routes.decisionsMeetingCapture),
-            tooltip: 'Capture from Meeting',
-            child: const Icon(Icons.notes_outlined),
-          ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-            heroTag: 'fab-new',
-            onPressed: () => context.push(Routes.decisionsCreate),
-            tooltip: 'New decision',
-            child: const Icon(Icons.add),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push(Routes.decisionsCreate),
+        tooltip: 'New decision',
+        child: const Icon(Icons.add),
       ),
-      body: Column(
-        children: [
-          _filterBar(),
-          Expanded(
-            child: decisionsAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    'Failed to load decisions: $error',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-              data: (_) {
-                if (allDecisions.isEmpty) {
-                  return const Center(child: Text('No decisions yet.'));
-                }
-                if (filtered.isEmpty) {
-                  return const Center(
-                    child: Text('No decisions match the current filters.'),
-                  );
-                }
-                return ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (_, index) =>
-                      _DecisionTile(decision: filtered[index]),
-                );
-              },
+      body: decisionsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Failed to load decisions: $error',
+              textAlign: TextAlign.center,
             ),
           ),
-        ],
+        ),
+        data: (_) {
+          if (allDecisions.isEmpty) {
+            return const Center(child: Text('No decisions yet.'));
+          }
+          if (filtered.isEmpty) {
+            return const Center(
+              child: Text('No decisions match the current filters.'),
+            );
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: filtered.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (_, index) =>
+                _DecisionTile(decision: filtered[index]),
+          );
+        },
       ),
     );
   }
