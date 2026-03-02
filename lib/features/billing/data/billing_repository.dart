@@ -1,4 +1,8 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/billing/data/models/subscription.dart';
@@ -50,17 +54,29 @@ class BillingRepository {
     required String successUrl,
     required String cancelUrl,
   }) async {
-    final response = await supabase.functions.invoke(
-      'create-checkout-session',
-      body: {
+    final session = supabase.auth.currentSession;
+    final token = session?.accessToken ?? '';
+
+    final response = await http.post(
+      Uri.parse('https://omazuyditjbtoupmipcr.supabase.co/functions/v1/create-checkout-session'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
         'price_id': priceId,
         'workspace_id': workspaceId,
-        'success_url': successUrl,
-        'cancel_url': cancelUrl,
-      },
+      }),
     );
-    final data = response.data as Map<String, dynamic>;
-    return data['url'] as String;
+
+    debugPrint('Checkout response status: ${response.statusCode}');
+    debugPrint('Checkout response body: ${response.body}');
+
+    final data = jsonDecode(response.body);
+    final url = data['url'] as String?;
+
+    if (url == null) throw Exception('No URL in checkout response: ${response.body}');
+    return url;
   }
 
   /// Calls the manage-subscription Edge Function and returns the
