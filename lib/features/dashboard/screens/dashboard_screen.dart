@@ -70,7 +70,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home'),
+        automaticallyImplyLeading: false,
         actions: [
           if (_isRefreshing)
             const Padding(
@@ -508,6 +508,7 @@ class _StatusBarChart extends StatelessWidget {
               child: BarChart(
                 BarChartData(
                   maxY: maxVal * 1.25,
+                  barTouchData: BarTouchData(enabled: false),
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: false,
@@ -520,7 +521,33 @@ class _StatusBarChart extends StatelessWidget {
                   titlesData: FlTitlesData(
                     leftTitles: const AxisTitles(),
                     rightTitles: const AxisTitles(),
-                    topTitles: const AxisTitles(),
+                    topTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 20,
+                        getTitlesWidget: (value, _) {
+                          final counts = [draft, active, closed, archived];
+                          final i = value.toInt();
+                          if (i < 0 || i >= counts.length) {
+                            return const SizedBox.shrink();
+                          }
+                          return Text(
+                            '${counts[i]}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.85),
+                                ),
+                          );
+                        },
+                      ),
+                    ),
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
@@ -623,19 +650,37 @@ class _HealthDonut extends StatelessWidget {
                             value: onTrack!.toDouble(),
                             color: AppColors.success,
                             radius: 18,
-                            showTitle: false,
+                            showTitle: onTrack! > 0,
+                            title: onTrack! > 0 ? '$onTrack' : '',
+                            titleStyle: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
                           PieChartSectionData(
                             value: needsAttention!.toDouble(),
                             color: AppColors.warning,
                             radius: 18,
-                            showTitle: false,
+                            showTitle: needsAttention! > 0,
+                            title: needsAttention! > 0 ? '$needsAttention' : '',
+                            titleStyle: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
                           PieChartSectionData(
                             value: overdue!.toDouble(),
                             color: AppColors.destructive,
                             radius: 18,
-                            showTitle: false,
+                            showTitle: overdue! > 0,
+                            title: overdue! > 0 ? '$overdue' : '',
+                            titleStyle: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
                         ],
                       ),

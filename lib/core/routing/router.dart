@@ -48,7 +48,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       subscriptionStatus.valueOrNull == SubscriptionStatus.active;
 
   return GoRouter(
-    initialLocation: Routes.decisionsList,
+    initialLocation: Routes.dashboard,
     redirect: (BuildContext context, GoRouterState state) {
       final isPublicRoute = state.matchedLocation.startsWith('/share/') ||
           state.matchedLocation.startsWith('/auth/');
