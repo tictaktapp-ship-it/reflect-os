@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/core/providers/theme_provider.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
+import 'package:reflect_os/features/settings/providers/profile_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -21,6 +23,9 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // ── Profile ───────────────────────────────────────────────
+          const _ProfileCard(),
+
           // ── Account ───────────────────────────────────────────────
           _SectionCard(
             children: [
@@ -232,6 +237,235 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
+// ── Profile Card ──────────────────────────────────────────────────────────────
+
+class _ProfileCard extends ConsumerStatefulWidget {
+  const _ProfileCard();
+
+  @override
+  ConsumerState<_ProfileCard> createState() => _ProfileCardState();
+}
+
+class _ProfileCardState extends ConsumerState<_ProfileCard> {
+  bool _uploading = false;
+
+  Future<void> _pickAndUploadAvatar() async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 85,
+    );
+    if (file == null || !mounted) return;
+
+    setState(() => _uploading = true);
+    try {
+      final repo = ref.read(profileRepositoryProvider);
+      final url = await repo.uploadAvatar(userId, file);
+      await repo.updateAvatarUrl(userId, url);
+      ref.invalidate(profileProvider);
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  Future<void> _editDisplayName(String current) async {
+    final controller = TextEditingController(text: current);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Display name'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(hintText: 'Enter your name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null || result.isEmpty || !mounted) return;
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    await ref.read(profileRepositoryProvider).updateDisplayName(userId, result);
+    ref.invalidate(profileProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profileAsync = ref.watch(profileProvider);
+    final email = supabase.auth.currentUser?.email ?? '—';
+
+    return _SectionCard(
+      children: [
+        profileAsync.when(
+          loading: () => const SizedBox(
+            height: 56,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (_, _) => _ProfileRow(
+            email: email,
+            displayName: null,
+            avatarUrl: null,
+            uploading: false,
+            onTapAvatar: _pickAndUploadAvatar,
+            onEditName: _editDisplayName,
+          ),
+          data: (profile) => _ProfileRow(
+            email: email,
+            displayName: profile?.displayName,
+            avatarUrl: profile?.avatarUrl,
+            uploading: _uploading,
+            onTapAvatar: _pickAndUploadAvatar,
+            onEditName: _editDisplayName,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileRow extends StatelessWidget {
+  const _ProfileRow({
+    required this.email,
+    required this.displayName,
+    required this.avatarUrl,
+    required this.uploading,
+    required this.onTapAvatar,
+    required this.onEditName,
+  });
+
+  final String email;
+  final String? displayName;
+  final String? avatarUrl;
+  final bool uploading;
+  final VoidCallback onTapAvatar;
+  final void Function(String) onEditName;
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = _initials(displayName ?? email);
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: uploading ? null : onTapAvatar,
+          child: SizedBox(
+            width: 56,
+            height: 56,
+            child: Stack(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: AppColors.accentPrimary,
+                  backgroundImage:
+                      avatarUrl != null ? NetworkImage(avatarUrl!) : null,
+                  child: avatarUrl == null
+                      ? Text(
+                          initials,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        )
+                      : null,
+                ),
+                if (uploading)
+                  const Positioned.fill(
+                    child: CircleAvatar(
+                      radius: 28,
+                      backgroundColor: Colors.black45,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: AppColors.accentPrimary,
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(4),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      size: 12,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      displayName ?? email,
+                      style: Theme.of(context).textTheme.titleMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                    onPressed: () => onEditName(displayName ?? ''),
+                    tooltip: 'Edit name',
+                    constraints:
+                        const BoxConstraints(minWidth: 32, minHeight: 32),
+                    padding: EdgeInsets.zero,
+                  ),
+                ],
+              ),
+              Text(
+                email,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _initials(String name) {
+    if (name.isEmpty) return '?';
+    final parts = name.trim().split(RegExp(r'[\s@]+'));
+    if (parts.length == 1) return parts[0][0].toUpperCase();
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+}
+
+// ── Shared widgets ────────────────────────────────────────────────────────────
+
 class _SectionCard extends StatelessWidget {
   const _SectionCard({required this.children});
 
@@ -267,7 +501,10 @@ class _SettingsRow extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
               ),
         ),
         const SizedBox(height: 2),

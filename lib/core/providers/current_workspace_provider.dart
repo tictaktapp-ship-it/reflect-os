@@ -1,44 +1,31 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reflect_os/core/providers/auth_state_provider.dart';
-import 'package:reflect_os/core/supabase/supabase_client.dart';
+import 'package:reflect_os/features/workspace/providers/workspace_providers.dart';
 
-/// Provides the current user's workspace_id.
-/// Exception to the no-raw-tables rule: there is no user_visible_workspaces
-/// view exposed to Flutter. The subscriptions table is queried directly here.
-/// RLS on the subscriptions table ensures users can only read their own row.
+/// Provides the current user's active workspace_id.
+/// Derives from [selectedWorkspaceIdProvider] (explicit user choice) falling
+/// back to the first entry in [userWorkspacesProvider] (personal workspace).
+/// Kept as `FutureProvider<String?>` for backward compat with existing callers.
 final currentWorkspaceProvider = FutureProvider<String?>((ref) async {
   final authStatus = ref.watch(authStateProvider);
-  final auth = authStatus.valueOrNull;
+  if (authStatus.valueOrNull is! AuthAuthenticated) return null;
 
-  if (auth is! AuthAuthenticated) return null;
+  final selectedId = ref.watch(selectedWorkspaceIdProvider);
+  if (selectedId != null) return selectedId;
 
-  final userId = auth.session.user.id;
-
-  final response = await supabase
-      .from('subscriptions')
-      .select('workspace_id')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-  return response?['workspace_id'] as String?;
+  final workspaces = await ref.watch(userWorkspacesProvider.future);
+  return workspaces.isNotEmpty ? workspaces.first.id : null;
 });
 
-/// Reads the workspace name from the workspaces table.
-/// Exception to the no-raw-tables rule: there is no user_visible_workspaces view.
-/// Falls back to 'My Workspace' if RLS blocks the read or the row is missing.
-/// Reads the workspace name from the workspaces table.
-/// Exception to the no-raw-tables rule: there is no user_visible_workspaces view.
-/// Falls back to 'My Workspace' if RLS blocks the read or the row is missing.
+/// Provides the display name of the current workspace.
+/// Falls back to 'My Workspace' if the workspace cannot be found.
 final workspaceNameProvider = FutureProvider<String?>((ref) async {
   final workspaceId = await ref.watch(currentWorkspaceProvider.future);
   if (workspaceId == null) return null;
+
+  final workspaces = await ref.watch(userWorkspacesProvider.future);
   try {
-    final row = await supabase
-        .from('workspaces')
-        .select('name')
-        .eq('id', workspaceId)
-        .maybeSingle();
-    return (row?['name'] as String?) ?? 'My Workspace';
+    return workspaces.firstWhere((w) => w.id == workspaceId).name;
   } catch (_) {
     return 'My Workspace';
   }
