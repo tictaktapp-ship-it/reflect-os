@@ -8,6 +8,30 @@ class BillingRepository {
 
   final Ref _ref;
 
+  /// Returns the current user's workspace_id, creating a workspace first if
+  /// the user has never subscribed before (no subscription row yet).
+  Future<String> ensureWorkspaceExists() async {
+    // Fast path: workspace already linked via subscriptions table.
+    final existing = await _ref.read(currentWorkspaceProvider.future);
+    if (existing != null) return existing;
+
+    // New user — create the workspace row directly.
+    // Exception to no-raw-tables rule: no RPC exists for this operation.
+    final user = supabase.auth.currentUser;
+    if (user == null) throw Exception('Not authenticated');
+
+    final row = await supabase
+        .from('workspaces')
+        .insert({
+          'name': user.email ?? 'My Workspace',
+          'owner_id': user.id,
+        })
+        .select('id')
+        .single();
+
+    return row['id'] as String;
+  }
+
   Future<Subscription?> getSubscription() async {
     final workspaceId = await _ref.read(currentWorkspaceProvider.future);
     if (workspaceId == null) return null;

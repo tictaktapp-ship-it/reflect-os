@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
-import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/providers/subscription_status_provider.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
 import 'package:reflect_os/features/billing/providers/billing_provider.dart';
@@ -49,11 +48,10 @@ class _BillingSubscribeScreenState
   }
 
   Future<void> _subscribe(String priceId) async {
-    final workspaceId = await ref.read(currentWorkspaceProvider.future);
-    if (workspaceId == null) return;
-
     setState(() => _isCheckingOut = true);
     try {
+      final workspaceId =
+          await ref.read(billingRepositoryProvider).ensureWorkspaceExists();
       final url =
           await ref.read(billingRepositoryProvider).createCheckoutSession(
                 priceId: priceId,

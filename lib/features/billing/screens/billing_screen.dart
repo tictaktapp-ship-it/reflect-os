@@ -54,9 +54,11 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
     });
   }
 
-  Future<void> _subscribe(String priceId, String workspaceId) async {
+  Future<void> _subscribe(String priceId) async {
     setState(() => _isCheckingOut = true);
     try {
+      final workspaceId =
+          await ref.read(billingRepositoryProvider).ensureWorkspaceExists();
       final url = await ref.read(billingRepositoryProvider).createCheckoutSession(
             priceId: priceId,
             workspaceId: workspaceId,
@@ -203,14 +205,9 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                     'Share links',
                   ],
                   isLoading: _isCheckingOut,
-                  onSubscribe: workspaceId == null
-                      ? null
-                      : () => _subscribe(
-                            _annualBilling
-                                ? _individualAnnual
-                                : _individualMonthly,
-                            workspaceId,
-                          ),
+                  onSubscribe: () => _subscribe(
+                    _annualBilling ? _individualAnnual : _individualMonthly,
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -230,12 +227,9 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                   ],
                   isHighlighted: true,
                   isLoading: _isCheckingOut,
-                  onSubscribe: workspaceId == null
-                      ? null
-                      : () => _subscribe(
-                            _annualBilling ? _teamAnnual : _teamMonthly,
-                            workspaceId,
-                          ),
+                  onSubscribe: () => _subscribe(
+                    _annualBilling ? _teamAnnual : _teamMonthly,
+                  ),
                 ),
               ],
             ],
