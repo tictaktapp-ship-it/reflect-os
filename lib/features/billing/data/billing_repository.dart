@@ -24,7 +24,8 @@ class BillingRepository {
         .from('workspaces')
         .insert({
           'name': user.email ?? 'My Workspace',
-          'owner_id': user.id,
+          'owner_user_id': user.id,
+          'workspace_type': 'personal',
         })
         .select('id')
         .single();
