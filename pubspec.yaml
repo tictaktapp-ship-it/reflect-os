@@ -47,6 +47,7 @@ dependencies:
   shared_preferences: ^2.5.4
   file_picker: ^8.1.2
   http: ^1.2.0
+  fl_chart: ^0.68.0
 
 dev_dependencies:
   flutter_test:
