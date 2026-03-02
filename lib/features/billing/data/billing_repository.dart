@@ -20,17 +20,12 @@ class BillingRepository {
     final user = supabase.auth.currentUser;
     if (user == null) throw Exception('Not authenticated');
 
-    final row = await supabase
-        .from('workspaces')
-        .insert({
-          'name': user.email ?? 'My Workspace',
-          'owner_user_id': user.id,
-          'workspace_type': 'personal',
-        })
-        .select('id')
-        .single();
+    final result = await supabase
+        .rpc('create_personal_workspace_for_current_user', params: {
+          'workspace_name': user.email ?? 'My Workspace',
+        });
 
-    return row['id'] as String;
+    return result as String;
   }
 
   Future<Subscription?> getSubscription() async {
