@@ -6,8 +6,12 @@ import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/core/providers/theme_provider.dart';
+import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
 import 'package:reflect_os/features/settings/providers/profile_provider.dart';
+import 'package:reflect_os/features/settings/widgets/encryption_mode_tile.dart';
+import 'package:reflect_os/features/workspace/data/models/workspace_model.dart';
+import 'package:reflect_os/features/workspace/providers/workspace_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -150,6 +154,20 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
 
+          // ── Personalisation ───────────────────────────────────────
+          _SectionCard(
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.people_outline),
+                title: const Text('Demographic Packs'),
+                subtitle: const Text('Tailor decisions to your audience'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push(Routes.packs),
+              ),
+            ],
+          ),
+
           // ── Data & Privacy ───────────────────────────────────────
           _SectionCard(
             children: [
@@ -163,6 +181,9 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ],
           ),
+
+          // ── Privacy & Security ─────────────────────────────────────
+          _EncryptionSection(ref: ref),
 
           // ── Workspace Branding ────────────────────────────────────
           _SectionCard(
@@ -511,6 +532,43 @@ class _SettingsRow extends StatelessWidget {
         Text(
           value,
           style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      ],
+    );
+  }
+}
+
+// ── Encryption section ────────────────────────────────────────────────────────
+
+/// Renders the Privacy & Security card containing the [EncryptionModeTile].
+/// Resolves the current workspace id and owner status from Riverpod providers.
+class _EncryptionSection extends StatelessWidget {
+  const _EncryptionSection({required this.ref});
+
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    final workspaceId =
+        ref.watch(currentWorkspaceProvider).valueOrNull;
+    if (workspaceId == null) return const SizedBox.shrink();
+
+    final workspaces =
+        ref.watch(userWorkspacesProvider).valueOrNull ?? const <WorkspaceModel>[];
+    WorkspaceModel? match;
+    for (final w in workspaces) {
+      if (w.id == workspaceId) {
+        match = w;
+        break;
+      }
+    }
+    final isOwner = match?.role == 'owner';
+
+    return _SectionCard(
+      children: [
+        EncryptionModeTile(
+          workspaceId: workspaceId,
+          isOwner: isOwner,
         ),
       ],
     );
