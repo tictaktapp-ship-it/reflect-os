@@ -38,6 +38,11 @@ import 'package:reflect_os/features/sharing/screens/share_links_screen.dart';
 import 'package:reflect_os/features/templates/data/models/decision_template.dart';
 import 'package:reflect_os/features/templates/screens/templates_screen.dart';
 import 'package:reflect_os/features/team/screens/team_screen.dart';
+import 'package:reflect_os/features/toolkit/data/models/tool_definition.dart';
+import 'package:reflect_os/features/toolkit/screens/tool_detail_screen.dart';
+import 'package:reflect_os/features/toolkit/screens/tool_results_screen.dart';
+import 'package:reflect_os/features/toolkit/screens/toolkit_screen.dart';
+import 'package:reflect_os/features/demographic_packs/screens/packs_screen.dart';
 import 'routes.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -164,6 +169,40 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const DataPrivacyScreen(),
           ),
         ],
+      ),
+
+      // Tool Kit — push above shell
+      GoRoute(
+        path: Routes.toolkit,
+        builder: (context, state) => ToolkitScreen(
+          decisionId: state.uri.queryParameters['decisionId'],
+        ),
+      ),
+      GoRoute(
+        path: Routes.toolDetail,
+        builder: (context, state) => ToolDetailScreen(
+          toolId: state.pathParameters['toolId']!,
+          decisionId: state.uri.queryParameters['decisionId'],
+          tool: state.extra as ToolDefinition?,
+        ),
+      ),
+      GoRoute(
+        path: Routes.toolResults,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return ToolResultsScreen(
+            toolRunId: extra['toolRunId'] as String,
+            outputs: extra['outputs'] as Map<String, dynamic>,
+            tool: extra['tool'] as ToolDefinition,
+            decisionId: extra['decisionId'] as String?,
+          );
+        },
+      ),
+
+      // Demographic Packs — push above shell
+      GoRoute(
+        path: Routes.packs,
+        builder: (context, state) => const PacksScreen(),
       ),
 
       // Bulk import — push above shell

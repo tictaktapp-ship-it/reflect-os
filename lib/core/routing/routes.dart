@@ -66,6 +66,14 @@ abstract final class Routes {
   // Share links management (authenticated)
   static const String decisionsShareLinks = '/decisions/:id/share-links';
 
+  // Tool Kit
+  static const String toolkit = '/toolkit';
+  static const String toolDetail = '/toolkit/:toolId';
+  static const String toolResults = '/toolkit/:toolId/results';
+
+  // Demographic Packs
+  static const String packs = '/packs';
+
   // Share
   // Must work without authentication — this is the public share link entry point.
   static const String share = '/share/:token';

@@ -36,6 +36,8 @@ import 'package:reflect_os/features/engineering/data/models/engineering_artifact
 import 'package:reflect_os/features/engineering/providers/engineering_provider.dart';
 import 'package:reflect_os/features/debrief/data/models/decision_debrief.dart';
 import 'package:reflect_os/features/debrief/providers/debrief_provider.dart';
+import 'package:reflect_os/features/toolkit/data/models/tool_run.dart';
+import 'package:reflect_os/features/toolkit/providers/toolkit_providers.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class DecisionDetailScreen extends ConsumerWidget {
@@ -578,6 +580,9 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
 
           // ── Activity ──────────────────────────────────────────
           _ActivitySection(decisionId: decision.id),
+
+          // ── Tool Kit ──────────────────────────────────────────
+          _ToolKitSection(decisionId: decision.id),
 
           const SizedBox(height: 80), // clear the FAB
         ],
@@ -4839,6 +4844,107 @@ class _ArtifactRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Tool Kit section ──────────────────────────────────────────────────────────
+
+/// Collapsible section at the bottom of the decision detail screen that shows
+/// previous tool runs and a button to browse the Tool Kit library.
+class _ToolKitSection extends ConsumerWidget {
+  const _ToolKitSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final runsAsync = ref.watch(decisionToolRunsProvider(decisionId));
+
+    return _CollapsibleSection(
+      title: 'Tool Kit',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          OutlinedButton.icon(
+            icon: const Icon(Icons.calculate_outlined, size: 16),
+            label: const Text('Browse tools'),
+            onPressed: () =>
+                context.push('${Routes.toolkit}?decisionId=$decisionId'),
+          ),
+          const SizedBox(height: 12),
+          runsAsync.when(
+            loading: () => const SizedBox(
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            error: (_, _) => const SizedBox.shrink(),
+            data: (runs) {
+              if (runs.isEmpty) {
+                return Text(
+                  'No tool runs for this decision yet.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.4),
+                      ),
+                );
+              }
+              return Column(
+                children: runs.map((r) => _ToolRunRow(run: r)).toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolRunRow extends StatelessWidget {
+  const _ToolRunRow({required this.run});
+
+  final ToolRun run;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final d = run.createdAt;
+    final dateStr =
+        '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    final firstEntry = run.outputsJsonb.entries.firstOrNull;
+    final primaryValue = firstEntry != null
+        ? '${firstEntry.key}: ${firstEntry.value}'
+        : 'No outputs';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.calculate_outlined, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  run.toolDefinitionName,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  '$dateStr · $primaryValue',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
