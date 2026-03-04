@@ -8,7 +8,7 @@ class ToolkitRepository {
 
   Future<List<ToolDefinition>> getToolDefinitions() async {
     final rows = await supabase
-        .from(SupabaseTables.toolDefinitions)
+        .from(SupabaseViews.toolDefinitions)
         .select()
         .order('name');
     return rows.map(ToolDefinition.fromJson).toList();
@@ -37,19 +37,29 @@ class ToolkitRepository {
       'p_tool_definition_id': toolDefinitionId,
       'p_inputs_jsonb': inputsJsonb,
     });
-    return result as String;
+    // RPC returns the inserted tool_runs row as a Map
+    final row = result as Map<String, dynamic>;
+    return row['id'] as String;
   }
 
   /// Step 2 of the two-call flow: persists client-computed outputs.
   Future<void> approveAndInjectToolOutput({
     required String toolRunId,
+    required String decisionId,
+    required String finalDescription,
     required Map<String, dynamic> outputsJsonb,
+    required Map<String, dynamic> calculationBreakdownJsonb,
+    bool attachToolAudit = false,
   }) async {
     await supabase.rpc(
       SupabaseRpcs.approveAndInjectToolOutput,
       params: {
-        'p_tool_run_id': toolRunId,
-        'p_outputs_jsonb': outputsJsonb,
+        'p_tool_run_id':                  toolRunId,
+        'p_decision_id':                  decisionId,
+        'p_final_description':            finalDescription,
+        'p_outputs_jsonb':                outputsJsonb,
+        'p_calculation_breakdown_jsonb':  calculationBreakdownJsonb,
+        'p_attach_tool_audit':            attachToolAudit,
       },
     );
   }

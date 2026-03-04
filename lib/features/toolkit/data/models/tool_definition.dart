@@ -22,10 +22,10 @@ class ToolDefinition {
   });
 
   factory ToolDefinition.fromJson(Map<String, dynamic> json) {
-    final inputList = (json['input_schema'] as List<dynamic>? ?? [])
+    final inputList = (json['input_schema_jsonb'] as List<dynamic>? ?? [])
         .map((e) => ToolInputField.fromJson(e as Map<String, dynamic>))
         .toList();
-    final outputList = (json['output_schema'] as List<dynamic>? ?? [])
+    final outputList = (json['output_schema_jsonb'] as List<dynamic>? ?? [])
         .map((e) => ToolOutputField.fromJson(e as Map<String, dynamic>))
         .toList();
     return ToolDefinition(
@@ -35,7 +35,7 @@ class ToolDefinition {
       category: json['category'] as String? ?? 'General',
       inputSchema: inputList,
       outputSchema: outputList,
-      formulaAst: json['formula_ast'] as Map<String, dynamic>? ?? {},
+      formulaAst: json['calculation_spec_jsonb'] as Map<String, dynamic>? ?? {},
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
   }

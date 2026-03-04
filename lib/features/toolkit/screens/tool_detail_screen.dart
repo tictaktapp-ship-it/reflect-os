@@ -126,13 +126,18 @@ class _ToolDetailScreenState extends ConsumerState<ToolDetailScreen> {
       );
 
       // Step 2: compute outputs (pure Dart, no network)
-      final engine = const CalculatorEngine();
-      final outputs = engine.compute(tool.formulaAst, inputs);
+      final result = const CalculatorEngine().compute(tool.formulaAst, inputs);
+      final outputsJsonb = result['outputs'] as Map<String, dynamic>? ?? result;
+      final breakdownJsonb = result['breakdown'] as Map<String, dynamic>? ?? {};
 
       // Step 3: persist outputs
       await repo.approveAndInjectToolOutput(
-        toolRunId: toolRunId,
-        outputsJsonb: outputs,
+        toolRunId:                 toolRunId,
+        decisionId:                decisionId,
+        finalDescription:          '${tool.name} result — run on ${DateTime.now().toLocal().toString().substring(0, 10)}',
+        outputsJsonb:              outputsJsonb,
+        calculationBreakdownJsonb: breakdownJsonb,
+        attachToolAudit:           false,
       );
 
       if (!mounted) return;
@@ -143,7 +148,7 @@ class _ToolDetailScreenState extends ConsumerState<ToolDetailScreen> {
         resultsPath,
         extra: {
           'toolRunId': toolRunId,
-          'outputs': outputs,
+          'outputs': outputsJsonb,
           'tool': tool,
           'decisionId': decisionId,
         },

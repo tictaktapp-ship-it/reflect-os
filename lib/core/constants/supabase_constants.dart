@@ -7,6 +7,8 @@ abstract final class SupabaseTables {
 }
 
 abstract final class SupabaseViews {
+  static const String toolDefinitions = 'user_visible_tool_definitions';
+  static const String toolRuns = 'user_visible_tool_runs';
   static const String workspaceToolRuns = 'v_workspace_tool_runs';
   static const String workspaceDemographicPacks = 'v_workspace_demographic_packs';
 }
