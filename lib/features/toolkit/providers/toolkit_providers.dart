@@ -9,12 +9,12 @@ final toolkitRepositoryProvider = Provider<ToolkitRepository>(
 
 final toolDefinitionsProvider =
     FutureProvider<List<ToolDefinition>>((ref) {
-  return ref.read(toolkitRepositoryProvider).getToolDefinitions();
+  return ref.watch(toolkitRepositoryProvider).getToolDefinitions();
 });
 
 final decisionToolRunsProvider =
     FutureProvider.family<List<ToolRun>, String>((ref, decisionId) {
   return ref
-      .read(toolkitRepositoryProvider)
+      .watch(toolkitRepositoryProvider)
       .getToolRunsForDecision(decisionId);
 });

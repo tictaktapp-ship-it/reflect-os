@@ -16,7 +16,7 @@ class ToolkitRepository {
 
   Future<List<ToolRun>> getToolRunsForDecision(String decisionId) async {
     final rows = await supabase
-        .from(SupabaseViews.workspaceToolRuns)
+        .from(SupabaseViews.toolRuns)
         .select()
         .eq('decision_id', decisionId)
         .order('created_at', ascending: false);
