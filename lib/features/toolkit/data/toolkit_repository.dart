@@ -7,11 +7,17 @@ class ToolkitRepository {
   const ToolkitRepository();
 
   Future<List<ToolDefinition>> getToolDefinitions() async {
-    final rows = await supabase
-        .from(SupabaseViews.toolDefinitions)
-        .select()
-        .order('name');
-    return rows.map(ToolDefinition.fromJson).toList();
+    try {
+      final rows = await supabase
+          .from(SupabaseViews.toolDefinitions)
+          .select()
+          .order('name');
+      return rows.map(ToolDefinition.fromJson).toList();
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('getToolDefinitions error: $e\n$st');
+      rethrow;
+    }
   }
 
   Future<List<ToolRun>> getToolRunsForDecision(String decisionId) async {

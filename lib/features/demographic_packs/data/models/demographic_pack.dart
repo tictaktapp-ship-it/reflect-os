@@ -1,29 +1,34 @@
 class DemographicPack {
   final String id;
-  final String name;
+  final String key;
+  final String displayName;
   final String description;
-  final String targetAudience;
-
-  /// Field values to pre-populate on the create-decision form.
-  /// Keys map to decision form field ids.
-  final Map<String, dynamic> prePopulateFields;
+  final bool isActive;
+  final Map<String, dynamic> preferencesJsonb;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   const DemographicPack({
     required this.id,
-    required this.name,
+    required this.key,
+    required this.displayName,
     required this.description,
-    required this.targetAudience,
-    required this.prePopulateFields,
+    required this.isActive,
+    required this.preferencesJsonb,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
   factory DemographicPack.fromJson(Map<String, dynamic> json) {
     return DemographicPack(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      description: json['description'] as String? ?? '',
-      targetAudience: json['target_audience'] as String? ?? '',
-      prePopulateFields:
-          (json['pre_populate_fields'] as Map<String, dynamic>?) ?? {},
+      id:               json['id']           as String,
+      key:              json['key']          as String,
+      displayName:      json['display_name'] as String,
+      description:      json['description']  as String? ?? '',
+      isActive:         json['is_active']    as bool? ?? true,
+      preferencesJsonb: json['preferences_jsonb'] as Map<String, dynamic>? ?? {},
+      createdAt:        DateTime.parse(json['created_at'] as String),
+      updatedAt:        DateTime.parse(json['updated_at'] as String),
     );
   }
 }

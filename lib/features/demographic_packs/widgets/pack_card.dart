@@ -32,7 +32,7 @@ class PackCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    pack.name,
+                    pack.displayName,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -56,10 +56,10 @@ class PackCard extends StatelessWidget {
                   ),
               ],
             ),
-            if (pack.targetAudience.isNotEmpty) ...[
+            if (pack.key.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
-                pack.targetAudience,
+                pack.key,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: AppColors.accentPrimary,
                 ),

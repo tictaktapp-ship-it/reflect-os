@@ -7,9 +7,9 @@ class DemographicPacksRepository {
 
   Future<List<DemographicPack>> getPacks() async {
     final rows = await supabase
-        .from(SupabaseTables.demographicPacks)
+        .from(SupabaseViews.demographicPacks)
         .select()
-        .order('name');
+        .order('display_name');
     return rows.map(DemographicPack.fromJson).toList();
   }
 
@@ -18,10 +18,10 @@ class DemographicPacksRepository {
   Future<String?> getDefaultPackId(String workspaceId) async {
     final row = await supabase
         .from(SupabaseTables.workspaceSettings)
-        .select('default_demographic_pack_id')
+        .select('default_pack_id')
         .eq('workspace_id', workspaceId)
         .maybeSingle();
-    return row?['default_demographic_pack_id'] as String?;
+    return row?['default_pack_id'] as String?;
   }
 
   /// Calls the `set_workspace_default_pack` RPC.
@@ -30,7 +30,7 @@ class DemographicPacksRepository {
     required String packId,
   }) async {
     await supabase.rpc(
-      SupabaseRpcs.setWorkspaceDefaultPack,
+      SupabaseRpcs.setWorkspaceDefaultDemographicPack,
       params: {
         'p_workspace_id': workspaceId,
         'p_pack_id': packId,

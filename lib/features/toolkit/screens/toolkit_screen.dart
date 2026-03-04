@@ -55,8 +55,8 @@ class _ToolkitScreenState extends ConsumerState<ToolkitScreen> {
             child: toolsAsync.when(
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
-              error: (_, _) => const Center(
-                child: Text('Could not load tools. Please try again.'),
+              error: (error, _) => Center(
+                child: Text('Could not load tools: ${error.toString()}'),
               ),
               data: (tools) {
                 final filtered = _query.isEmpty
