@@ -57,11 +57,11 @@ const webDir = 'web/icons';
 mkdirSync(webDir, { recursive: true });
 
 // Standard PWA icons — teal background, icon centred with 15% padding
-writeFileSync(`${webDir}/Icon-192.png`,          renderWithBg(192, '#0D7377', 0.15));
-writeFileSync(`${webDir}/Icon-512.png`,          renderWithBg(512, '#0D7377', 0.15));
+writeFileSync(`${webDir}/Icon-192.png`,          renderWithBg(192, '#0D7377', 0.05));
+writeFileSync(`${webDir}/Icon-512.png`,          renderWithBg(512, '#0D7377', 0.05));
 // Maskable icons — more padding (safe zone = inner 80% of canvas)
-writeFileSync(`${webDir}/Icon-maskable-192.png`, renderWithBg(192, '#0D7377', 0.1));
-writeFileSync(`${webDir}/Icon-maskable-512.png`, renderWithBg(512, '#0D7377', 0.1));
+writeFileSync(`${webDir}/Icon-maskable-192.png`, renderWithBg(192, '#0D7377', 0.08));
+writeFileSync(`${webDir}/Icon-maskable-512.png`, renderWithBg(512, '#0D7377', 0.08));
 
 // Favicon — 32×32, transparent background
 writeFileSync('web/favicon.png', render(32));
@@ -81,12 +81,12 @@ for (const { name, size } of densities) {
   const dir = `android/app/src/main/res/mipmap-${name}`;
   mkdirSync(dir, { recursive: true });
 
-  // ic_launcher — teal background, 15% padding
-  writeFileSync(`${dir}/ic_launcher.png`,       renderWithBg(size, '#0D7377', 0.15));
+  // ic_launcher — teal background, 5% padding
+  writeFileSync(`${dir}/ic_launcher.png`,       renderWithBg(size, '#0D7377', 0.05));
   // ic_launcher_round — same
-  writeFileSync(`${dir}/ic_launcher_round.png`, renderWithBg(size, '#0D7377', 0.15));
-  // ic_launcher_foreground — transparent background, icon fills 66% (adaptive icon foreground layer)
-  writeFileSync(`${dir}/ic_launcher_foreground.png`, render(size, 0.17));
+  writeFileSync(`${dir}/ic_launcher_round.png`, renderWithBg(size, '#0D7377', 0.05));
+  // ic_launcher_foreground — transparent background, icon fills ~90%
+  writeFileSync(`${dir}/ic_launcher_foreground.png`, render(size, 0.05));
 
   console.log(`✓ Android ${name} (${size}px)`);
 }
