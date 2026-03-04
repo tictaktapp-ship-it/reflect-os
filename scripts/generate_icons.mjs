@@ -5,7 +5,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { Resvg } from '@resvg/resvg-js';
 
-const svg = readFileSync('icon_source.svg');
+const svg = readFileSync('assets/images/reflect-icon-dark.svg');
 
 function render(size, padding = 0) {
   const padded = Math.round(size * padding);

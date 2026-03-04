@@ -27,3 +27,12 @@ GoogleService-Info.plist
 # OS
 .DS_Store
 Thumbs.db
+
+# Node (icon generation tooling)
+node_modules/
+
+# Legacy icon source (superseded by assets/images/reflect-icon-dark.svg)
+icon_source.svg
+
+# Claude Code local settings
+.claude/
