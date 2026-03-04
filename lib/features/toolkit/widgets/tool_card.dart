@@ -27,6 +27,12 @@ class ToolCard extends StatelessWidget {
             children: [
               Row(
                 children: [
+                  Icon(
+                    _resolveIcon(tool.iconName),
+                    size: 18,
+                    color: AppColors.accentPrimary,
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       tool.name,
@@ -56,6 +62,28 @@ class ToolCard extends StatelessWidget {
       ),
     );
   }
+}
+
+IconData _resolveIcon(String name) {
+  return switch (name) {
+    'trending_up'    => Icons.trending_up,
+    'trending_down'  => Icons.trending_down,
+    'bar_chart'      => Icons.bar_chart,
+    'show_chart'     => Icons.show_chart,
+    'pie_chart'      => Icons.pie_chart,
+    'people'         => Icons.people,
+    'person'         => Icons.person,
+    'warning'        => Icons.warning_amber_rounded,
+    'check_circle'   => Icons.check_circle_outline,
+    'schedule'       => Icons.schedule,
+    'science'        => Icons.science,
+    'psychology'     => Icons.psychology,
+    'balance'        => Icons.balance,
+    'analytics'      => Icons.analytics,
+    'speed'          => Icons.speed,
+    'calculate'      => Icons.calculate,
+    _                => Icons.calculate,
+  };
 }
 
 class _CategoryChip extends StatelessWidget {

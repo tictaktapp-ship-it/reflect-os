@@ -39,6 +39,8 @@ import 'package:reflect_os/features/templates/data/models/decision_template.dart
 import 'package:reflect_os/features/templates/screens/templates_screen.dart';
 import 'package:reflect_os/features/team/screens/team_screen.dart';
 import 'package:reflect_os/features/toolkit/data/models/tool_definition.dart';
+import 'package:reflect_os/features/toolkit/data/models/tool_run.dart';
+import 'package:reflect_os/features/toolkit/engine/calculator_engine.dart';
 import 'package:reflect_os/features/toolkit/screens/tool_detail_screen.dart';
 import 'package:reflect_os/features/toolkit/screens/tool_results_screen.dart';
 import 'package:reflect_os/features/toolkit/screens/toolkit_screen.dart';
@@ -189,12 +191,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.toolResults,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>;
+          final extra = state.extra as ({
+            ToolCalculationResult result,
+            ToolRun run,
+            ToolDefinition tool,
+            String? decisionId,
+          });
           return ToolResultsScreen(
-            toolRunId: extra['toolRunId'] as String,
-            outputs: extra['outputs'] as Map<String, dynamic>,
-            tool: extra['tool'] as ToolDefinition,
-            decisionId: extra['decisionId'] as String?,
+            result:     extra.result,
+            run:        extra.run,
+            tool:       extra.tool,
+            decisionId: extra.decisionId,
           );
         },
       ),

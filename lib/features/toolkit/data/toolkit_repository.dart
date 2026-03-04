@@ -2,9 +2,12 @@ import 'package:reflect_os/core/constants/supabase_constants.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'models/tool_definition.dart';
 import 'models/tool_run.dart';
+import 'models/tool_preset.dart';
 
 class ToolkitRepository {
   const ToolkitRepository();
+
+  // ── Read paths (views only) ──────────────────────────────────────────────
 
   Future<List<ToolDefinition>> getToolDefinitions() async {
     try {
@@ -12,12 +15,21 @@ class ToolkitRepository {
           .from(SupabaseViews.toolDefinitions)
           .select()
           .order('name');
-      return rows.map(ToolDefinition.fromJson).toList();
+      return (rows as List).map((r) => ToolDefinition.fromJson(r as Map<String, dynamic>)).toList();
     } catch (e, st) {
       // ignore: avoid_print
       print('getToolDefinitions error: $e\n$st');
       rethrow;
     }
+  }
+
+  Future<ToolDefinition> getToolDefinition(String id) async {
+    final row = await supabase
+        .from(SupabaseViews.toolDefinitions)
+        .select()
+        .eq('id', id)
+        .single();
+    return ToolDefinition.fromJson(row);
   }
 
   Future<List<ToolRun>> getToolRunsForDecision(String decisionId) async {
@@ -26,29 +38,54 @@ class ToolkitRepository {
         .select()
         .eq('decision_id', decisionId)
         .order('created_at', ascending: false);
-    return rows.map(ToolRun.fromJson).toList();
+    return (rows as List).map((r) => ToolRun.fromJson(r as Map<String, dynamic>)).toList();
   }
 
-  /// Step 1 of the two-call flow: creates a shell run row, returns its id.
-  Future<String> runTool({
+  Future<List<ToolPreset>> getPresetsForTool({
     required String workspaceId,
-    required String decisionId,
     required String toolDefinitionId,
-    required Map<String, dynamic> inputsJsonb,
   }) async {
-    final result =
-        await supabase.rpc(SupabaseRpcs.runTool, params: {
-      'p_workspace_id': workspaceId,
-      'p_decision_id': decisionId,
-      'p_tool_definition_id': toolDefinitionId,
-      'p_inputs_jsonb': inputsJsonb,
-    });
-    // RPC returns the inserted tool_runs row as a Map
-    final row = result as Map<String, dynamic>;
-    return row['id'] as String;
+    final rows = await supabase
+        .from(SupabaseViews.toolPresets)
+        .select()
+        .eq('workspace_id', workspaceId)
+        .eq('tool_definition_id', toolDefinitionId)
+        .order('created_at', ascending: false);
+    return (rows as List).map((r) => ToolPreset.fromJson(r as Map<String, dynamic>)).toList();
   }
 
-  /// Step 2 of the two-call flow: persists client-computed outputs.
+  // ── Write paths (RPCs only) ──────────────────────────────────────────────
+
+  /// Creates a shell run row via RPC. Returns the full tool_runs row.
+  Future<ToolRun> runTool({
+    required String toolDefinitionId,
+    required String workspaceId,
+    required Map<String, dynamic> inputsJsonb,
+    String? decisionId,
+    int projectionYears = 3,
+    String currencyCode = 'GBP',
+    String confidenceScenario = 'base',
+  }) async {
+    final enrichedInputs = {
+      ...inputsJsonb,
+      '__projection_years': projectionYears,
+      '__currency_code': currencyCode,
+      '__confidence_scenario': confidenceScenario,
+    };
+
+    final result = await supabase.rpc(
+      SupabaseRpcs.runTool,
+      params: {
+        'p_tool_definition_id': toolDefinitionId,
+        'p_workspace_id': workspaceId,
+        'p_inputs_jsonb': enrichedInputs,
+        'p_decision_id': ?decisionId,
+      },
+    );
+    return ToolRun.fromJson(result as Map<String, dynamic>);
+  }
+
+  /// Approves client-computed outputs and injects them into a decision.
   Future<void> approveAndInjectToolOutput({
     required String toolRunId,
     required String decisionId,
@@ -60,13 +97,36 @@ class ToolkitRepository {
     await supabase.rpc(
       SupabaseRpcs.approveAndInjectToolOutput,
       params: {
-        'p_tool_run_id':                  toolRunId,
-        'p_decision_id':                  decisionId,
-        'p_final_description':            finalDescription,
-        'p_outputs_jsonb':                outputsJsonb,
-        'p_calculation_breakdown_jsonb':  calculationBreakdownJsonb,
-        'p_attach_tool_audit':            attachToolAudit,
+        'p_tool_run_id': toolRunId,
+        'p_decision_id': decisionId,
+        'p_final_description': finalDescription,
+        'p_outputs_jsonb': outputsJsonb,
+        'p_calculation_breakdown_jsonb': calculationBreakdownJsonb,
+        'p_attach_tool_audit': attachToolAudit,
       },
     );
+  }
+
+  /// Saves current inputs as a named preset.
+  Future<ToolPreset> savePreset({
+    required String workspaceId,
+    required String toolDefinitionId,
+    required String name,
+    required Map<String, dynamic> inputsJsonb,
+    String? description,
+    bool isWorkspaceDefault = false,
+  }) async {
+    final result = await supabase.rpc(
+      SupabaseRpcs.saveToolPreset,
+      params: {
+        'p_workspace_id': workspaceId,
+        'p_tool_definition_id': toolDefinitionId,
+        'p_name': name,
+        'p_inputs_jsonb': inputsJsonb,
+        'p_description': ?description,
+        'p_is_workspace_default': isWorkspaceDefault,
+      },
+    );
+    return ToolPreset.fromJson(result as Map<String, dynamic>);
   }
 }

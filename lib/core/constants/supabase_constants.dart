@@ -9,6 +9,7 @@ abstract final class SupabaseTables {
 abstract final class SupabaseViews {
   static const String toolDefinitions = 'user_visible_tool_definitions';
   static const String toolRuns = 'user_visible_tool_runs';
+  static const String toolPresets = 'user_visible_tool_presets';
   static const String demographicPacks = 'user_visible_demographic_packs';
   static const String workspaceToolRuns = 'v_workspace_tool_runs';
   static const String workspaceDemographicPacks = 'v_workspace_demographic_packs';
@@ -23,4 +24,5 @@ abstract final class SupabaseRpcs {
       'set_workspace_default_demographic_pack';
   static const String setWorkspaceEncryptionMode =
       'set_workspace_encryption_mode';
+  static const String saveToolPreset = 'save_tool_preset';
 }

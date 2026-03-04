@@ -4930,7 +4930,7 @@ class _ToolRunRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  run.toolDefinitionName,
+                  run.toolName,
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w500,
                   ),
