@@ -22,10 +22,13 @@ class ToolDefinition {
   });
 
   factory ToolDefinition.fromJson(Map<String, dynamic> json) {
-    final inputList = (json['input_schema_jsonb'] as List<dynamic>? ?? [])
+    final inputSchema = json['input_schema_jsonb'] as Map<String, dynamic>? ?? {};
+    final inputList = ((inputSchema['fields'] as List<dynamic>?) ?? [])
         .map((e) => ToolInputField.fromJson(e as Map<String, dynamic>))
         .toList();
-    final outputList = (json['output_schema_jsonb'] as List<dynamic>? ?? [])
+
+    final outputSchema = json['output_schema_jsonb'] as Map<String, dynamic>? ?? {};
+    final outputList = ((outputSchema['fields'] as List<dynamic>?) ?? [])
         .map((e) => ToolOutputField.fromJson(e as Map<String, dynamic>))
         .toList();
     return ToolDefinition(
