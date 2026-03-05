@@ -108,7 +108,7 @@ class _WideShell extends StatelessWidget {
                 isDark
                     ? 'assets/images/reflect-inline-dark.svg'
                     : 'assets/images/reflect-inline-light.svg',
-                width: 130,
+                width: 520,
               ),
             ),
             trailing: Padding(
@@ -188,7 +188,7 @@ class _NarrowShell extends StatelessWidget {
               isDark
                   ? 'assets/images/reflect-inline-dark.svg'
                   : 'assets/images/reflect-inline-light.svg',
-              height: 22,
+              height: 88,
             ),
             const SizedBox(width: 12),
             const _WorkspaceSwitcherChip(),

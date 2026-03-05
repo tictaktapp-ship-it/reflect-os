@@ -24,7 +24,7 @@ class CoachDashboardScreen extends ConsumerWidget {
               Theme.of(context).brightness == Brightness.dark
                   ? 'assets/images/reflect-icon-dark.svg'
                   : 'assets/images/reflect-icon-light.svg',
-              height: 40,
+              height: 160,
             ),
             const SizedBox(width: 8),
             const Text('Coach Dashboard'),
@@ -146,7 +146,7 @@ class CoachDashboardScreen extends ConsumerWidget {
                         Theme.of(sheetCtx).brightness == Brightness.dark
                             ? 'assets/images/reflect-icon-dark.svg'
                             : 'assets/images/reflect-icon-light.svg',
-                        height: 32,
+                        height: 128,
                       ),
                     ),
                     const SizedBox(height: 16),

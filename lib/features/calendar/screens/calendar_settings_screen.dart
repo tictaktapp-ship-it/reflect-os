@@ -71,7 +71,7 @@ class _CalendarSettingsScreenState
                   Theme.of(ctx).brightness == Brightness.dark
                       ? 'assets/images/reflect-icon-dark.svg'
                       : 'assets/images/reflect-icon-light.svg',
-                  height: 32,
+                  height: 128,
                 ),
               ),
               const SizedBox(height: 16),
@@ -158,7 +158,7 @@ class _CalendarSettingsScreenState
               Theme.of(context).brightness == Brightness.dark
                   ? 'assets/images/reflect-icon-dark.svg'
                   : 'assets/images/reflect-icon-light.svg',
-              height: 40,
+              height: 160,
             ),
             const SizedBox(width: 8),
             const Text('Calendar Integration'),

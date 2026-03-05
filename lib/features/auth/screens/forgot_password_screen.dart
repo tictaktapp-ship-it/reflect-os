@@ -56,7 +56,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   const SizedBox(height: 48),
                   Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 280),
+                      constraints: const BoxConstraints(maxWidth: 560),
                       child: SvgPicture.asset(
                         Theme.of(context).brightness == Brightness.dark
                             ? 'assets/images/reflect-inline-dark.svg'

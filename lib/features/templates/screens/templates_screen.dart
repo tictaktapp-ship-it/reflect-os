@@ -54,7 +54,7 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
                       isDark
                           ? 'assets/images/reflect-icon-dark.svg'
                           : 'assets/images/reflect-icon-light.svg',
-                      height: 32,
+                      height: 128,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -228,7 +228,7 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
                   isDark
                       ? 'assets/images/reflect-icon-dark.svg'
                       : 'assets/images/reflect-icon-light.svg',
-                  height: 32,
+                  height: 128,
                 ),
               ),
               const SizedBox(height: 8),
@@ -362,7 +362,7 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
               isDark
                   ? 'assets/images/reflect-icon-dark.svg'
                   : 'assets/images/reflect-icon-light.svg',
-              height: 40,
+              height: 160,
             ),
             const SizedBox(width: 8),
             const Text('Templates'),
@@ -671,7 +671,7 @@ Future<DecisionTemplate?> showTemplatePicker(
                 isDark
                     ? 'assets/images/reflect-icon-dark.svg'
                     : 'assets/images/reflect-icon-light.svg',
-                height: 32,
+                height: 128,
               ),
             ),
             const SizedBox(height: 8),
