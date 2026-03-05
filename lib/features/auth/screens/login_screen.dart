@@ -59,7 +59,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 48),
                     Center(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 180),
+                        constraints: const BoxConstraints(maxWidth: 280),
                         child: SvgPicture.asset(
                           Theme.of(context).brightness == Brightness.dark
                               ? 'assets/images/reflect-inline-dark.svg'

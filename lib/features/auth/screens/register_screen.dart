@@ -85,9 +85,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     const SizedBox(height: 48),
                     Center(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 180),
+                        constraints: const BoxConstraints(maxWidth: 280),
                         child: SvgPicture.asset(
-                          'assets/images/reflect-inline-dark.svg',
+                          Theme.of(context).brightness == Brightness.dark
+                              ? 'assets/images/reflect-inline-dark.svg'
+                              : 'assets/images/reflect-inline-light.svg',
                         ),
                       ),
                     ),
