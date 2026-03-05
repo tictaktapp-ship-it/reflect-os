@@ -86,15 +86,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const SizedBox(height: 48),
-                      Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 560, maxHeight: 160),
-                          child: SvgPicture.asset(
-                            Theme.of(context).brightness == Brightness.dark
-                                ? 'assets/images/reflect-inline-dark.svg'
-                                : 'assets/images/reflect-inline-light.svg',
-                          ),
-                        ),
+                      SvgPicture.asset(
+                        'assets/images/reflect-inline-light.svg',
+                        height: 48,
                       ),
                       const SizedBox(height: 40),
                       TextFormField(
