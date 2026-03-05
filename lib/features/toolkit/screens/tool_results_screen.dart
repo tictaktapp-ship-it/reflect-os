@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
@@ -165,10 +168,10 @@ class _ToolResultsScreenState extends State<ToolResultsScreen> {
             const SizedBox(height: 20),
           ],
 
-          // Section 5 — Chart stub
+          // Section 5 — Chart
           if (chartConfig.isNotEmpty) ...[
             _SectionHeader(title: 'Chart'),
-            _ChartStub(chartConfig: chartConfig),
+            _ToolChart(chartConfig: chartConfig),
             const SizedBox(height: 20),
           ],
 
@@ -401,56 +404,501 @@ class _ProjectionsTable extends StatelessWidget {
   }
 }
 
-// ── Chart stub ────────────────────────────────────────────────────────────────
+// ── Tool chart ────────────────────────────────────────────────────────────────
 
-class _ChartStub extends StatelessWidget {
-  const _ChartStub({required this.chartConfig});
+class _ToolChart extends StatelessWidget {
+  const _ToolChart({required this.chartConfig});
 
   final Map<String, dynamic> chartConfig;
 
-  static IconData _chartIcon(String? type) => switch (type) {
-        'cumulative_line'      => Icons.show_chart,
-        'breakeven_crossover'  => Icons.show_chart,
-        'fan_chart'            => Icons.area_chart,
-        'tornado'              => Icons.bar_chart,
-        'risk_heatmap'         => Icons.grid_on,
-        _                      => Icons.bar_chart,
-      };
+  // ── Pure helpers ──────────────────────────────────────────────────────────
+
+  static List<Map<String, dynamic>>? _parseSeries(List<dynamic> raw) {
+    try {
+      return raw.map((e) => e as Map<String, dynamic>).toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static List<double> _vals(Map<String, dynamic> s) {
+    try {
+      final raw = s['values'] as List<dynamic>?;
+      if (raw == null) return [];
+      return raw.map((v) => (v as num).toDouble()).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // ── Shared chart helpers ──────────────────────────────────────────────────
+
+  static Widget _card(BuildContext context, Widget child) => Card(
+        color: Theme.of(context).colorScheme.surface,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: child,
+        ),
+      );
+
+  static FlGridData _lineGrid(BuildContext context) => FlGridData(
+        show: true,
+        drawVerticalLine: false,
+        getDrawingHorizontalLine: (_) => FlLine(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.07),
+          strokeWidth: 1,
+        ),
+      );
+
+  static FlTitlesData _lineTitles(BuildContext context, int maxPoints) {
+    final rotate = maxPoints > 6;
+    return FlTitlesData(
+      leftTitles: AxisTitles(
+        sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 52,
+          getTitlesWidget: (v, _) => Text(
+            _fmtShort(v),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(fontSize: 9),
+          ),
+        ),
+      ),
+      rightTitles: const AxisTitles(),
+      topTitles: const AxisTitles(),
+      bottomTitles: AxisTitles(
+        sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: rotate ? 36 : 20,
+          getTitlesWidget: (v, _) {
+            final i = v.toInt();
+            if (v != i.toDouble() || i < 0 || i >= maxPoints) {
+              return const SizedBox.shrink();
+            }
+            final lbl = 'Y${i + 1}';
+            if (rotate) {
+              return Transform.rotate(
+                angle: -math.pi / 4,
+                child: Text(lbl,
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelSmall
+                        ?.copyWith(fontSize: 9)),
+              );
+            }
+            return Text(lbl,
+                style: Theme.of(context)
+                    .textTheme
+                    .labelSmall
+                    ?.copyWith(fontSize: 9));
+          },
+        ),
+      ),
+    );
+  }
+
+  // ── Dispatch ──────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final theme     = Theme.of(context);
     final chartType = chartConfig['primary_chart'] as String?;
-    final seriesList = (chartConfig['series'] as List<dynamic>?)
-            ?.map((s) => s.toString())
-            .join(', ') ??
-        '';
+    final rawSeries = chartConfig['series'] as List<dynamic>?;
+    if (rawSeries == null || rawSeries.isEmpty) {
+      return const Center(child: Text('No data'));
+    }
+    return switch (chartType) {
+      'cumulative_line'     => _cumulativeLine(context, rawSeries),
+      'breakeven_crossover' => _breakevenCrossover(context, rawSeries),
+      'fan_chart'           => _fanChart(context, rawSeries),
+      'tornado'             => _tornado(context, rawSeries),
+      'risk_heatmap'        => _heatmap(context, rawSeries),
+      _                     => const Center(child: Text('Chart type not supported')),
+    };
+  }
+
+  // ── cumulative_line ───────────────────────────────────────────────────────
+
+  Widget _cumulativeLine(BuildContext context, List<dynamic> rawSeries) {
+    final series = _parseSeries(rawSeries);
+    if (series == null) return const Center(child: Text('No data'));
+    final cs      = Theme.of(context).colorScheme;
+    final palette = [cs.primary, cs.secondary, cs.tertiary];
+
+    int    maxPoints = 0;
+    double maxY      = 0;
+    final  lines     = <LineChartBarData>[];
+
+    for (var i = 0; i < series.length; i++) {
+      final vals = _vals(series[i]);
+      if (vals.isEmpty) continue;
+      maxPoints = math.max(maxPoints, vals.length);
+      double cum = 0;
+      final spots = <FlSpot>[];
+      for (var j = 0; j < vals.length; j++) {
+        cum += vals[j];
+        spots.add(FlSpot(j.toDouble(), cum));
+        maxY = math.max(maxY, cum.abs());
+      }
+      lines.add(LineChartBarData(
+        spots:   spots,
+        isCurved: true,
+        color:   palette[i % palette.length],
+        barWidth: 2,
+        dotData: const FlDotData(show: false),
+      ));
+    }
+
+    if (lines.isEmpty) return const Center(child: Text('No data'));
+    return _card(
+      context,
+      SizedBox(
+        height: 220,
+        child: LineChart(LineChartData(
+          minY:        0,
+          maxY:        maxY * 1.25,
+          borderData:  FlBorderData(show: false),
+          gridData:    _lineGrid(context),
+          titlesData:  _lineTitles(context, maxPoints),
+          lineBarsData: lines,
+        )),
+      ),
+    );
+  }
+
+  // ── breakeven_crossover ───────────────────────────────────────────────────
+
+  Widget _breakevenCrossover(BuildContext context, List<dynamic> rawSeries) {
+    final series = _parseSeries(rawSeries);
+    if (series == null || series.length < 2) {
+      return const Center(child: Text('No data'));
+    }
+    final cs       = Theme.of(context).colorScheme;
+    final revVals  = _vals(series[0]);
+    final costVals = _vals(series[1]);
+    if (revVals.isEmpty || costVals.isEmpty) {
+      return const Center(child: Text('No data'));
+    }
+
+    final maxPoints = math.max(revVals.length, costVals.length);
+    double maxY = 0;
+    for (final v in [...revVals, ...costVals]) {
+      maxY = math.max(maxY, v.abs());
+    }
+
+    int? crossX;
+    for (var i = 0; i < math.min(revVals.length, costVals.length) - 1; i++) {
+      if ((revVals[i] - costVals[i]) * (revVals[i + 1] - costVals[i + 1]) <= 0) {
+        crossX = i;
+        break;
+      }
+    }
+
+    FlSpot toSpot(MapEntry<int, double> e) => FlSpot(e.key.toDouble(), e.value);
+
+    return _card(
+      context,
+      SizedBox(
+        height: 220,
+        child: LineChart(LineChartData(
+          maxY:       maxY * 1.25,
+          borderData: FlBorderData(show: false),
+          gridData:   _lineGrid(context),
+          titlesData: _lineTitles(context, maxPoints),
+          extraLinesData: ExtraLinesData(
+            verticalLines: crossX != null
+                ? [
+                    VerticalLine(
+                      x:           crossX.toDouble() + 0.5,
+                      color:       cs.onSurface.withValues(alpha: 0.4),
+                      strokeWidth: 1.5,
+                      dashArray:   [4, 4],
+                    )
+                  ]
+                : [],
+          ),
+          lineBarsData: [
+            LineChartBarData(
+              spots:    revVals.asMap().entries.map(toSpot).toList(),
+              isCurved: true,
+              color:    cs.primary,
+              barWidth: 2,
+              dotData:  const FlDotData(show: false),
+            ),
+            LineChartBarData(
+              spots:    costVals.asMap().entries.map(toSpot).toList(),
+              isCurved: true,
+              color:    cs.error,
+              barWidth: 2,
+              dotData:  const FlDotData(show: false),
+            ),
+          ],
+        )),
+      ),
+    );
+  }
+
+  // ── fan_chart ─────────────────────────────────────────────────────────────
+
+  Widget _fanChart(BuildContext context, List<dynamic> rawSeries) {
+    final series = _parseSeries(rawSeries);
+    if (series == null || series.length < 3) {
+      return const Center(child: Text('No data'));
+    }
+    final cs = Theme.of(context).colorScheme;
+
+    // Identify base, upper, lower by label; fall back to index 0/1/2
+    Map<String, dynamic>? base, upper, lower;
+    for (final s in series) {
+      final lbl = (s['label'] as String? ?? '').toLowerCase();
+      if (lbl.contains('upper') || lbl.contains('best')) {
+        upper ??= s;
+      } else if (lbl.contains('lower') || lbl.contains('worst')) {
+        lower ??= s;
+      } else {
+        base ??= s;
+      }
+    }
+    base  ??= series[0];
+    upper ??= series[1];
+    lower ??= series[2];
+
+    final baseVals  = _vals(base);
+    final upperVals = _vals(upper);
+    final lowerVals = _vals(lower);
+    if (baseVals.isEmpty) return const Center(child: Text('No data'));
+
+    final maxPoints = [baseVals.length, upperVals.length, lowerVals.length]
+        .reduce(math.max);
+    final allVals = [...baseVals, ...upperVals, ...lowerVals];
+    final maxY    = allVals.reduce(math.max) * 1.25;
+    final rawMin  = allVals.reduce(math.min);
+    final minY    = rawMin < 0 ? rawMin * 1.25 : rawMin * 0.75;
+
+    FlSpot toSpot(MapEntry<int, double> e) => FlSpot(e.key.toDouble(), e.value);
+
+    return _card(
+      context,
+      SizedBox(
+        height: 220,
+        child: LineChart(LineChartData(
+          minY:        minY,
+          maxY:        maxY,
+          borderData:  FlBorderData(show: false),
+          gridData:    _lineGrid(context),
+          titlesData:  _lineTitles(context, maxPoints),
+          betweenBarsData: upperVals.isNotEmpty && lowerVals.isNotEmpty
+              ? [
+                  BetweenBarsData(
+                    fromIndex: 0,
+                    toIndex:   2,
+                    color: cs.primary.withValues(alpha: 0.08),
+                  )
+                ]
+              : [],
+          lineBarsData: [
+            // Upper bound — index 0 (referenced by betweenBarsData)
+            LineChartBarData(
+              spots:    upperVals.asMap().entries.map(toSpot).toList(),
+              isCurved: true,
+              color:    cs.primary.withValues(alpha: 0.35),
+              barWidth: 1.5,
+              dotData:  const FlDotData(show: false),
+            ),
+            // Base — index 1
+            LineChartBarData(
+              spots:    baseVals.asMap().entries.map(toSpot).toList(),
+              isCurved: true,
+              color:    cs.primary,
+              barWidth: 2.5,
+              dotData:  const FlDotData(show: false),
+            ),
+            // Lower bound — index 2 (referenced by betweenBarsData)
+            LineChartBarData(
+              spots:    lowerVals.asMap().entries.map(toSpot).toList(),
+              isCurved: true,
+              color:    cs.primary.withValues(alpha: 0.35),
+              barWidth: 1.5,
+              dotData:  const FlDotData(show: false),
+            ),
+          ],
+        )),
+      ),
+    );
+  }
+
+  // ── tornado (horizontal bar, custom layout) ───────────────────────────────
+
+  Widget _tornado(BuildContext context, List<dynamic> rawSeries) {
+    final series = _parseSeries(rawSeries);
+    if (series == null || series.isEmpty) {
+      return const Center(child: Text('No data'));
+    }
+    final cs = Theme.of(context).colorScheme;
+
+    double firstVal(Map<String, dynamic> s) {
+      final vals = _vals(s);
+      if (vals.isNotEmpty) return vals.first;
+      final v = s['value'];
+      return v != null ? (v as num).toDouble() : 0.0;
+    }
+
+    final labels = series.map((s) => s['label'] as String? ?? '').toList();
+    final values = series.map((s) => firstVal(s)).toList();
+    double maxAbs = values.map((v) => v.abs()).fold(0.0, math.max);
+    if (maxAbs == 0) maxAbs = 1;
+
+    const labelWidth   = 100.0;
+    const gapWidth     = 4.0;
+    const dividerWidth = 1.0;
+    const rowHeight    = 36.0;
+    const barHeight    = 24.0;
+    final chartHeight  = math.max(180.0, series.length * rowHeight);
+
+    return _card(
+      context,
+      SizedBox(
+        height: chartHeight,
+        child: LayoutBuilder(builder: (ctx, constraints) {
+          final barAreaWidth =
+              (constraints.maxWidth - labelWidth - gapWidth - dividerWidth) / 2;
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(series.length, (i) {
+              final v    = values[i];
+              final frac = v.abs() / maxAbs;
+              final posW = v >= 0
+                  ? (barAreaWidth * frac).clamp(0.0, barAreaWidth)
+                  : 0.0;
+              final negW = v < 0
+                  ? (barAreaWidth * frac).clamp(0.0, barAreaWidth)
+                  : 0.0;
+              return SizedBox(
+                height: rowHeight,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: labelWidth,
+                      child: Text(
+                        labels[i],
+                        textAlign: TextAlign.right,
+                        overflow:  TextOverflow.ellipsis,
+                        style: Theme.of(ctx)
+                            .textTheme
+                            .labelSmall
+                            ?.copyWith(fontSize: 9),
+                      ),
+                    ),
+                    SizedBox(width: gapWidth),
+                    // Negative half — bar extends rightward from right edge
+                    SizedBox(
+                      width: barAreaWidth,
+                      height: barHeight,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Container(
+                          width:  negW,
+                          height: barHeight,
+                          color:  cs.error.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width:  dividerWidth,
+                      height: barHeight,
+                      color:  cs.onSurface.withValues(alpha: 0.2),
+                    ),
+                    // Positive half — bar extends leftward from left edge
+                    SizedBox(
+                      width: barAreaWidth,
+                      height: barHeight,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          width:  posW,
+                          height: barHeight,
+                          color:  cs.primary.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          );
+        }),
+      ),
+    );
+  }
+
+  // ── risk_heatmap (DataTable) ──────────────────────────────────────────────
+
+  Widget _heatmap(BuildContext context, List<dynamic> rawSeries) {
+    final series = _parseSeries(rawSeries);
+    if (series == null || series.isEmpty) {
+      return const Center(child: Text('No data'));
+    }
+    final cs = Theme.of(context).colorScheme;
+
+    final allVals = series.expand((s) => _vals(s)).toList();
+    if (allVals.isEmpty) return const Center(child: Text('No data'));
+
+    final minVal = allVals.reduce(math.min);
+    final maxVal = allVals.reduce(math.max);
+    final range  = maxVal - minVal;
+
+    Color cellColor(double v) {
+      if (range == 0) return cs.primary.withValues(alpha: 0.1);
+      final t = (v - minVal) / range; // 0 = low, 1 = high
+      if (t < 0.5) {
+        return Color.lerp(
+          Colors.green.withValues(alpha: 0.25),
+          Colors.amber.withValues(alpha: 0.25),
+          t * 2,
+        )!;
+      }
+      return Color.lerp(
+        Colors.amber.withValues(alpha: 0.25),
+        Colors.red.withValues(alpha: 0.25),
+        (t - 0.5) * 2,
+      )!;
+    }
+
+    final maxCols = series.map((s) => _vals(s).length).fold(0, math.max);
 
     return Card(
-      color: theme.colorScheme.surface,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Icon(_chartIcon(chartType),
-                size: 48, color: AppColors.accentPrimary.withValues(alpha: 0.4)),
-            const SizedBox(height: 12),
-            Text(
-              chartType ?? 'Chart',
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(color: AppColors.textSecondary),
-            ),
-            if (seriesList.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(seriesList,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: AppColors.textSecondary)),
-            ],
-            const SizedBox(height: 8),
-            Text('Charts coming in the next release',
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: AppColors.textSecondary)),
+      color: cs.surface,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingRowColor:
+              WidgetStatePropertyAll(cs.primary.withValues(alpha: 0.08)),
+          columns: [
+            const DataColumn(label: Text('Factor')),
+            ...List.generate(maxCols, (i) => DataColumn(label: Text('${i + 1}'))),
           ],
+          rows: series.map((s) {
+            final label = s['label'] as String? ?? '';
+            final vals  = _vals(s);
+            return DataRow(cells: [
+              DataCell(Text(label,
+                  style: Theme.of(context).textTheme.labelSmall)),
+              ...List.generate(maxCols, (i) {
+                if (i >= vals.length) return const DataCell(Text('—'));
+                final v = vals[i];
+                return DataCell(
+                  Container(
+                    color:   cellColor(v),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    child: Text(
+                      _formatValue(v, null),
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ),
+                );
+              }),
+            ]);
+          }).toList(),
         ),
       ),
     );
@@ -556,4 +1004,10 @@ String _fmtCurrency(double v) {
   if (v.abs() >= 1000000) return '£${(v / 1000000).toStringAsFixed(1)}m';
   if (v.abs() >= 1000)    return '£${(v / 1000).toStringAsFixed(0)}k';
   return '£${v.toStringAsFixed(0)}';
+}
+
+String _fmtShort(double v) {
+  if (v.abs() >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
+  if (v.abs() >= 1000)    return '${(v / 1000).toStringAsFixed(0)}k';
+  return v.toStringAsFixed(0);
 }
