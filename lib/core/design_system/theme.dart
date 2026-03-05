@@ -109,8 +109,12 @@ final class AppTheme {
           side: const BorderSide(color: Color(0xFFE0E0E4)),
         ),
       ),
+      navigationBarTheme: const NavigationBarThemeData(
+        indicatorColor: AppColors.accentPrimary,
+      ),
       navigationRailTheme: const NavigationRailThemeData(
         backgroundColor: Colors.white,
+        indicatorColor: AppColors.accentPrimary,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

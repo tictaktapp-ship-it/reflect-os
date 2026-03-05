@@ -367,6 +367,8 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.accentPrimary,
+        foregroundColor: Colors.white,
         onPressed: () => context.push(Routes.decisionsCreate),
         tooltip: 'New decision',
         child: const Icon(Icons.add),
@@ -392,7 +394,7 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
             );
           }
           return ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
             itemCount: filtered.length,
             separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (_, index) =>

@@ -4,12 +4,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/connectivity_provider.dart';
-import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
-import 'package:reflect_os/features/dashboard/providers/dashboard_provider.dart';
 import 'package:reflect_os/features/settings/providers/profile_provider.dart';
-import 'package:reflect_os/features/workspace/providers/workspace_providers.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({required this.navigationShell, super.key});
@@ -116,7 +113,6 @@ class _WideShell extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const _WorkspaceSwitcherChip(),
                   IconButton(
                     icon: const Icon(Icons.search_outlined),
                     tooltip: 'Search',
@@ -181,18 +177,11 @@ class _NarrowShell extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SvgPicture.asset(
-              isDark
-                  ? 'assets/images/reflect-inline-dark.svg'
-                  : 'assets/images/reflect-inline-light.svg',
-              height: 88,
-            ),
-            const SizedBox(width: 12),
-            const _WorkspaceSwitcherChip(),
-          ],
+        title: SvgPicture.asset(
+          isDark
+              ? 'assets/images/reflect-inline-dark.svg'
+              : 'assets/images/reflect-inline-light.svg',
+          height: 88,
         ),
         centerTitle: false,
         automaticallyImplyLeading: false,
@@ -238,114 +227,6 @@ class _NarrowShell extends StatelessWidget {
             selectedIcon: Icon(Icons.psychology),
             label: 'Coach',
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Workspace Switcher Chip ────────────────────────────────────────────────────
-
-class _WorkspaceSwitcherChip extends ConsumerWidget {
-  const _WorkspaceSwitcherChip();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final name = ref.watch(workspaceNameProvider).valueOrNull ?? '…';
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => showModalBottomSheet<void>(
-          context: context,
-          isScrollControlled: true,
-          builder: (ctx) => const _WorkspaceSwitcherSheet(),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  name,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ),
-              const SizedBox(width: 2),
-              const Icon(Icons.unfold_more, size: 14),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Workspace Switcher Sheet ──────────────────────────────────────────────────
-
-class _WorkspaceSwitcherSheet extends ConsumerWidget {
-  const _WorkspaceSwitcherSheet();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final workspacesAsync = ref.watch(userWorkspacesProvider);
-    final currentId = ref.watch(currentWorkspaceProvider).valueOrNull;
-
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-            child: Text(
-              'Workspaces',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
-          workspacesAsync.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (e, _) => Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text('Failed to load workspaces: $e'),
-            ),
-            data: (workspaces) => ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: workspaces.length,
-              itemBuilder: (context, index) {
-                final ws = workspaces[index];
-                final isSelected = ws.id == currentId;
-                return ListTile(
-                  leading: Icon(
-                    ws.workspaceType == 'personal'
-                        ? Icons.person_outline
-                        : Icons.business_outlined,
-                  ),
-                  title: Text(ws.name),
-                  subtitle: Text(ws.workspaceType),
-                  trailing: isSelected
-                      ? Icon(Icons.check, color: AppColors.accentPrimary)
-                      : null,
-                  onTap: () {
-                    ref.read(selectedWorkspaceIdProvider.notifier).state =
-                        ws.id;
-                    ref.invalidate(dashboardAnalyticsProvider);
-                    Navigator.of(context).pop();
-                  },
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
         ],
       ),
     );

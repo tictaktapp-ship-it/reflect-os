@@ -3,7 +3,7 @@
     "short_name": "Reflect OS",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0D1117",
+    "background_color": "#FFFFFF",
     "theme_color": "#0D1117",
     "description": "Make better decisions. Track outcomes. Learn from results.",
     "orientation": "portrait-primary",

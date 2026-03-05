@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/initiatives/data/models/initiative.dart';
 import 'package:reflect_os/features/initiatives/providers/initiatives_provider.dart';
@@ -13,8 +14,10 @@ class InitiativesListScreen extends ConsumerWidget {
     final initiativesAsync = ref.watch(initiativesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Initiatives')),
+      appBar: AppBar(title: const SizedBox.shrink()),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.accentPrimary,
+        foregroundColor: Colors.white,
         onPressed: () => context.push(Routes.initiativesCreate),
         child: const Icon(Icons.add),
       ),
@@ -40,7 +43,7 @@ class InitiativesListScreen extends ConsumerWidget {
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
             itemCount: initiatives.length,
             separatorBuilder: (context, index) => const SizedBox(height: 8),
             itemBuilder: (context, index) =>

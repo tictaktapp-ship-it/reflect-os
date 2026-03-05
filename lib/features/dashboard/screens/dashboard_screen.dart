@@ -38,6 +38,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
   }
 
+  List<Decision> _forRange(List<Decision> all) {
+    if (_selectedRange == _DateRange.allTime) return all;
+    final cutoff = DateTime.now().subtract(
+      _selectedRange == _DateRange.thirtyDays
+          ? const Duration(days: 30)
+          : const Duration(days: 90),
+    );
+    return all.where((d) => d.createdAt.isAfter(cutoff)).toList();
+  }
+
+  String get _rangeLabel => switch (_selectedRange) {
+        _DateRange.thirtyDays => 'Last 30 days',
+        _DateRange.ninetyDays => 'Last 90 days',
+        _DateRange.allTime => 'All time',
+      };
+
   @override
   Widget build(BuildContext context) {
     final decisionsAsync = ref.watch(decisionsProvider);
@@ -98,14 +114,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ),
         data: (decisions) {
+          final rangeDecisions = _forRange(decisions);
           final draft =
-              decisions.where((d) => d.state == 'Draft').length;
+              rangeDecisions.where((d) => d.state == 'Draft').length;
           final active =
-              decisions.where((d) => d.state == 'Active').length;
+              rangeDecisions.where((d) => d.state == 'Active').length;
           final closed =
-              decisions.where((d) => d.state == 'Closed').length;
+              rangeDecisions.where((d) => d.state == 'Closed').length;
           final archived =
-              decisions.where((d) => d.state == 'Archived').length;
+              rangeDecisions.where((d) => d.state == 'Archived').length;
 
           final upcomingIds = checkpointsAsync.valueOrNull
                   ?.map((c) => c.decisionId)
@@ -226,6 +243,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             active: active,
                             closed: closed,
                             archived: archived,
+                            rangeLabel: _rangeLabel,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -244,6 +262,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         active: active,
                         closed: closed,
                         archived: archived,
+                        rangeLabel: _rangeLabel,
                       ),
                       const SizedBox(height: 12),
                       _ConfidenceDeltaCard(
@@ -270,44 +289,73 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
 
               // ── Needs Attention ───────────────────────────────────────
-              _sectionHeader(context, 'NEEDS ATTENTION'),
-              if (needsAttention.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(left: 4, bottom: 4),
-                  child: Text(
-                    'All clear — no decisions need attention.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              ExpansionTile(
+                tilePadding: const EdgeInsets.only(left: 4, right: 8),
+                title: Text(
+                  'NEEDS ATTENTION',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                      ),
+                ),
+                initiallyExpanded: false,
+                children: [
+                  if (needsAttention.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4, bottom: 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'All clear — no decisions need attention.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.4),
+                              ),
+                        ),
+                      ),
+                    )
+                  else
+                    SizedBox(
+                      height: 140,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding:
+                            const EdgeInsets.only(left: 4, right: 4, bottom: 4),
+                        itemCount: needsAttention.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 10),
+                        itemBuilder: (_, index) {
+                          final d = needsAttention[index];
+                          return _NeedsAttentionCard(
+                            decision: d,
+                            dueDate: earliestDue[d.id],
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+
+              // ── Recent Decisions ──────────────────────────────────────
+              if (recentFive.isNotEmpty)
+                ExpansionTile(
+                  tilePadding: const EdgeInsets.only(left: 4, right: 8),
+                  title: Text(
+                    'RECENT DECISIONS',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withValues(alpha: 0.4),
+                              .withValues(alpha: 0.6),
                         ),
                   ),
-                )
-              else
-                SizedBox(
-                  height: 140,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding:
-                        const EdgeInsets.only(left: 4, right: 4, bottom: 4),
-                    itemCount: needsAttention.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 10),
-                    itemBuilder: (_, index) {
-                      final d = needsAttention[index];
-                      return _NeedsAttentionCard(
-                        decision: d,
-                        dueDate: earliestDue[d.id],
-                      );
-                    },
-                  ),
+                  initiallyExpanded: false,
+                  children:
+                      recentFive.map((d) => _RecentDecisionTile(decision: d)).toList(),
                 ),
-
-              // ── Recent Decisions ──────────────────────────────────────
-              if (recentFive.isNotEmpty) ...[
-                _sectionHeader(context, 'RECENT DECISIONS'),
-                ...recentFive.map((d) => _RecentDecisionTile(decision: d)),
-              ],
 
               const SizedBox(height: 24),
             ],
@@ -317,19 +365,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 }
-
-Widget _sectionHeader(BuildContext context, String label) => Padding(
-      padding: const EdgeInsets.only(top: 20, bottom: 8, left: 4),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
-            ),
-      ),
-    );
 
 // ── Quality Dial ─────────────────────────────────────────────────────────────
 // Half-donut arc gauge. quality is 0–10. Clipped to upper half.
@@ -445,6 +480,15 @@ class _QualityDial extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 4),
+            Center(
+              child: Text(
+                hasData ? quality!.toStringAsFixed(1) : '—',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: AppColors.accentPrimary,
+                    ),
+              ),
+            ),
           ],
         ),
       ),
@@ -461,12 +505,14 @@ class _StatusBarChart extends StatelessWidget {
     required this.active,
     required this.closed,
     required this.archived,
+    required this.rangeLabel,
   });
 
   final int draft;
   final int active;
   final int closed;
   final int archived;
+  final String rangeLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -588,7 +634,7 @@ class _StatusBarChart extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'All time',
+              rangeLabel,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: Theme.of(context)
                         .colorScheme

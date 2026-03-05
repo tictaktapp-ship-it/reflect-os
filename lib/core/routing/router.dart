@@ -51,8 +51,9 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authStatus = ref.watch(authStateProvider);
   final isAuthenticated = authStatus.valueOrNull is AuthAuthenticated;
   final subscriptionStatus = ref.watch(subscriptionStatusProvider);
+  // Treat unknown/loading the same as active — only redirect when confirmed inactive.
   final isSubscribed =
-      subscriptionStatus.valueOrNull == SubscriptionStatus.active;
+      subscriptionStatus.valueOrNull != SubscriptionStatus.inactive;
 
   return GoRouter(
     initialLocation: Routes.dashboard,
