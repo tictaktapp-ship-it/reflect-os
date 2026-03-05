@@ -169,9 +169,14 @@ class _ToolResultsScreenState extends State<ToolResultsScreen> {
           ],
 
           // Section 5 — Chart
-          if (chartConfig.isNotEmpty) ...[
+          if (chartConfig.isNotEmpty && result.annualProjections.isNotEmpty) ...[
             _SectionHeader(title: 'Chart'),
-            _ToolChart(chartConfig: chartConfig),
+            _ToolChart(
+              chartConfig: chartConfig,
+              projections: result.annualProjections
+                  .map((r) => r as Map<String, dynamic>)
+                  .toList(),
+            ),
             const SizedBox(height: 20),
           ],
 
@@ -407,9 +412,13 @@ class _ProjectionsTable extends StatelessWidget {
 // ── Tool chart ────────────────────────────────────────────────────────────────
 
 class _ToolChart extends StatelessWidget {
-  const _ToolChart({required this.chartConfig});
+  const _ToolChart({
+    required this.chartConfig,
+    required this.projections,
+  });
 
   final Map<String, dynamic> chartConfig;
+  final List<Map<String, dynamic>> projections;
 
   // ── Pure helpers ──────────────────────────────────────────────────────────
 
@@ -421,14 +430,20 @@ class _ToolChart extends StatelessWidget {
     }
   }
 
-  static List<double> _vals(Map<String, dynamic> s) {
-    try {
-      final raw = s['values'] as List<dynamic>?;
-      if (raw == null) return [];
-      return raw.map((v) => (v as num).toDouble()).toList();
-    } catch (_) {
-      return [];
+  List<double> _valsFor(Map<String, dynamic> s) {
+    final key = s['key'] as String?;
+    if (key == null) return [];
+    return projections
+        .map((row) => ((row[key] as num?) ?? 0).toDouble())
+        .toList();
+  }
+
+  String _xLabel(int i) {
+    if (i < projections.length) {
+      final yr = projections[i]['year'];
+      if (yr != null) return yr.toString();
     }
+    return 'Y${i + 1}';
   }
 
   // ── Shared chart helpers ──────────────────────────────────────────────────
@@ -450,7 +465,7 @@ class _ToolChart extends StatelessWidget {
         ),
       );
 
-  static FlTitlesData _lineTitles(BuildContext context, int maxPoints) {
+  FlTitlesData _lineTitles(BuildContext context, int maxPoints) {
     final rotate = maxPoints > 6;
     return FlTitlesData(
       leftTitles: AxisTitles(
@@ -474,7 +489,7 @@ class _ToolChart extends StatelessWidget {
             if (v != i.toDouble() || i < 0 || i >= maxPoints) {
               return const SizedBox.shrink();
             }
-            final lbl = 'Y${i + 1}';
+            final lbl = _xLabel(i);
             if (rotate) {
               return Transform.rotate(
                 angle: -math.pi / 4,
@@ -501,8 +516,8 @@ class _ToolChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chartType = chartConfig['primary_chart'] as String?;
-    final rawSeries = chartConfig['series'] as List<dynamic>?;
-    if (rawSeries == null || rawSeries.isEmpty) {
+    final rawSeries = chartConfig['series'] as List<dynamic>? ?? [];
+    if (projections.isEmpty) {
       return const Center(child: Text('No data'));
     }
     return switch (chartType) {
@@ -528,7 +543,7 @@ class _ToolChart extends StatelessWidget {
     final  lines     = <LineChartBarData>[];
 
     for (var i = 0; i < series.length; i++) {
-      final vals = _vals(series[i]);
+      final vals = _valsFor(series[i]);
       if (vals.isEmpty) continue;
       maxPoints = math.max(maxPoints, vals.length);
       double cum = 0;
@@ -572,8 +587,8 @@ class _ToolChart extends StatelessWidget {
       return const Center(child: Text('No data'));
     }
     final cs       = Theme.of(context).colorScheme;
-    final revVals  = _vals(series[0]);
-    final costVals = _vals(series[1]);
+    final revVals  = _valsFor(series[0]);
+    final costVals = _valsFor(series[1]);
     if (revVals.isEmpty || costVals.isEmpty) {
       return const Center(child: Text('No data'));
     }
@@ -661,9 +676,9 @@ class _ToolChart extends StatelessWidget {
     upper ??= series[1];
     lower ??= series[2];
 
-    final baseVals  = _vals(base);
-    final upperVals = _vals(upper);
-    final lowerVals = _vals(lower);
+    final baseVals  = _valsFor(base);
+    final upperVals = _valsFor(upper);
+    final lowerVals = _valsFor(lower);
     if (baseVals.isEmpty) return const Center(child: Text('No data'));
 
     final maxPoints = [baseVals.length, upperVals.length, lowerVals.length]
@@ -735,10 +750,8 @@ class _ToolChart extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     double firstVal(Map<String, dynamic> s) {
-      final vals = _vals(s);
-      if (vals.isNotEmpty) return vals.first;
-      final v = s['value'];
-      return v != null ? (v as num).toDouble() : 0.0;
+      final vals = _valsFor(s);
+      return vals.isNotEmpty ? vals.first : 0.0;
     }
 
     final labels = series.map((s) => s['label'] as String? ?? '').toList();
@@ -839,7 +852,7 @@ class _ToolChart extends StatelessWidget {
     }
     final cs = Theme.of(context).colorScheme;
 
-    final allVals = series.expand((s) => _vals(s)).toList();
+    final allVals = series.expand((s) => _valsFor(s)).toList();
     if (allVals.isEmpty) return const Center(child: Text('No data'));
 
     final minVal = allVals.reduce(math.min);
@@ -863,7 +876,7 @@ class _ToolChart extends StatelessWidget {
       )!;
     }
 
-    final maxCols = series.map((s) => _vals(s).length).fold(0, math.max);
+    final maxCols = series.map((s) => _valsFor(s).length).fold(0, math.max);
 
     return Card(
       color: cs.surface,
@@ -878,7 +891,7 @@ class _ToolChart extends StatelessWidget {
           ],
           rows: series.map((s) {
             final label = s['label'] as String? ?? '';
-            final vals  = _vals(s);
+            final vals  = _valsFor(s);
             return DataRow(cells: [
               DataCell(Text(label,
                   style: Theme.of(context).textTheme.labelSmall)),
