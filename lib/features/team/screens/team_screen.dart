@@ -15,7 +15,7 @@ class TeamScreen extends ConsumerWidget {
     final currentUserId = supabase.auth.currentUser?.id;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Team')),
+      appBar: AppBar(),
       body: membersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(

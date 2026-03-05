@@ -90,7 +90,10 @@ final class AppTheme {
       colorScheme: base.colorScheme.copyWith(
         primary: AppColors.accentPrimary,
         onPrimary: Colors.white,
-        secondary: AppColors.accentHover,
+        secondary: AppColors.accentPrimary,
+        onSecondary: Colors.white,
+        secondaryContainer: AppColors.accentPrimary,
+        onSecondaryContainer: Colors.white,
         surface: Colors.white,
         onSurface: const Color(0xFF1A1A2E),
         error: AppColors.destructive,

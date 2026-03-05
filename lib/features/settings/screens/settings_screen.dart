@@ -40,6 +40,9 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
 
+          // ── Workspace ─────────────────────────────────────────────
+          const _WorkspaceSwitcherSection(),
+
           // ── Notifications ─────────────────────────────────────────
           _SectionCard(
             children: [
@@ -534,6 +537,74 @@ class _SettingsRow extends StatelessWidget {
           style: Theme.of(context).textTheme.bodyMedium,
         ),
       ],
+    );
+  }
+}
+
+// ── Workspace Switcher ────────────────────────────────────────────────────────
+
+class _WorkspaceSwitcherSection extends ConsumerWidget {
+  const _WorkspaceSwitcherSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final workspaceName = ref.watch(workspaceNameProvider).valueOrNull;
+    if (workspaceName == null) return const SizedBox.shrink();
+
+    return _SectionCard(
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.business_outlined),
+          title: const Text('Workspace'),
+          subtitle: Text(workspaceName),
+          trailing: const Icon(Icons.unfold_more),
+          onTap: () => _showSheet(context, ref),
+        ),
+      ],
+    );
+  }
+
+  void _showSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetCtx) {
+        final workspaces = ref.read(userWorkspacesProvider).valueOrNull ?? [];
+        final currentId = ref.read(currentWorkspaceProvider).valueOrNull;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                child: Text(
+                  'Switch Workspace',
+                  style: Theme.of(sheetCtx).textTheme.titleMedium,
+                ),
+              ),
+              ...workspaces.map(
+                (w) => ListTile(
+                  leading: const Icon(Icons.business_outlined),
+                  title: Text(w.name),
+                  subtitle: Text(w.role == 'owner' ? 'Owner' : 'Member'),
+                  trailing: w.id == currentId
+                      ? const Icon(Icons.check, color: AppColors.accentPrimary)
+                      : null,
+                  onTap: () {
+                    ref.read(selectedWorkspaceIdProvider.notifier).state = w.id;
+                    Navigator.of(sheetCtx).pop();
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
     );
   }
 }
