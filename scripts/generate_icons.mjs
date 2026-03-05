@@ -5,49 +5,32 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { Resvg } from '@resvg/resvg-js';
 
-const svg = readFileSync('assets/images/reflect-icon-dark.svg');
+// Read SVG as string and inject white background rect before rasterising
+const svgStr = readFileSync('assets/images/reflect-icon-dark.svg', 'utf8');
+const svg = Buffer.from(
+  svgStr.replace(/(<svg[^>]*>)/, '$1<rect width="100%" height="100%" fill="#FFFFFF"/>'),
+);
 
 function render(size, padding = 0) {
   const padded = Math.round(size * padding);
   const inner = size - padded * 2;
   const resvg = new Resvg(svg, {
     fitTo: { mode: 'width', value: inner },
-    background: 'transparent',
+    background: 'white',
   });
-  const rendered = resvg.render();
-  const buf = rendered.asPng();
+  const buf = resvg.render().asPng();
 
   if (padding === 0) return buf;
 
-  // Create padded canvas: write PNG at offset padded,padded on size×size transparent canvas
-  // Resvg doesn't support canvas offset directly — use a wrapper SVG
+  // Create padded canvas with white background
   const wrapper = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+    <rect width="${size}" height="${size}" fill="#FFFFFF"/>
     <image href="data:image/png;base64,${buf.toString('base64')}"
            x="${padded}" y="${padded}" width="${inner}" height="${inner}"/>
   </svg>`;
   const resvg2 = new Resvg(Buffer.from(wrapper), {
     fitTo: { mode: 'width', value: size },
-    background: 'transparent',
-  });
-  return resvg2.render().asPng();
-}
-
-function renderWithBg(size, bgColor, padding = 0) {
-  const padded = Math.round(size * padding);
-  const inner = size - padded * 2;
-  const resvg = new Resvg(svg, {
-    fitTo: { mode: 'width', value: inner },
-    background: 'transparent',
-  });
-  const iconBuf = resvg.render().asPng();
-  const wrapper = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
-    <rect width="${size}" height="${size}" fill="${bgColor}"/>
-    <image href="data:image/png;base64,${iconBuf.toString('base64')}"
-           x="${padded}" y="${padded}" width="${inner}" height="${inner}"/>
-  </svg>`;
-  const resvg2 = new Resvg(Buffer.from(wrapper), {
-    fitTo: { mode: 'width', value: size },
-    background: bgColor,
+    background: 'white',
   });
   return resvg2.render().asPng();
 }
@@ -56,14 +39,14 @@ function renderWithBg(size, bgColor, padding = 0) {
 const webDir = 'web/icons';
 mkdirSync(webDir, { recursive: true });
 
-// Standard PWA icons — teal background, icon centred with 15% padding
-writeFileSync(`${webDir}/Icon-192.png`,          renderWithBg(192, '#0D7377', 0.05));
-writeFileSync(`${webDir}/Icon-512.png`,          renderWithBg(512, '#0D7377', 0.05));
+// Standard PWA icons — white background, icon centred with 5% padding
+writeFileSync(`${webDir}/Icon-192.png`,          render(192, 0.05));
+writeFileSync(`${webDir}/Icon-512.png`,          render(512, 0.05));
 // Maskable icons — more padding (safe zone = inner 80% of canvas)
-writeFileSync(`${webDir}/Icon-maskable-192.png`, renderWithBg(192, '#0D7377', 0.08));
-writeFileSync(`${webDir}/Icon-maskable-512.png`, renderWithBg(512, '#0D7377', 0.08));
+writeFileSync(`${webDir}/Icon-maskable-192.png`, render(192, 0.08));
+writeFileSync(`${webDir}/Icon-maskable-512.png`, render(512, 0.08));
 
-// Favicon — 32×32, transparent background
+// Favicon — 32×32, white background
 writeFileSync('web/favicon.png', render(32));
 
 console.log('✓ Web icons generated');
@@ -81,11 +64,11 @@ for (const { name, size } of densities) {
   const dir = `android/app/src/main/res/mipmap-${name}`;
   mkdirSync(dir, { recursive: true });
 
-  // ic_launcher — teal background, 5% padding
-  writeFileSync(`${dir}/ic_launcher.png`,       renderWithBg(size, '#0D7377', 0.05));
+  // ic_launcher — white background, 5% padding
+  writeFileSync(`${dir}/ic_launcher.png`,            render(size, 0.05));
   // ic_launcher_round — same
-  writeFileSync(`${dir}/ic_launcher_round.png`, renderWithBg(size, '#0D7377', 0.05));
-  // ic_launcher_foreground — transparent background, icon fills ~90%
+  writeFileSync(`${dir}/ic_launcher_round.png`,      render(size, 0.05));
+  // ic_launcher_foreground — white background, icon fills ~90%
   writeFileSync(`${dir}/ic_launcher_foreground.png`, render(size, 0.05));
 
   console.log(`✓ Android ${name} (${size}px)`);

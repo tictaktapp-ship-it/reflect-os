@@ -88,7 +88,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       const SizedBox(height: 48),
                       SvgPicture.asset(
                         'assets/images/reflect-inline-light.svg',
-                        height: 48,
+                        height: 144,
                       ),
                       const SizedBox(height: 40),
                       TextFormField(

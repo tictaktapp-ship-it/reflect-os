@@ -62,7 +62,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 16),
                       SvgPicture.asset(
                         'assets/images/reflect-inline-light.svg',
-                        height: 48,
+                        height: 144,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
