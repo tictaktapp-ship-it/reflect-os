@@ -56,10 +56,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 16),
                     Center(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 280),
+                        constraints: const BoxConstraints(maxWidth: 280, maxHeight: 80),
                         child: SvgPicture.asset(
                           Theme.of(context).brightness == Brightness.dark
                               ? 'assets/images/reflect-inline-dark.svg'
@@ -67,7 +67,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
