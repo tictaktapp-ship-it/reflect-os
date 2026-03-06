@@ -160,26 +160,16 @@ class _PrivacySettingsScreenState
       await supabase.functions.invoke('send-weekly-digest');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Test digest sent to your email')),
+          const SnackBar(
+              content:
+                  Text('Check your inbox — the test email is on its way')),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      final msg = e.toString();
-      final isNetworkError = msg.contains('Failed to fetch') ||
-          msg.contains('XMLHttpRequest');
-      final isNotDeployed = msg.contains('404') ||
-          msg.contains('not found') ||
-          msg.contains('FunctionsHttpException');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isNetworkError
-                ? 'Test digest unavailable in this environment — will work in production.'
-                : isNotDeployed
-                    ? 'send-weekly-digest function is not deployed. Deploy it via the Supabase dashboard.'
-                    : 'Failed to send test digest. Check your email provider configuration.',
-          ),
+        const SnackBar(
+          content: Text('Could not send — please try again in a moment'),
         ),
       );
     } finally {
