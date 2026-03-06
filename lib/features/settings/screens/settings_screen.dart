@@ -234,7 +234,7 @@ class SettingsScreen extends ConsumerWidget {
                     title: const Text('Request a feature'),
                     subtitle: const Text('Suggest something new'),
                     onTap: () => _launchUrl(
-                        'https://reflect-os.com/feature-request'),
+                        'mailto:contact@reflect-os.com?subject=Feature%20Request'),
                   ),
                   const Divider(height: 1, indent: 40, endIndent: 0),
                   ListTile(
@@ -360,8 +360,17 @@ void _showAboutSheet(BuildContext context) {
             ),
             const SizedBox(height: 8),
             Text(
-              'The decision intelligence platform for professionals who want '
-              'to make better decisions — and learn from every one.',
+              'Reflect OS is an intelligent decision-logging and reflection '
+              'platform for individuals and high-stakes teams. It captures '
+              'consequential decisions at the moment they are made, then '
+              'brings users back at scheduled checkpoints to record what '
+              'actually happened. Over time, those entries become a '
+              'structured, searchable decision history that Reflect OS '
+              'analyses to surface patterns, calibration signals, and '
+              'evidence-based coaching insights. The result is fewer repeat '
+              'mistakes, stronger judgment under pressure, and a compounding '
+              '"decision intelligence" asset that gets more valuable with '
+              'every decision logged.',
               style: Theme.of(ctx).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
@@ -414,11 +423,13 @@ void _showAboutSheet(BuildContext context) {
             ),
             const SizedBox(height: 8),
             bullet(
-                'GDPR compliant — full data export and account deletion available'),
-            bullet('Data encrypted at rest and in transit'),
-            bullet('Row-level security on all user data'),
+                'Designed for GDPR compliance — full data export and account deletion available in-app'),
+            bullet(
+                'All data encrypted at rest and in transit (via Supabase/TLS)'),
+            bullet('Row-level security enforced on all user data'),
             bullet('Soft deletion with 30-day recovery window'),
-            bullet('No third-party advertising or data selling'),
+            bullet('No advertising, no third-party data selling'),
+            bullet('Hosted in the EU (Supabase eu-west-1)'),
             const SizedBox(height: 24),
 
             // Close button
