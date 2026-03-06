@@ -105,7 +105,7 @@ class _WideShell extends StatelessWidget {
                 isDark
                     ? 'assets/images/reflect-inline-dark.svg'
                     : 'assets/images/reflect-inline-light.svg',
-                width: 520,
+                width: 780,
               ),
             ),
             trailing: Padding(
@@ -181,7 +181,7 @@ class _NarrowShell extends StatelessWidget {
           isDark
               ? 'assets/images/reflect-inline-dark.svg'
               : 'assets/images/reflect-inline-light.svg',
-          height: 88,
+          height: 132,
         ),
         centerTitle: false,
         automaticallyImplyLeading: false,
