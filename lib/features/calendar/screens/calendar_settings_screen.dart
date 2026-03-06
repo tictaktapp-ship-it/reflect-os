@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -23,7 +24,8 @@ class CalendarSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _CalendarSettingsScreenState
-    extends ConsumerState<CalendarSettingsScreen> {
+    extends ConsumerState<CalendarSettingsScreen>
+    with WidgetsBindingObserver {
   String? _workspaceId;
   bool _autoSync = true;
   bool _isLoading = true;
@@ -33,14 +35,31 @@ class _CalendarSettingsScreenState
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _stopListening = addCalendarMessageListener(_handleCalendarMessage);
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    if (kIsWeb) {
+      final uri = Uri.base;
+      if (uri.queryParameters['calendar_oauth'] == 'success') {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.invalidate(calendarConnectionsProvider);
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _stopListening();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(calendarConnectionsProvider);
+    }
   }
 
   Future<void> _load() async {
@@ -155,7 +174,15 @@ class _CalendarSettingsScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+            onPressed: () => ref.invalidate(calendarConnectionsProvider),
+          ),
+        ],
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _workspaceId == null
