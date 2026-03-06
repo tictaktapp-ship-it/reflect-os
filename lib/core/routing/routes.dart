@@ -57,6 +57,9 @@ abstract final class Routes {
   // Branding
   static const String settingsBranding = '/settings/branding';
 
+  // Workspace management
+  static const String settingsWorkspaces = '/settings/workspaces';
+
   // Coaching
   static const String coachingDashboard = '/coaching/dashboard';
 

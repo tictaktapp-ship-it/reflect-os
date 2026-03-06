@@ -42,7 +42,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
 
           // ── Workspace ─────────────────────────────────────────────
-          const _WorkspaceSwitcherSection(),
+          const _WorkspaceManagementSection(),
 
           // ── Notifications ─────────────────────────────────────────
           _SectionCard(
@@ -562,31 +562,56 @@ class _SettingsRow extends StatelessWidget {
   }
 }
 
-// ── Workspace Switcher ────────────────────────────────────────────────────────
+// ── Workspace Management ──────────────────────────────────────────────────────
 
-class _WorkspaceSwitcherSection extends ConsumerWidget {
-  const _WorkspaceSwitcherSection();
+class _WorkspaceManagementSection extends ConsumerStatefulWidget {
+  const _WorkspaceManagementSection();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_WorkspaceManagementSection> createState() =>
+      _WorkspaceManagementSectionState();
+}
+
+class _WorkspaceManagementSectionState
+    extends ConsumerState<_WorkspaceManagementSection> {
+  @override
+  Widget build(BuildContext context) {
     final workspaceName = ref.watch(workspaceNameProvider).valueOrNull;
     if (workspaceName == null) return const SizedBox.shrink();
 
     return _SectionCard(
       children: [
+        // ── Current workspace / switcher ────────────────────────────
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.business_outlined),
           title: const Text('Workspace'),
           subtitle: Text(workspaceName),
           trailing: const Icon(Icons.unfold_more),
-          onTap: () => _showSheet(context, ref),
+          onTap: _showSwitcherSheet,
+        ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
+        // ── Create new workspace ────────────────────────────────────
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.add_circle_outline),
+          title: const Text('Create new workspace'),
+          onTap: _showCreateSheet,
+        ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
+        // ── Full management screen ──────────────────────────────────
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.manage_accounts_outlined),
+          title: const Text('Manage workspaces'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(Routes.settingsWorkspaces),
         ),
       ],
     );
   }
 
-  void _showSheet(BuildContext context, WidgetRef ref) {
+  void _showSwitcherSheet() {
     showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -626,6 +651,95 @@ class _WorkspaceSwitcherSection extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  void _showCreateSheet() {
+    final nameCtrl = TextEditingController();
+    bool shareWithTeam = false;
+    final formKey = GlobalKey<FormState>();
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            20,
+            16,
+            MediaQuery.of(ctx).viewInsets.bottom + 32,
+          ),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'New Workspace',
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: nameCtrl,
+                  decoration:
+                      const InputDecoration(labelText: 'Workspace name *'),
+                  textCapitalization: TextCapitalization.words,
+                  autofocus: true,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Name required' : null,
+                ),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Share with team'),
+                  subtitle: const Text('Creates a team workspace'),
+                  value: shareWithTeam,
+                  onChanged: (v) => setSheetState(() => shareWithTeam = v),
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () async {
+                    if (!formKey.currentState!.validate()) return;
+                    final name = nameCtrl.text.trim();
+                    final share = shareWithTeam;
+                    Navigator.of(ctx).pop();
+                    try {
+                      await ref
+                          .read(workspaceRepositoryProvider)
+                          .createWorkspace(name, share);
+                      ref.invalidate(userWorkspacesProvider);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content: Text('Workspace "$name" created')),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content:
+                                  Text('Failed to create workspace: $e')),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Create Workspace'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -14,4 +14,28 @@ class WorkspaceRepository {
         .order('workspace_type', ascending: true);
     return rows.map((row) => WorkspaceModel.fromJson(row)).toList();
   }
+
+  Future<void> createWorkspace(String name, bool shareWithTeam) async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not authenticated');
+    await supabase.from('workspaces').insert({
+      'name': name,
+      'workspace_type': shareWithTeam ? 'team' : 'personal',
+      'owner_user_id': userId,
+    });
+  }
+
+  Future<void> renameWorkspace(String id, String name) async {
+    await supabase
+        .from('workspaces')
+        .update({'name': name})
+        .eq('id', id);
+  }
+
+  Future<void> deleteWorkspace(String id) async {
+    await supabase
+        .from('workspaces')
+        .update({'deleted_at': DateTime.now().toIso8601String()})
+        .eq('id', id);
+  }
 }

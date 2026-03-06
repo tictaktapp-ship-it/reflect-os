@@ -45,6 +45,7 @@ import 'package:reflect_os/features/toolkit/screens/tool_detail_screen.dart';
 import 'package:reflect_os/features/toolkit/screens/tool_results_screen.dart';
 import 'package:reflect_os/features/toolkit/screens/toolkit_screen.dart';
 import 'package:reflect_os/features/demographic_packs/screens/packs_screen.dart';
+import 'package:reflect_os/features/workspace/screens/workspace_management_screen.dart';
 import 'routes.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -170,6 +171,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'data-privacy',
             builder: (context, state) => const DataPrivacyScreen(),
+          ),
+          GoRoute(
+            path: 'workspaces',
+            builder: (context, state) => const WorkspaceManagementScreen(),
           ),
         ],
       ),
