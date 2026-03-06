@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
@@ -203,6 +204,60 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
 
+          // ── GROUP 5 — About & Feedback ───────────────────────────
+          _SettingsGroup(
+            title: 'About & Feedback',
+            children: [
+              _SectionCard(
+                children: [
+                  // Sub-section 1 — About
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.info_outline),
+                    title: const Text('About Reflect OS'),
+                    onTap: () => _showAboutSheet(context),
+                  ),
+                  const Divider(height: 1, indent: 40, endIndent: 0),
+                  // Sub-section 2 — Feedback & Contact
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.rate_review_outlined),
+                    title: const Text('Send feedback'),
+                    subtitle: const Text('Tell us what you think'),
+                    onTap: () => _launchUrl(
+                        'mailto:contact@reflect-os.com?subject=Feedback'),
+                  ),
+                  const Divider(height: 1, indent: 40, endIndent: 0),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.lightbulb_outline),
+                    title: const Text('Request a feature'),
+                    subtitle: const Text('Suggest something new'),
+                    onTap: () => _launchUrl(
+                        'https://reflect-os.com/feature-request'),
+                  ),
+                  const Divider(height: 1, indent: 40, endIndent: 0),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.mail_outline),
+                    title: const Text('Contact us'),
+                    subtitle: const Text('contact@reflect-os.com'),
+                    onTap: () =>
+                        _launchUrl('mailto:contact@reflect-os.com'),
+                  ),
+                  const Divider(height: 1, indent: 40, endIndent: 0),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.language),
+                    title: const Text('Website'),
+                    subtitle: const Text('reflect-os.com'),
+                    onTap: () => _launchUrl('https://reflect-os.com'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
           // ── Sign out ──────────────────────────────────────────────
           _SectionCard(
             children: [
@@ -250,6 +305,135 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+// ── About & Feedback helpers ──────────────────────────────────────────────────
+
+Future<void> _launchUrl(String url) async {
+  await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+}
+
+void _showAboutSheet(BuildContext context) {
+  Widget bullet(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 5),
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: AppColors.accentPrimary,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Text(text)),
+          ],
+        ),
+      );
+
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (ctx) => DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (_, scrollCtrl) => SingleChildScrollView(
+        controller: scrollCtrl,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // App name + tagline
+            Text(
+              'Reflect OS',
+              style: Theme.of(ctx).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'The decision intelligence platform for professionals who want '
+              'to make better decisions — and learn from every one.',
+              style: Theme.of(ctx).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+
+            // What it does
+            Text(
+              'What it does',
+              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Reflect OS helps you log, track, and review your decisions with '
+              'structured templates, stakeholder collaboration, outcome scoring, '
+              'and a built-in toolkit of decision-making frameworks. Every '
+              'decision you make becomes a learning asset.',
+              style: Theme.of(ctx).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+
+            // Key features
+            Text(
+              'Key features',
+              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            bullet('Decision logging with structured templates'),
+            bullet('Stakeholder management and approvals'),
+            bullet('Outcome tracking and quality scoring'),
+            bullet(
+                'Decision toolkit with frameworks (RACI, pre-mortem, SWOT and more)'),
+            bullet('Weekly decision digest and coaching tools'),
+            bullet('Workspace management for teams'),
+            const SizedBox(height: 16),
+
+            // Compliance & standards
+            Text(
+              'Compliance & standards',
+              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Reflect OS is designed with privacy and compliance in mind:',
+              style: Theme.of(ctx).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 8),
+            bullet(
+                'GDPR compliant — full data export and account deletion available'),
+            bullet('Data encrypted at rest and in transit'),
+            bullet('Row-level security on all user data'),
+            bullet('Soft deletion with 30-day recovery window'),
+            bullet('No third-party advertising or data selling'),
+            const SizedBox(height: 24),
+
+            // Close button
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Close'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 // ── Settings Group (collapsible) ──────────────────────────────────────────────
