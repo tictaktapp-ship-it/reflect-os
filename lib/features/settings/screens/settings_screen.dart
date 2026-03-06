@@ -268,6 +268,7 @@ class _SettingsGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ExpansionTile(
+      key: PageStorageKey(title),
       title: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall,
@@ -730,6 +731,7 @@ class _WorkspaceManagementSectionState
                           .createWorkspace(name, share);
                       ref.invalidate(userWorkspacesProvider);
                       if (mounted) {
+                        setState(() {});
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                               content: Text('Workspace "$name" created')),

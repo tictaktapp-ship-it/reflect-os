@@ -401,6 +401,50 @@ class _WorkspaceWizardScreenState
     );
   }
 
+  // ── Nav helpers ───────────────────────────────────────────────────────────
+
+  Widget _buildNavRow() {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            if (_currentPage > 0)
+              TextButton(
+                onPressed: _skipPage,
+                child: const Text('Skip'),
+              )
+            else
+              const SizedBox.shrink(),
+            FilledButton(
+              onPressed: _isSaving
+                  ? null
+                  : (_currentPage == 4 ? _onFinish : _onNext),
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(_currentPage == 4 ? 'Finish' : 'Next'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _wrapPage(Widget content) {
+    return Column(
+      children: [
+        Expanded(child: SingleChildScrollView(child: content)),
+        _buildNavRow(),
+      ],
+    );
+  }
+
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -417,53 +461,16 @@ class _WorkspaceWizardScreenState
         title: _buildStepDots(),
         centerTitle: true,
       ),
-      body: Column(
+      body: PageView(
+        controller: _pageCtrl,
+        physics: const NeverScrollableScrollPhysics(),
+        onPageChanged: (i) => setState(() => _currentPage = i),
         children: [
-          Expanded(
-            child: PageView(
-              controller: _pageCtrl,
-              physics: const NeverScrollableScrollPhysics(),
-              onPageChanged: (i) =>
-                  setState(() => _currentPage = i),
-              children: [
-                SingleChildScrollView(child: _buildStep1()),
-                SingleChildScrollView(child: _buildStep2()),
-                SingleChildScrollView(child: _buildStep3()),
-                SingleChildScrollView(child: _buildStep4()),
-                SingleChildScrollView(child: _buildStep5()),
-              ],
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (_currentPage > 0)
-                    TextButton(
-                      onPressed: _skipPage,
-                      child: const Text('Skip'),
-                    )
-                  else
-                    const SizedBox.shrink(),
-                  FilledButton(
-                    onPressed: _isSaving
-                        ? null
-                        : (_currentPage == 4 ? _onFinish : _onNext),
-                    child: _isSaving
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2),
-                          )
-                        : Text(_currentPage == 4 ? 'Finish' : 'Next'),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _wrapPage(_buildStep1()),
+          _wrapPage(_buildStep2()),
+          _wrapPage(_buildStep3()),
+          _wrapPage(_buildStep4()),
+          _wrapPage(_buildStep5()),
         ],
       ),
     );

@@ -96,6 +96,7 @@ class _WorkspaceManagementScreenState
           .createWorkspace(name, shareWithTeam);
       ref.invalidate(userWorkspacesProvider);
       if (mounted) {
+        setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Workspace "$name" created')),
         );
@@ -145,6 +146,7 @@ class _WorkspaceManagementScreenState
           .read(workspaceRepositoryProvider)
           .renameWorkspace(workspace.id, result);
       ref.invalidate(userWorkspacesProvider);
+      if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -200,6 +202,7 @@ class _WorkspaceManagementScreenState
           .read(workspaceRepositoryProvider)
           .deleteWorkspace(workspace.id);
       ref.invalidate(userWorkspacesProvider);
+      if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

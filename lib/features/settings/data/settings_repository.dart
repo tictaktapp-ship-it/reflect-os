@@ -75,14 +75,14 @@ class SettingsRepository {
 
   Future<void> createDeletionRequest(String reason) async {
     await supabase.rpc('create_gdpr_request', params: {
-      'p_request_type': 'deletion',
+      'p_request_type': 'personal_full_delete',
       'p_reason': reason,
     });
   }
 
   Future<void> createExportRequest() async {
     await supabase.rpc('create_gdpr_request', params: {
-      'p_request_type': 'export',
+      'p_request_type': 'data_export',
       'p_reason': null,
     });
   }
