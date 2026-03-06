@@ -28,191 +28,177 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ── Profile ───────────────────────────────────────────────
-          const _ProfileCard(),
-
-          // ── Account ───────────────────────────────────────────────
-          _SectionCard(
+          // ── GROUP 1 — My Account ──────────────────────────────────
+          _SettingsGroup(
+            title: 'My Account',
+            initiallyExpanded: true,
             children: [
-              _SettingsRow(
-                label: 'Account',
-                value: email,
+              const _ProfileCard(),
+              _SectionCard(
+                children: [
+                  _SettingsRow(label: 'Account', value: email),
+                ],
               ),
             ],
           ),
 
-          // ── Workspace ─────────────────────────────────────────────
-          const _WorkspaceManagementSection(),
-
-          // ── Notifications ─────────────────────────────────────────
-          _SectionCard(
+          // ── GROUP 2 — Workspace ───────────────────────────────────
+          _SettingsGroup(
+            title: 'Workspace',
             children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.notifications_outlined),
-                title: const Text('Notifications'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(Routes.settingsPrivacy),
+              _SectionCard(
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.auto_fix_high),
+                    title: const Text('Set up workspace'),
+                    subtitle: const Text(
+                        'Configure verticals, templates and branding'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(Routes.workspaceWizard),
+                  ),
+                ],
+              ),
+              const _WorkspaceManagementSection(),
+              _SectionCard(
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.tune_outlined),
+                    title: const Text('Workspace Vertical'),
+                    subtitle: const Text(
+                        'Customise tags, categories, and checkpoints'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(Routes.settingsVertical),
+                  ),
+                  const Divider(height: 1, indent: 40, endIndent: 0),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.palette_outlined),
+                    title: const Text('Workspace Branding'),
+                    subtitle:
+                        const Text('Logo, colours, and company details'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(Routes.settingsBranding),
+                  ),
+                  const Divider(height: 1, indent: 40, endIndent: 0),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.people_outline),
+                    title: const Text('Demographic Packs'),
+                    subtitle:
+                        const Text('Tailor decisions to your audience'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(Routes.packs),
+                  ),
+                  const Divider(height: 1, indent: 40, endIndent: 0),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.article_outlined),
+                    title: const Text('Templates'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(Routes.settingsTemplates),
+                  ),
+                  const Divider(height: 1, indent: 40, endIndent: 0),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.upload_file_outlined),
+                    title: const Text('Bulk Import'),
+                    subtitle:
+                        const Text('Import decisions from a CSV file'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(Routes.import),
+                  ),
+                  const Divider(height: 1, indent: 40, endIndent: 0),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.calendar_today_outlined),
+                    title: const Text('Calendar'),
+                    subtitle: const Text(
+                        'Connect Google Calendar or Outlook'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(Routes.settingsCalendar),
+                  ),
+                ],
               ),
             ],
           ),
 
-          // ── Appearance ────────────────────────────────────────────
-          _SectionCard(
+          // ── GROUP 3 — Preferences ─────────────────────────────────
+          _SettingsGroup(
+            title: 'Preferences',
             children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.brightness_6_outlined),
-                title: const Text('Appearance'),
-                subtitle: Text(
-                  themeMode == ThemeMode.light ? 'Light' : 'Dark',
-                ),
-                trailing: Switch(
-                  value: themeMode == ThemeMode.light,
-                  onChanged: (_) =>
-                      ref.read(themeModeProvider.notifier).toggle(),
-                ),
+              _SectionCard(
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.notifications_outlined),
+                    title: const Text('Notifications'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(Routes.settingsPrivacy),
+                  ),
+                  const Divider(height: 1, indent: 40, endIndent: 0),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.brightness_6_outlined),
+                    title: const Text('Appearance'),
+                    subtitle: Text(
+                      themeMode == ThemeMode.light ? 'Light' : 'Dark',
+                    ),
+                    trailing: Switch(
+                      value: themeMode == ThemeMode.light,
+                      onChanged: (_) =>
+                          ref.read(themeModeProvider.notifier).toggle(),
+                    ),
+                  ),
+                ],
               ),
+              _EncryptionSection(ref: ref),
             ],
           ),
 
-          // ── Billing ───────────────────────────────────────────────
-          _SectionCard(
+          // ── GROUP 4 — Data & Admin ────────────────────────────────
+          _SettingsGroup(
+            title: 'Data & Admin',
             children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.credit_card_outlined),
-                title: const Text('Billing'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(Routes.settingsBilling),
-              ),
-            ],
-          ),
-
-          // ── Audit Log ─────────────────────────────────────────────
-          _SectionCard(
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.history_outlined),
-                title: const Text('Audit Log'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(Routes.settingsAuditLog),
-              ),
-            ],
-          ),
-
-          // ── Templates ─────────────────────────────────────────────
-          _SectionCard(
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.article_outlined),
-                title: const Text('Templates'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(Routes.settingsTemplates),
-              ),
-            ],
-          ),
-
-          // ── Import ────────────────────────────────────────────────
-          _SectionCard(
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.upload_file_outlined),
-                title: const Text('Bulk Import'),
-                subtitle: const Text('Import decisions from a CSV file'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(Routes.import),
-              ),
-            ],
-          ),
-
-          // ── Calendar ──────────────────────────────────────────────
-          _SectionCard(
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.calendar_today_outlined),
-                title: const Text('Calendar'),
-                subtitle: const Text('Connect Google Calendar or Outlook'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(Routes.settingsCalendar),
-              ),
-            ],
-          ),
-
-          // ── Workspace Vertical ────────────────────────────────────
-          _SectionCard(
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.tune_outlined),
-                title: const Text('Workspace Vertical'),
-                subtitle: const Text(
-                    'Customise tags, categories, and checkpoints'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(Routes.settingsVertical),
-              ),
-            ],
-          ),
-
-          // ── Personalisation ───────────────────────────────────────
-          _SectionCard(
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.people_outline),
-                title: const Text('Demographic Packs'),
-                subtitle: const Text('Tailor decisions to your audience'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(Routes.packs),
-              ),
-            ],
-          ),
-
-          // ── Data & Privacy ───────────────────────────────────────
-          _SectionCard(
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.privacy_tip_outlined),
-                title: const Text('Data & Privacy'),
-                subtitle: const Text('GDPR requests, data export, delete account'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(Routes.settingsDataPrivacy),
-              ),
-            ],
-          ),
-
-          // ── Privacy & Security ─────────────────────────────────────
-          _EncryptionSection(ref: ref),
-
-          // ── Workspace Branding ────────────────────────────────────
-          _SectionCard(
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.palette_outlined),
-                title: const Text('Workspace Branding'),
-                subtitle: const Text('Logo, colours, and company details'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(Routes.settingsBranding),
-              ),
-            ],
-          ),
-
-          // ── Portfolio ─────────────────────────────────────────
-          _SectionCard(
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.business_outlined),
-                title: const Text('Portfolio'),
-                subtitle: const Text('Manage investment assets'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(Routes.investmentAssets),
+              _SectionCard(
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.credit_card_outlined),
+                    title: const Text('Billing'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(Routes.settingsBilling),
+                  ),
+                  const Divider(height: 1, indent: 40, endIndent: 0),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.history_outlined),
+                    title: const Text('Audit Log'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(Routes.settingsAuditLog),
+                  ),
+                  const Divider(height: 1, indent: 40, endIndent: 0),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.privacy_tip_outlined),
+                    title: const Text('Data & Privacy'),
+                    subtitle: const Text(
+                        'GDPR requests, data export, delete account'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () =>
+                        context.push(Routes.settingsDataPrivacy),
+                  ),
+                  const Divider(height: 1, indent: 40, endIndent: 0),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.business_outlined),
+                    title: const Text('Portfolio'),
+                    subtitle: const Text('Manage investment assets'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(Routes.investmentAssets),
+                  ),
+                ],
               ),
             ],
           ),
@@ -262,6 +248,36 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Settings Group (collapsible) ──────────────────────────────────────────────
+
+class _SettingsGroup extends StatelessWidget {
+  const _SettingsGroup({
+    required this.title,
+    required this.children,
+    this.initiallyExpanded = false,
+  });
+
+  final String title;
+  final List<Widget> children;
+  final bool initiallyExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExpansionTile(
+      title: Text(
+        title,
+        style: Theme.of(context).textTheme.titleSmall,
+      ),
+      initiallyExpanded: initiallyExpanded,
+      tilePadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      childrenPadding: EdgeInsets.zero,
+      shape: const Border(),
+      collapsedShape: const Border(),
+      children: children,
     );
   }
 }

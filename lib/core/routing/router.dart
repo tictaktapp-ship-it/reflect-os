@@ -46,6 +46,7 @@ import 'package:reflect_os/features/toolkit/screens/tool_results_screen.dart';
 import 'package:reflect_os/features/toolkit/screens/toolkit_screen.dart';
 import 'package:reflect_os/features/demographic_packs/screens/packs_screen.dart';
 import 'package:reflect_os/features/workspace/screens/workspace_management_screen.dart';
+import 'package:reflect_os/features/workspace/screens/workspace_wizard_screen.dart';
 import 'routes.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -175,6 +176,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'workspaces',
             builder: (context, state) => const WorkspaceManagementScreen(),
+          ),
+          GoRoute(
+            path: 'workspace-wizard',
+            builder: (context, state) => const WorkspaceWizardScreen(),
           ),
         ],
       ),

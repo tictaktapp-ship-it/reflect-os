@@ -60,6 +60,9 @@ abstract final class Routes {
   // Workspace management
   static const String settingsWorkspaces = '/settings/workspaces';
 
+  // Workspace setup wizard
+  static const String workspaceWizard = '/settings/workspace-wizard';
+
   // Coaching
   static const String coachingDashboard = '/coaching/dashboard';
 
