@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/features/settings/data/models/vertical_config.dart';
@@ -78,20 +77,7 @@ class _VerticalSettingsScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            SvgPicture.asset(
-              Theme.of(context).brightness == Brightness.dark
-                  ? 'assets/images/reflect-icon-dark.svg'
-                  : 'assets/images/reflect-icon-light.svg',
-              height: 160,
-            ),
-            const SizedBox(width: 8),
-            const Text('Workspace Vertical'),
-          ],
-        ),
-      ),
+      appBar: AppBar(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _buildBody(context),

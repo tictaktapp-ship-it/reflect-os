@@ -352,22 +352,8 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
   @override
   Widget build(BuildContext context) {
     final templatesAsync = ref.watch(templatesProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            SvgPicture.asset(
-              isDark
-                  ? 'assets/images/reflect-icon-dark.svg'
-                  : 'assets/images/reflect-icon-light.svg',
-              height: 160,
-            ),
-            const SizedBox(width: 8),
-            const Text('Templates'),
-          ],
-        ),
         actions: [
           if (_isWorking)
             const Padding(
@@ -406,32 +392,37 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // ── System templates ──────────────────────────────────
-              _SectionHeader(label: 'System Templates (${system.length})'),
-              if (system.isEmpty)
-                _EmptyHint('No system templates available.')
-              else
-                ...system.map(
-                  (t) => _TemplateCard(
-                    template: t,
-                    onTap: () => _showDetail(t),
-                    onLongPress: null, // system templates cannot be deleted
+              ExpansionTile(
+                title: Text('System Templates (${system.length})'),
+                initiallyExpanded: false,
+                children: [
+                  if (system.isEmpty)
+                    _EmptyHint('No system templates available.')
+                  else
+                    ...system.map(
+                      (t) => _TemplateCard(
+                        template: t,
+                        onTap: () => _showDetail(t),
+                        onLongPress: null,
+                      ),
+                    ),
+                ],
+              ),
+              ExpansionTile(
+                title: Text('My Templates (${mine.length})'),
+                initiallyExpanded: false,
+                children: [
+                  if (mine.isEmpty)
+                    _EmptyHint(
+                        'No custom templates yet. Tap + to create one.'),
+                  ...mine.map(
+                    (t) => _TemplateCard(
+                      template: t,
+                      onTap: () => _showDetail(t),
+                      onLongPress: () => _confirmDelete(t),
+                    ),
                   ),
-                ),
-
-              const SizedBox(height: 16),
-
-              // ── My templates ─────────────────────────────────────
-              _SectionHeader(label: 'My Templates (${mine.length})'),
-              if (mine.isEmpty)
-                _EmptyHint(
-                    'No custom templates yet. Tap + to create one.'),
-              ...mine.map(
-                (t) => _TemplateCard(
-                  template: t,
-                  onTap: () => _showDetail(t),
-                  onLongPress: () => _confirmDelete(t),
-                ),
+                ],
               ),
               const SizedBox(height: 80),
             ],
@@ -442,25 +433,6 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
   }
 }
 
-// ── Section header ──────────────────────────────────────────────────────────
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-      ),
-    );
-  }
-}
 
 // ── Empty hint ──────────────────────────────────────────────────────────────
 

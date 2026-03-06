@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
@@ -105,25 +104,11 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final subscriptionAsync = ref.watch(subscriptionProvider);
     final workspaceId = ref.watch(currentWorkspaceProvider).valueOrNull;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            SvgPicture.asset(
-              isDark
-                  ? 'assets/images/reflect-icon-dark.svg'
-                  : 'assets/images/reflect-icon-light.svg',
-              height: 160,
-            ),
-            const SizedBox(width: 8),
-            const Text('Billing'),
-          ],
-        ),
-      ),
+      appBar: AppBar(),
       body: subscriptionAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(

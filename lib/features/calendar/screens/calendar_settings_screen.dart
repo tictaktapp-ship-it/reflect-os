@@ -151,20 +151,7 @@ class _CalendarSettingsScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            SvgPicture.asset(
-              Theme.of(context).brightness == Brightness.dark
-                  ? 'assets/images/reflect-icon-dark.svg'
-                  : 'assets/images/reflect-icon-light.svg',
-              height: 160,
-            ),
-            const SizedBox(width: 8),
-            const Text('Calendar Integration'),
-          ],
-        ),
-      ),
+      appBar: AppBar(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _workspaceId == null
