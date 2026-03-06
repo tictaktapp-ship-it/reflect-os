@@ -1,7 +1,6 @@
 import 'dart:convert';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -12,6 +11,9 @@ import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/calendar/data/models/calendar_connection.dart';
 import 'package:reflect_os/features/calendar/providers/calendar_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'calendar_platform_stub.dart'
+    if (dart.library.html) 'calendar_platform_web.dart';
 
 class CalendarSettingsScreen extends ConsumerStatefulWidget {
   const CalendarSettingsScreen({super.key});
@@ -27,19 +29,18 @@ class _CalendarSettingsScreenState
   bool _autoSync = true;
   bool _isLoading = true;
   bool _isDisconnecting = false;
-  late final void Function(html.Event) _messageHandler;
+  late final void Function() _stopListening;
 
   @override
   void initState() {
     super.initState();
-    _messageHandler = _onMessage;
-    html.window.addEventListener('message', _messageHandler);
+    _stopListening = addCalendarMessageListener(_handleCalendarMessage);
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
   @override
   void dispose() {
-    html.window.removeEventListener('message', _messageHandler);
+    _stopListening();
     super.dispose();
   }
 
@@ -69,13 +70,10 @@ class _CalendarSettingsScreenState
     }
   }
 
-  void _onMessage(html.Event event) {
-    if (event is html.MessageEvent) {
-      final data = event.data;
-      if (data is Map && data['type'] == 'calendar-oauth-success') {
-        if (mounted && _workspaceId != null) {
-          ref.invalidate(calendarConnectionsProvider(_workspaceId!));
-        }
+  void _handleCalendarMessage(dynamic data) {
+    if (data is Map && data['type'] == 'calendar-oauth-success') {
+      if (mounted && _workspaceId != null) {
+        ref.invalidate(calendarConnectionsProvider(_workspaceId!));
       }
     }
   }
@@ -84,14 +82,21 @@ class _CalendarSettingsScreenState
     final userId = supabase.auth.currentUser?.id;
     if (userId == null || _workspaceId == null) return;
     try {
+      final isPopup = kIsWeb;
       final uri = Uri.parse(
         'https://omazuyditjbtoupmipcr.supabase.co/functions/v1/calendar-oauth-initiate'
-        '?provider=$provider&user_id=$userId&workspace_id=$_workspaceId',
+        '?provider=$provider&user_id=$userId&workspace_id=$_workspaceId&is_popup=$isPopup',
       );
       final resp = await http.get(uri);
-      final url = jsonDecode(resp.body)['url'] as String;
-      html.window.open(url, 'calendar_oauth',
-          'width=500,height=700,scrollbars=yes');
+      final authUrl = jsonDecode(resp.body)['url'] as String;
+      if (kIsWeb) {
+        openCalendarOAuthPopup(authUrl);
+      } else {
+        final url = Uri.parse(authUrl);
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        }
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
