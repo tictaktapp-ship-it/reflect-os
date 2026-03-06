@@ -7,6 +7,8 @@ import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/templates/data/models/decision_template.dart';
 import 'package:reflect_os/features/templates/providers/templates_provider.dart';
+import 'package:reflect_os/features/toolkit/data/models/tool_definition.dart';
+import 'package:reflect_os/features/toolkit/providers/toolkit_providers.dart';
 
 class TemplatesScreen extends ConsumerStatefulWidget {
   const TemplatesScreen({super.key});
@@ -26,6 +28,8 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
     String? stakes;
     bool requiresApproval = false;
     final formKey = GlobalKey<FormState>();
+    var selectedToolIds = <String>[];
+    final toolsFuture = ref.read(toolDefinitionsProvider.future);
 
     showModalBottomSheet(
       context: context,
@@ -104,6 +108,47 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
                     onChanged: (v) =>
                         setSheetState(() => requiresApproval = v),
                   ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Included Tools',
+                    style: Theme.of(ctx).textTheme.labelMedium,
+                  ),
+                  FutureBuilder<List<ToolDefinition>>(
+                    future: toolsFuture,
+                    builder: (ctx, snap) {
+                      if (!snap.hasData) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Center(
+                              child: CircularProgressIndicator(strokeWidth: 2)),
+                        );
+                      }
+                      final tools = snap.data!;
+                      if (tools.isEmpty) return const SizedBox.shrink();
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: tools.map((tool) {
+                          final selected = selectedToolIds.contains(tool.id);
+                          return CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            dense: true,
+                            title: Text(tool.name,
+                                style: Theme.of(ctx).textTheme.bodyMedium),
+                            subtitle: Text(tool.category,
+                                style: Theme.of(ctx).textTheme.labelSmall),
+                            value: selected,
+                            onChanged: (v) => setSheetState(() {
+                              selectedToolIds = v == true
+                                  ? [...selectedToolIds, tool.id]
+                                  : selectedToolIds
+                                      .where((id) => id != tool.id)
+                                      .toList();
+                            }),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: _isWorking
@@ -116,6 +161,7 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
                               description: descCtrl.text.trim(),
                               defaultStakes: stakes,
                               requiresApproval: requiresApproval,
+                              toolIds: selectedToolIds,
                             );
                           },
                     child: const Text('Create Template'),
@@ -138,18 +184,23 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
     required String description,
     String? defaultStakes,
     required bool requiresApproval,
+    required List<String> toolIds,
   }) async {
     setState(() => _isWorking = true);
     try {
       final workspaceId = await ref.read(currentWorkspaceProvider.future);
       if (workspaceId == null) return;
-      await ref.read(templatesRepositoryProvider).createTemplate(
+      final repo = ref.read(templatesRepositoryProvider);
+      final templateId = await repo.createTemplate(
             workspaceId: workspaceId,
             name: name,
             description: description.isEmpty ? null : description,
             defaultStakes: defaultStakes,
             requiresApproval: requiresApproval,
           );
+      if (toolIds.isNotEmpty) {
+        await repo.setToolsForTemplate(templateId, toolIds);
+      }
       ref.invalidate(templatesProvider);
     } catch (e) {
       if (mounted) {
@@ -206,6 +257,9 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
   // ── Detail sheet ────────────────────────────────────────────────────────────
 
   void _showDetail(DecisionTemplate template) {
+    final toolsFuture =
+        ref.read(templatesRepositoryProvider).getToolsForTemplate(template.id);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -327,6 +381,53 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
                       .toList(),
                 ),
               ],
+              const SizedBox(height: 16),
+              Text(
+                'Included Tools',
+                style: Theme.of(ctx).textTheme.labelMedium?.copyWith(
+                      color: Theme.of(ctx)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
+              ),
+              const SizedBox(height: 6),
+              FutureBuilder<List<ToolDefinition>>(
+                future: toolsFuture,
+                builder: (ctx, snap) {
+                  if (!snap.hasData) {
+                    return const SizedBox(
+                      height: 24,
+                      child: Center(
+                          child: CircularProgressIndicator(strokeWidth: 2)),
+                    );
+                  }
+                  final tools = snap.data!;
+                  if (tools.isEmpty) {
+                    return Text(
+                      'No tools linked.',
+                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(ctx)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.4),
+                          ),
+                    );
+                  }
+                  return Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: tools
+                        .map((t) => Chip(
+                              label: Text(t.name),
+                              labelStyle: Theme.of(ctx).textTheme.labelSmall,
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            ))
+                        .toList(),
+                  );
+                },
+              ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: () {
