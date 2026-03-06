@@ -30,10 +30,17 @@ class ProfileRepository {
     final safeExt = validExts.contains(ext) ? ext : 'jpg';
     final path = '$userId/avatar.$safeExt';
     final bytes = await file.readAsBytes();
+    const mimeTypes = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'webp': 'image/webp',
+    };
+    final mimeType = mimeTypes[safeExt] ?? 'image/jpeg';
     await supabase.storage.from('avatars').uploadBinary(
       path,
       bytes,
-      fileOptions: FileOptions(contentType: 'image/$safeExt', upsert: true),
+      fileOptions: FileOptions(contentType: mimeType, upsert: true),
     );
     return supabase.storage.from('avatars').getPublicUrl(path);
   }
