@@ -52,7 +52,15 @@ class DecisionsRepository {
         .select('id')
         .single();
 
-    return response['id'] as String;
+    final decisionId = response['id'] as String;
+
+    // Fire-and-forget: sync checkpoints/deadline to calendar if connected.
+    supabase.functions.invoke(
+      'calendar-sync',
+      body: {'workspace_id': input.workspaceId, 'decision_id': decisionId},
+    ).ignore();
+
+    return decisionId;
   }
 
   /// Two-step search: calls search_decisions RPC (returns ranked decision_ids),

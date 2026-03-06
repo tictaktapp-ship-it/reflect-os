@@ -1,9 +1,14 @@
+import 'dart:convert';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
+import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/calendar/data/models/calendar_connection.dart';
 import 'package:reflect_os/features/calendar/providers/calendar_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,11 +27,20 @@ class _CalendarSettingsScreenState
   bool _autoSync = true;
   bool _isLoading = true;
   bool _isDisconnecting = false;
+  late final void Function(html.Event) _messageHandler;
 
   @override
   void initState() {
     super.initState();
+    _messageHandler = _onMessage;
+    html.window.addEventListener('message', _messageHandler);
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  @override
+  void dispose() {
+    html.window.removeEventListener('message', _messageHandler);
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -55,46 +69,36 @@ class _CalendarSettingsScreenState
     }
   }
 
-  void _showOAuthStub(String provider) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: SvgPicture.asset(
-                  Theme.of(ctx).brightness == Brightness.dark
-                      ? 'assets/images/reflect-icon-dark.svg'
-                      : 'assets/images/reflect-icon-light.svg',
-                  height: 128,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Connect $provider',
-                style: Theme.of(ctx).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '$provider OAuth is configured during deployment. '
-                'Contact your workspace admin to enable this integration.',
-                style: Theme.of(ctx).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void _onMessage(html.Event event) {
+    if (event is html.MessageEvent) {
+      final data = event.data;
+      if (data is Map && data['type'] == 'calendar-oauth-success') {
+        if (mounted && _workspaceId != null) {
+          ref.invalidate(calendarConnectionsProvider(_workspaceId!));
+        }
+      }
+    }
+  }
+
+  Future<void> _connect(String provider) async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null || _workspaceId == null) return;
+    try {
+      final uri = Uri.parse(
+        'https://omazuyditjbtoupmipcr.supabase.co/functions/v1/calendar-oauth-initiate'
+        '?provider=$provider&user_id=$userId&workspace_id=$_workspaceId',
+      );
+      final resp = await http.get(uri);
+      final url = jsonDecode(resp.body)['url'] as String;
+      html.window.open(url, 'calendar_oauth',
+          'width=500,height=700,scrollbars=yes');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to start $provider connection: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _disconnect(CalendarConnection connection) async {
@@ -231,7 +235,7 @@ class _CalendarSettingsScreenState
                   providerName: 'Google Calendar',
                   connection: google,
                   isDisconnecting: _isDisconnecting,
-                  onConnect: () => _showOAuthStub('Google Calendar'),
+                  onConnect: () => _connect('google'),
                   onDisconnect: google != null
                       ? () => _disconnect(google)
                       : null,
@@ -243,7 +247,7 @@ class _CalendarSettingsScreenState
                   providerName: 'Microsoft Outlook',
                   connection: outlook,
                   isDisconnecting: _isDisconnecting,
-                  onConnect: () => _showOAuthStub('Microsoft Outlook'),
+                  onConnect: () => _connect('microsoft'),
                   onDisconnect: outlook != null
                       ? () => _disconnect(outlook)
                       : null,

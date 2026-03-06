@@ -5,9 +5,12 @@ class CalendarRepository {
   const CalendarRepository();
 
   Future<List<CalendarConnection>> getConnections(String workspaceId) async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return [];
     final rows = await supabase
         .from('calendar_connections')
         .select()
+        .eq('user_id', userId)
         .eq('workspace_id', workspaceId)
         .isFilter('deleted_at', null)
         .order('created_at', ascending: true);
