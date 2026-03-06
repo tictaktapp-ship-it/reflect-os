@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -82,20 +81,16 @@ class _CalendarSettingsScreenState
     final userId = supabase.auth.currentUser?.id;
     if (userId == null || _workspaceId == null) return;
     try {
-      final isPopup = kIsWeb;
+      const isPopup = false;
       final uri = Uri.parse(
         'https://omazuyditjbtoupmipcr.supabase.co/functions/v1/calendar-oauth-initiate'
         '?provider=$provider&user_id=$userId&workspace_id=$_workspaceId&is_popup=$isPopup',
       );
       final resp = await http.get(uri);
       final authUrl = jsonDecode(resp.body)['url'] as String;
-      if (kIsWeb) {
-        openCalendarOAuthPopup(authUrl);
-      } else {
-        final url = Uri.parse(authUrl);
-        if (await canLaunchUrl(url)) {
-          await launchUrl(url, mode: LaunchMode.externalApplication);
-        }
+      final url = Uri.parse(authUrl);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
       }
     } catch (e) {
       if (mounted) {
