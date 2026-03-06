@@ -150,8 +150,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
       ref.invalidate(decisionsProvider);
 
       if (mounted) {
-        context.pop();
-        context.push('/decisions/detail/$id');
+        context.go('/decisions/detail/$id');
       }
     } catch (e) {
       _showError('Failed to create decision: $e');

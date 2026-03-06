@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
+import 'package:reflect_os/core/providers/package_info_provider.dart';
 import 'package:reflect_os/core/providers/theme_provider.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
@@ -251,7 +252,10 @@ class SettingsScreen extends ConsumerWidget {
             children: [
               _SettingsRow(
                 label: 'Version',
-                value: '1.0.0',
+                value: ref.watch(packageInfoProvider).maybeWhen(
+                      data: (info) => '${info.version} (${info.buildNumber})',
+                      orElse: () => '—',
+                    ),
               ),
             ],
           ),
@@ -291,6 +295,12 @@ class _ProfileCardState extends ConsumerState<_ProfileCard> {
       final url = await repo.uploadAvatar(userId, file);
       await repo.updateAvatarUrl(userId, url);
       ref.invalidate(profileProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload avatar: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
@@ -325,8 +335,18 @@ class _ProfileCardState extends ConsumerState<_ProfileCard> {
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) return;
 
-    await ref.read(profileRepositoryProvider).updateDisplayName(userId, result);
-    ref.invalidate(profileProvider);
+    try {
+      await ref
+          .read(profileRepositoryProvider)
+          .updateDisplayName(userId, result);
+      ref.invalidate(profileProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save display name: $e')),
+        );
+      }
+    }
   }
 
   @override

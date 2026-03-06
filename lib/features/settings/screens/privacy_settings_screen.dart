@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/settings/providers/settings_provider.dart';
@@ -166,14 +165,20 @@ class _PrivacySettingsScreenState
       }
     } catch (e) {
       if (!mounted) return;
-      final isNetworkError = e.toString().contains('Failed to fetch') ||
-          e.toString().contains('XMLHttpRequest');
+      final msg = e.toString();
+      final isNetworkError = msg.contains('Failed to fetch') ||
+          msg.contains('XMLHttpRequest');
+      final isNotDeployed = msg.contains('404') ||
+          msg.contains('not found') ||
+          msg.contains('FunctionsHttpException');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             isNetworkError
-                ? 'Test digest unavailable in this network environment. Will work in production.'
-                : 'Failed to send test digest: $e',
+                ? 'Test digest unavailable in this environment — will work in production.'
+                : isNotDeployed
+                    ? 'send-weekly-digest function is not deployed. Deploy it via the Supabase dashboard.'
+                    : 'Failed to send test digest. Check your email provider configuration.',
           ),
         ),
       );
@@ -185,20 +190,7 @@ class _PrivacySettingsScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            SvgPicture.asset(
-              Theme.of(context).brightness == Brightness.dark
-                  ? 'assets/images/reflect-icon-dark.svg'
-                  : 'assets/images/reflect-icon-light.svg',
-              height: 160,
-            ),
-            const SizedBox(width: 8),
-            const Text('Notifications'),
-          ],
-        ),
-      ),
+      appBar: AppBar(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _workspaceId == null

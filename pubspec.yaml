@@ -49,6 +49,7 @@ dependencies:
   http: ^1.2.0
   fl_chart: ^0.68.0
   image_picker: ^1.0.7
+  package_info_plus: ^9.0.0
 
 dev_dependencies:
   flutter_test:
