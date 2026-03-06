@@ -253,7 +253,8 @@ class SettingsScreen extends ConsumerWidget {
               _SettingsRow(
                 label: 'Version',
                 value: ref.watch(packageInfoProvider).maybeWhen(
-                      data: (info) => '${info.version} (${info.buildNumber})',
+                      data: (info) =>
+                          '${info.version} (build ${info.buildNumber})',
                       orElse: () => '—',
                     ),
               ),

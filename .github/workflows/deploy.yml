@@ -1,0 +1,48 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Bump build number
+        run: |
+          # Extract current version and build number
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //')
+          SEMVER=$(echo $VERSION | cut -d'+' -f1)
+          BUILD=$(echo $VERSION | cut -d'+' -f2)
+          NEW_BUILD=$((BUILD + 1))
+          NEW_VERSION="${SEMVER}+${NEW_BUILD}"
+
+          # Write back
+          sed -i "s/^version: .*/version: ${NEW_VERSION}/" pubspec.yaml
+
+          # Commit
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pubspec.yaml
+          git commit -m "chore: bump build number to ${NEW_BUILD} [skip ci]"
+          git push
+
+      - name: Build Flutter web
+        run: flutter build web --release
