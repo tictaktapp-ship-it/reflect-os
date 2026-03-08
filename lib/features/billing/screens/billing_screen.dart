@@ -1,11 +1,15 @@
+import 'dart:math' show max;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/providers/subscription_status_provider.dart';
+import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/billing/data/models/subscription.dart';
 import 'package:reflect_os/features/billing/providers/billing_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // ── Price IDs (injected at build time) ────────────────────────────────────────
@@ -35,13 +39,46 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
   bool _isCheckingOut = false;
   bool _isManaging = false;
 
+  // Team plan selection state
+  bool _teamSelected = false;
+  int _seatCount = 5;
+  final List<TextEditingController> _emailControllers =
+      List.generate(10, (_) => TextEditingController());
+  final int _minSeats = 5;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (Uri.base.queryParameters['success'] == 'true') {
         ref.invalidate(subscriptionProvider);
         ref.invalidate(subscriptionStatusProvider);
+
+        // Dispatch pending team invitations if returning from team checkout
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final pendingEmails = prefs.getStringList('pending_invite_emails');
+          final pendingWorkspaceId =
+              prefs.getString('pending_invite_workspace');
+          final pendingWorkspaceName =
+              prefs.getString('pending_invite_workspace_name');
+
+          if (pendingEmails != null &&
+              pendingEmails.isNotEmpty &&
+              pendingWorkspaceId != null) {
+            await prefs.remove('pending_invite_emails');
+            await prefs.remove('pending_invite_workspace');
+            await prefs.remove('pending_invite_workspace_name');
+            await supabase.functions.invoke('send-team-invitations', body: {
+              'workspace_id': pendingWorkspaceId,
+              'emails': pendingEmails,
+              'workspace_name': pendingWorkspaceName ?? 'Your workspace',
+            });
+          }
+        } catch (_) {
+          // Non-fatal — invitations can be resent from the workspace settings
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -53,17 +90,28 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    for (final c in _emailControllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
   Future<void> _subscribe(String priceId) async {
     setState(() => _isCheckingOut = true);
     try {
       final workspaceId =
           await ref.read(billingRepositoryProvider).ensureWorkspaceExists();
-      final url = await ref.read(billingRepositoryProvider).createCheckoutSession(
-            priceId: priceId,
-            workspaceId: workspaceId,
-            successUrl: 'https://app.reflect-os.com/#/settings/billing?success=true',
-            cancelUrl: 'https://app.reflect-os.com/#/settings/billing',
-          );
+      final url =
+          await ref.read(billingRepositoryProvider).createCheckoutSession(
+                priceId: priceId,
+                workspaceId: workspaceId,
+                successUrl:
+                    'https://app.reflect-os.com/#/settings/billing?success=true',
+                cancelUrl:
+                    'https://app.reflect-os.com/#/settings/billing',
+              );
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } catch (e) {
       if (!mounted) return;
@@ -84,13 +132,52 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
     }
   }
 
+  Future<void> _startTeamCheckout(List<String> emails) async {
+    setState(() => _isCheckingOut = true);
+    try {
+      final seatCount = max(_minSeats, emails.length);
+      final workspaceId =
+          await ref.read(billingRepositoryProvider).ensureWorkspaceExists();
+
+      // Persist emails so we can dispatch invitations after Stripe returns
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('pending_invite_emails', emails);
+      await prefs.setString('pending_invite_workspace', workspaceId);
+      final workspaceName = ref.read(workspaceNameProvider).valueOrNull;
+      if (workspaceName != null) {
+        await prefs.setString('pending_invite_workspace_name', workspaceName);
+      }
+
+      final url = await ref
+          .read(billingRepositoryProvider)
+          .createTeamCheckoutSession(
+            priceId: _annualBilling ? _teamAnnual : _teamMonthly,
+            workspaceId: workspaceId,
+            seatCount: seatCount,
+            invitedEmails: emails,
+            successUrl:
+                'https://app.reflect-os.com/#/settings/billing?success=true',
+            cancelUrl: 'https://app.reflect-os.com/#/settings/billing',
+          );
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to start checkout: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isCheckingOut = false);
+    }
+  }
+
   Future<void> _manage(String workspaceId) async {
     setState(() => _isManaging = true);
     try {
-      final url = await ref.read(billingRepositoryProvider).manageSubscription(
-            workspaceId: workspaceId,
-            returnUrl: 'https://app.reflect-os.com/#/settings/billing',
-          );
+      final url =
+          await ref.read(billingRepositoryProvider).manageSubscription(
+                workspaceId: workspaceId,
+                returnUrl: 'https://app.reflect-os.com/#/settings/billing',
+              );
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } catch (e) {
       if (!mounted) return;
@@ -104,8 +191,16 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final subscriptionAsync = ref.watch(subscriptionProvider);
     final workspaceId = ref.watch(currentWorkspaceProvider).valueOrNull;
+
+    // Compute valid emails on every build so UI stays reactive
+    final validEmails = _emailControllers
+        .map((c) => c.text.trim())
+        .where((e) => e.contains('@') && e.contains('.'))
+        .toList();
+    final canProceed = validEmails.length >= _minSeats;
 
     return Scaffold(
       appBar: AppBar(),
@@ -136,7 +231,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
               ] else ...[
                 // ── Monthly / Annual toggle ──────────────────────
                 Card(
-                  color: Theme.of(context).colorScheme.surface,
+                  color: theme.colorScheme.surface,
                   margin: const EdgeInsets.only(bottom: 16),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -157,18 +252,16 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppColors.success.withValues(alpha: 0.15),
+                            color:
+                                AppColors.success.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             'Save ~17%',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(
-                                  color: AppColors.success,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: AppColors.success,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
@@ -211,11 +304,138 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                     'Workspace branding',
                   ],
                   isHighlighted: true,
-                  isLoading: _isCheckingOut,
-                  onSubscribe: () => _subscribe(
-                    _annualBilling ? _teamAnnual : _teamMonthly,
-                  ),
+                  isLoading: _isCheckingOut && !_teamSelected,
+                  onSubscribe: () => setState(() => _teamSelected = true),
                 ),
+
+                // ── Team seat selector ───────────────────────────
+                if (_teamSelected) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    color: theme.colorScheme.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(
+                          color: AppColors.accentPrimary, width: 2),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Team members',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Add the email addresses of your team members. Minimum 5.',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Dynamic pricing
+                          Text(
+                            '£${39 * _seatCount}/month',
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: AppColors.accentPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '$_seatCount users × £39/user/month',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Email fields
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _emailControllers.length,
+                            itemBuilder: (context, i) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: TextFormField(
+                                controller: _emailControllers[i],
+                                keyboardType: TextInputType.emailAddress,
+                                decoration: InputDecoration(
+                                  labelText: i < _minSeats
+                                      ? 'Email ${i + 1} *'
+                                      : 'Email ${i + 1}',
+                                  hintText: 'colleague@company.com',
+                                  prefixIcon:
+                                      const Icon(Icons.email_outlined),
+                                ),
+                                onChanged: (_) {
+                                  final count = _emailControllers
+                                      .map((c) => c.text.trim())
+                                      .where((e) =>
+                                          e.contains('@') &&
+                                          e.contains('.'))
+                                      .length;
+                                  setState(() => _seatCount =
+                                      max(_minSeats, count));
+                                },
+                              ),
+                            ),
+                          ),
+
+                          // Add more fields
+                          TextButton.icon(
+                            onPressed: () => setState(() {
+                              _emailControllers
+                                  .add(TextEditingController());
+                            }),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add another person'),
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // Validation hint
+                          if (!canProceed)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Text(
+                                'Add at least ${_minSeats - validEmails.length} more email address${_minSeats - validEmails.length == 1 ? '' : 'es'} to continue',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.error,
+                                ),
+                              ),
+                            ),
+
+                          // Proceed to payment
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                              onPressed:
+                                  canProceed && !_isCheckingOut
+                                      ? () =>
+                                          _startTeamCheckout(validEmails)
+                                      : null,
+                              child: _isCheckingOut
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      canProceed
+                                          ? 'Proceed to payment — £${39 * max(_minSeats, validEmails.length)}/month'
+                                          : 'Add ${_minSeats - validEmails.length} more email${_minSeats - validEmails.length == 1 ? '' : 's'} to continue',
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ],
           );
@@ -296,9 +516,10 @@ class _ActivePlanCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         'Cancels on ${_dateFmt.format(sub.currentPeriodEnd.toLocal())} — your access continues until then.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.warning,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppColors.warning,
+                                ),
                       ),
                     ),
                   ],
@@ -380,10 +601,11 @@ class _PricingCard extends StatelessWidget {
                     ),
                     child: Text(
                       'Popular',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: AppColors.accentHover,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: AppColors.accentHover,
+                                fontWeight: FontWeight.w600,
+                              ),
                     ),
                   ),
                 ],

@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/theme.dart';
+import 'package:reflect_os/core/routing/routes.dart';
+import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -21,6 +24,26 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  // Invite token state
+  bool _initialized = false;
+  String? _inviteToken;
+  bool _emailReadOnly = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      final routerState = GoRouterState.of(context);
+      _inviteToken = routerState.uri.queryParameters['invite'];
+      final inviteEmail = routerState.uri.queryParameters['email'];
+      if (inviteEmail != null && inviteEmail.isNotEmpty) {
+        _emailController.text = inviteEmail;
+        _emailReadOnly = true;
+      }
+    }
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -30,20 +53,75 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.dispose();
   }
 
+  void _showAccountExistsDialog(String email) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Account already exists'),
+        content: const Text(
+          'An account with this email already exists. '
+          'Would you like to sign in instead?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.go(Routes.login, extra: {'email': email});
+            },
+            child: const Text('Sign in'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final email = _emailController.text.trim();
+
     await ref.read(authActionProvider.notifier).signUp(
-          email: _emailController.text.trim(),
+          email: email,
           password: _passwordController.text,
         );
+
     if (!mounted) return;
     final result = ref.read(authActionProvider);
+
     if (result.error != null) {
+      final err = result.error;
+      if (err is AuthException) {
+        final msg = err.message.toLowerCase();
+        if (msg.contains('already') ||
+            msg.contains('user_already_exists') ||
+            err.statusCode == '422') {
+          _showAccountExistsDialog(email);
+          return;
+        }
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result.error.toString())),
       );
       return;
     }
+
+    // Handle invite token — accept invitation and skip onboarding
+    if (_inviteToken != null) {
+      try {
+        await supabase.rpc('accept_workspace_invitation', params: {
+          'p_token': _inviteToken,
+          'p_user_id': supabase.auth.currentUser!.id,
+        });
+      } catch (_) {
+        // Non-fatal — user is still registered
+      }
+      if (mounted) context.go(Routes.home);
+      return;
+    }
+
     // session is null when Supabase requires email confirmation.
     if (result.valueOrNull?.session == null) {
       showDialog<void>(
@@ -112,6 +190,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
+                        readOnly: _emailReadOnly,
                         decoration: const InputDecoration(
                           labelText: 'Email',
                           border: OutlineInputBorder(),
@@ -189,7 +268,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2),
                               )
                             : const Text('Create account'),
                       ),

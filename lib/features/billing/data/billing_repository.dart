@@ -79,6 +79,45 @@ class BillingRepository {
     return url;
   }
 
+  /// Calls the create-checkout-session Edge Function for the Team plan,
+  /// passing seat count and invited email addresses.
+  Future<String> createTeamCheckoutSession({
+    required String priceId,
+    required String workspaceId,
+    required int seatCount,
+    required List<String> invitedEmails,
+    required String successUrl,
+    required String cancelUrl,
+  }) async {
+    final session = supabase.auth.currentSession;
+    final token = session?.accessToken ?? '';
+
+    final response = await http.post(
+      Uri.parse('https://omazuyditjbtoupmipcr.supabase.co/functions/v1/create-checkout-session'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'price_id': priceId,
+        'workspace_id': workspaceId,
+        'seat_count': seatCount,
+        'invited_emails': invitedEmails,
+      }),
+    );
+
+    debugPrint('Team checkout response status: ${response.statusCode}');
+    debugPrint('Team checkout response body: ${response.body}');
+
+    final data = jsonDecode(response.body);
+    final url = data['url'] as String?;
+
+    if (url == null) {
+      throw Exception('No URL in checkout response: ${response.body}');
+    }
+    return url;
+  }
+
   /// Calls the manage-subscription Edge Function and returns the
   /// Stripe Customer Portal URL.
   Future<String> manageSubscription({
