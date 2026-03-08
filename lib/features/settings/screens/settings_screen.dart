@@ -14,6 +14,7 @@ import 'package:reflect_os/features/settings/providers/profile_provider.dart';
 import 'package:reflect_os/features/settings/widgets/encryption_mode_tile.dart';
 import 'package:reflect_os/features/workspace/data/models/workspace_model.dart';
 import 'package:reflect_os/features/workspace/providers/workspace_providers.dart';
+import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -23,6 +24,7 @@ class SettingsScreen extends ConsumerWidget {
     final email = supabase.auth.currentUser?.email ?? '—';
     final isSigningOut = ref.watch(authActionProvider).isLoading;
     final themeMode = ref.watch(themeModeProvider);
+    final currentWorkspaceName = ref.watch(workspaceNameProvider).valueOrNull;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -46,20 +48,9 @@ class SettingsScreen extends ConsumerWidget {
           // ── GROUP 2 — Workspace ───────────────────────────────────
           _SettingsGroup(
             title: 'Workspace',
+            subtitle: currentWorkspaceName,
             children: [
-              _SectionCard(
-                children: [
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.auto_fix_high),
-                    title: const Text('Set up workspace'),
-                    subtitle: const Text(
-                        'Configure verticals, templates and branding'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(Routes.workspaceWizard),
-                  ),
-                ],
-              ),
+              const _WorkspaceContextBanner(),
               const _WorkspaceManagementSection(),
               _SectionCard(
                 children: [
@@ -454,20 +445,33 @@ class _SettingsGroup extends StatelessWidget {
     required this.title,
     required this.children,
     this.initiallyExpanded = false,
+    this.subtitle,
   });
 
   final String title;
+  final String? subtitle;
   final List<Widget> children;
   final bool initiallyExpanded;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return ExpansionTile(
       key: PageStorageKey(title),
-      title: Text(
-        title,
-        style: Theme.of(context).textTheme.titleSmall,
-      ),
+      title: subtitle != null
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: theme.textTheme.titleSmall),
+                Text(
+                  subtitle!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            )
+          : Text(title, style: theme.textTheme.titleSmall),
       initiallyExpanded: initiallyExpanded,
       tilePadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       childrenPadding: EdgeInsets.zero,
@@ -774,44 +778,70 @@ class _SettingsRow extends StatelessWidget {
   }
 }
 
+// ── Workspace Context Banner ──────────────────────────────────────────────────
+
+class _WorkspaceContextBanner extends ConsumerWidget {
+  const _WorkspaceContextBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentWorkspaceName = ref.watch(workspaceNameProvider).valueOrNull;
+    final theme = Theme.of(context);
+    return Card(
+      color: theme.colorScheme.primaryContainer,
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Icon(Icons.business,
+                color: theme.colorScheme.onPrimaryContainer),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Configuring workspace',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  Text(
+                    currentWorkspaceName ?? 'Loading...',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: theme.colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () => showWorkspaceSwitcherSheet(context, ref),
+              child: Text(
+                'Switch',
+                style: TextStyle(
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Workspace Management ──────────────────────────────────────────────────────
 
-class _WorkspaceManagementSection extends ConsumerStatefulWidget {
+class _WorkspaceManagementSection extends StatelessWidget {
   const _WorkspaceManagementSection();
 
   @override
-  ConsumerState<_WorkspaceManagementSection> createState() =>
-      _WorkspaceManagementSectionState();
-}
-
-class _WorkspaceManagementSectionState
-    extends ConsumerState<_WorkspaceManagementSection> {
-  @override
   Widget build(BuildContext context) {
-    final workspaceName = ref.watch(workspaceNameProvider).valueOrNull;
-    if (workspaceName == null) return const SizedBox.shrink();
-
     return _SectionCard(
       children: [
-        // ── Current workspace / switcher ────────────────────────────
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.business_outlined),
-          title: const Text('Workspace'),
-          subtitle: Text(workspaceName),
-          trailing: const Icon(Icons.unfold_more),
-          onTap: _showSwitcherSheet,
-        ),
-        const Divider(height: 1, indent: 16, endIndent: 16),
-        // ── Create new workspace ────────────────────────────────────
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.add_circle_outline),
-          title: const Text('Create new workspace'),
-          onTap: _showCreateSheet,
-        ),
-        const Divider(height: 1, indent: 16, endIndent: 16),
-        // ── Full management screen ──────────────────────────────────
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.manage_accounts_outlined),
@@ -819,140 +849,16 @@ class _WorkspaceManagementSectionState
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push(Routes.settingsWorkspaces),
         ),
-      ],
-    );
-  }
-
-  void _showSwitcherSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (sheetCtx) {
-        final workspaces = ref.read(userWorkspacesProvider).valueOrNull ?? [];
-        final currentId = ref.read(currentWorkspaceProvider).valueOrNull;
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                child: Text(
-                  'Switch Workspace',
-                  style: Theme.of(sheetCtx).textTheme.titleMedium,
-                ),
-              ),
-              ...workspaces.map(
-                (w) => ListTile(
-                  leading: const Icon(Icons.business_outlined),
-                  title: Text(w.name),
-                  subtitle: Text(w.role == 'owner' ? 'Owner' : 'Member'),
-                  trailing: w.id == currentId
-                      ? const Icon(Icons.check, color: AppColors.accentPrimary)
-                      : null,
-                  onTap: () {
-                    ref.read(selectedWorkspaceIdProvider.notifier).state = w.id;
-                    Navigator.of(sheetCtx).pop();
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showCreateSheet() {
-    final nameCtrl = TextEditingController();
-    bool shareWithTeam = false;
-    final formKey = GlobalKey<FormState>();
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            20,
-            16,
-            MediaQuery.of(ctx).viewInsets.bottom + 32,
-          ),
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'New Workspace',
-                  style: Theme.of(ctx).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: nameCtrl,
-                  decoration:
-                      const InputDecoration(labelText: 'Workspace name *'),
-                  textCapitalization: TextCapitalization.words,
-                  autofocus: true,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Name required' : null,
-                ),
-                const SizedBox(height: 8),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Share with team'),
-                  subtitle: const Text('Creates a team workspace'),
-                  value: shareWithTeam,
-                  onChanged: (v) => setSheetState(() => shareWithTeam = v),
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-                    final name = nameCtrl.text.trim();
-                    final share = shareWithTeam;
-                    Navigator.of(ctx).pop();
-                    try {
-                      await ref
-                          .read(workspaceRepositoryProvider)
-                          .createWorkspace(name, share);
-                      ref.invalidate(userWorkspacesProvider);
-                      if (mounted) {
-                        setState(() {});
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text('Workspace "$name" created')),
-                        );
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content:
-                                  Text('Failed to create workspace: $e')),
-                        );
-                      }
-                    }
-                  },
-                  child: const Text('Create Workspace'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('Cancel'),
-                ),
-              ],
-            ),
-          ),
+        const Divider(height: 1, indent: 40, endIndent: 0),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.auto_fix_high),
+          title: const Text('Set up workspace'),
+          subtitle: const Text('Configure verticals, templates and branding'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(Routes.workspaceWizard),
         ),
-      ),
+      ],
     );
   }
 }

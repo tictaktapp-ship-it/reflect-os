@@ -9,6 +9,7 @@ import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/utils/csv_downloader.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
 
 enum _SortOrder { newestFirst, oldestFirst, titleAsc, titleDesc }
 
@@ -331,6 +332,7 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        title: const WorkspaceSwitcherChip(),
         actions: [
           // Meeting capture — moved from secondary FAB
           IconButton(
