@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/demographic_packs/providers/demographic_packs_providers.dart';
@@ -74,11 +75,6 @@ class _WorkspaceWizardScreenState
   // ── Navigation ────────────────────────────────────────────────────────────
 
   void _prevPage() => _pageCtrl.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-
-  void _skipPage() => _pageCtrl.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
@@ -158,8 +154,7 @@ class _WorkspaceWizardScreenState
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Workspace set up successfully')),
+          const SnackBar(content: Text('Workspace set up successfully')),
         );
         context.go(Routes.settings);
       }
@@ -174,274 +169,247 @@ class _WorkspaceWizardScreenState
     }
   }
 
-  // ── Step indicator ────────────────────────────────────────────────────────
-
-  Widget _buildStepDots() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(5, (i) {
-        final active = i <= _currentPage;
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: active
-                ? Theme.of(context).colorScheme.primary
-                : Colors.transparent,
-            border: Border.all(
-              color: active
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.3),
-            ),
-          ),
-        );
-      }),
-    );
-  }
-
   // ── Step pages ────────────────────────────────────────────────────────────
 
   Widget _buildStep1() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "What's your workspace called?",
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _nameCtrl,
-            decoration:
-                const InputDecoration(labelText: 'Workspace name'),
-            textCapitalization: TextCapitalization.words,
-            autofocus: true,
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "What's your workspace called?",
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 24),
+        TextField(
+          controller: _nameCtrl,
+          decoration: const InputDecoration(labelText: 'Workspace name'),
+          textCapitalization: TextCapitalization.words,
+          autofocus: true,
+        ),
+      ],
     );
   }
 
   Widget _buildStep2() {
     final verticalsAsync = ref.watch(verticalsProvider);
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Choose your vertical',
-            style: Theme.of(context).textTheme.headlineSmall,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Choose your vertical',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 16),
+        verticalsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Text('Failed to load verticals: $e'),
+          data: (verticals) => Column(
+            children: verticals
+                .map(
+                  (v) => RadioListTile<String>(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(v.displayName),
+                    subtitle: v.description.isNotEmpty
+                        ? Text(v.description)
+                        : null,
+                    value: v.id,
+                    groupValue: _selectedVerticalId,
+                    onChanged: (val) => setState(() {
+                      _selectedVerticalId = val;
+                      _selectedVerticalName = v.verticalName;
+                    }),
+                  ),
+                )
+                .toList(),
           ),
-          const SizedBox(height: 16),
-          verticalsAsync.when(
-            loading: () =>
-                const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Failed to load verticals: $e'),
-            data: (verticals) => Column(
-              children: verticals
-                  .map(
-                    (v) => RadioListTile<String>(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(v.displayName),
-                      subtitle: v.description.isNotEmpty
-                          ? Text(v.description)
-                          : null,
-                      value: v.id,
-                      groupValue: _selectedVerticalId,
-                      onChanged: (val) => setState(() {
-                        _selectedVerticalId = val;
-                        _selectedVerticalName = v.verticalName;
-                      }),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildStep3() {
     final templatesAsync = ref.watch(templatesProvider);
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Pick starter templates',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 16),
-          templatesAsync.when(
-            loading: () =>
-                const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Failed to load templates: $e'),
-            data: (templates) {
-              final system =
-                  templates.where((t) => t.isSystem).toList();
-              if (system.isEmpty) {
-                return Text(
-                  'No system templates available.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
-                      ),
-                );
-              }
-              return Column(
-                children: system
-                    .map(
-                      (t) => CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(t.name),
-                        value: _selectedTemplateIds.contains(t.id),
-                        onChanged: (v) => setState(() {
-                          if (v == true) {
-                            _selectedTemplateIds.add(t.id);
-                          } else {
-                            _selectedTemplateIds.remove(t.id);
-                          }
-                        }),
-                      ),
-                    )
-                    .toList(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Pick starter templates',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 16),
+        templatesAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Text('Failed to load templates: $e'),
+          data: (templates) {
+            final system = templates.where((t) => t.isSystem).toList();
+            if (system.isEmpty) {
+              return Text(
+                'No system templates available.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
               );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStep4() {
-    final packsAsync = ref.watch(demographicPacksProvider);
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Enable demographic packs',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 16),
-          packsAsync.when(
-            loading: () =>
-                const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Failed to load packs: $e'),
-            data: (packs) => Column(
-              children: packs
+            }
+            return Column(
+              children: system
                   .map(
-                    (p) => SwitchListTile(
+                    (t) => CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: Text(p.displayName),
-                      subtitle: p.description.isNotEmpty
-                          ? Text(p.description)
-                          : null,
-                      value: _enabledPackIds.contains(p.id),
+                      title: Text(t.name),
+                      value: _selectedTemplateIds.contains(t.id),
                       onChanged: (v) => setState(() {
-                        if (v) {
-                          _enabledPackIds.add(p.id);
+                        if (v == true) {
+                          _selectedTemplateIds.add(t.id);
                         } else {
-                          _enabledPackIds.remove(p.id);
+                          _selectedTemplateIds.remove(t.id);
                         }
                       }),
                     ),
                   )
                   .toList(),
-            ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep4() {
+    final packsAsync = ref.watch(demographicPacksProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Enable demographic packs',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 16),
+        packsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Text('Failed to load packs: $e'),
+          data: (packs) => Column(
+            children: packs
+                .map(
+                  (p) => SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(p.displayName),
+                    subtitle: p.description.isNotEmpty
+                        ? Text(p.description)
+                        : null,
+                    value: _enabledPackIds.contains(p.id),
+                    onChanged: (v) => setState(() {
+                      if (v) {
+                        _enabledPackIds.add(p.id);
+                      } else {
+                        _enabledPackIds.remove(p.id);
+                      }
+                    }),
+                  ),
+                )
+                .toList(),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildStep5() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Branding (optional)',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'You can update this any time in settings.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
+              ),
+        ),
+        const SizedBox(height: 24),
+        TextField(
+          controller: _brandingCtrl,
+          decoration:
+              const InputDecoration(labelText: 'Workspace display name'),
+          textCapitalization: TextCapitalization.words,
+        ),
+      ],
+    );
+  }
+
+  // ── Layout helpers ────────────────────────────────────────────────────────
+
+  Widget _wrapPage(Widget content, {required Widget navRow}) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Branding (optional)',
-            style: Theme.of(context).textTheme.headlineSmall,
+          Expanded(
+            child: SingleChildScrollView(child: content),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'You can update this any time in settings.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-                ),
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _brandingCtrl,
-            decoration: const InputDecoration(
-                labelText: 'Workspace display name'),
-            textCapitalization: TextCapitalization.words,
-          ),
+          const SizedBox(height: 16),
+          navRow,
         ],
       ),
     );
   }
 
-  // ── Nav helpers ───────────────────────────────────────────────────────────
-
-  Widget _buildNavRow() {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildStandardNavRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        if (_currentPage > 0)
+          TextButton(
+            onPressed: _prevPage,
+            child: const Text('Back'),
+          )
+        else
+          const SizedBox(),
+        Row(
           children: [
-            if (_currentPage > 0)
-              TextButton(
-                onPressed: _skipPage,
-                child: const Text('Skip'),
-              )
-            else
-              const SizedBox.shrink(),
+            TextButton(
+              onPressed: () => context.go(Routes.settings),
+              child: const Text('Skip'),
+            ),
+            const SizedBox(width: 8),
             FilledButton(
-              onPressed: _isSaving
-                  ? null
-                  : (_currentPage == 4 ? _onFinish : _onNext),
+              onPressed: _isSaving ? null : _onNext,
               child: _isSaving
                   ? const SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(_currentPage == 4 ? 'Finish' : 'Next'),
+                  : const Text('Next'),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 
-  Widget _wrapPage(Widget content) {
-    return Column(
-      children: [
-        Expanded(child: SingleChildScrollView(child: content)),
-        _buildNavRow(),
-      ],
+  Widget _buildFinishNavRow() {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton(
+        onPressed: _isSaving ? null : _onFinish,
+        child: _isSaving
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Text('Finish'),
+      ),
     );
   }
 
@@ -451,26 +419,44 @@ class _WorkspaceWizardScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         leading: _currentPage > 0
-            ? IconButton(
-                icon: const Icon(Icons.chevron_left),
-                onPressed: _prevPage,
-              )
-            : null,
-        title: _buildStepDots(),
+            ? BackButton(onPressed: _prevPage)
+            : CloseButton(onPressed: () => context.go(Routes.settings)),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(
+            5,
+            (i) => Container(
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: i == _currentPage
+                    ? AppColors.accentPrimary
+                    : Colors.grey.shade300,
+              ),
+            ),
+          ),
+        ),
         centerTitle: true,
+        actions: [
+          TextButton(
+            onPressed: () => context.go(Routes.settings),
+            child: const Text('Skip all'),
+          ),
+        ],
       ),
       body: PageView(
         controller: _pageCtrl,
         physics: const NeverScrollableScrollPhysics(),
         onPageChanged: (i) => setState(() => _currentPage = i),
         children: [
-          _wrapPage(_buildStep1()),
-          _wrapPage(_buildStep2()),
-          _wrapPage(_buildStep3()),
-          _wrapPage(_buildStep4()),
-          _wrapPage(_buildStep5()),
+          _wrapPage(_buildStep1(), navRow: _buildStandardNavRow()),
+          _wrapPage(_buildStep2(), navRow: _buildStandardNavRow()),
+          _wrapPage(_buildStep3(), navRow: _buildStandardNavRow()),
+          _wrapPage(_buildStep4(), navRow: _buildStandardNavRow()),
+          _wrapPage(_buildStep5(), navRow: _buildFinishNavRow()),
         ],
       ),
     );
