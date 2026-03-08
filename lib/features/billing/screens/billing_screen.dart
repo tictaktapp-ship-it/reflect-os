@@ -39,9 +39,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
   bool _isCheckingOut = false;
   bool _isManaging = false;
 
-  // Team plan selection state
-  bool _teamSelected = false;
-  int _seatCount = 5;
+  // Team plan state
   final List<TextEditingController> _emailControllers =
       List.generate(10, (_) => TextEditingController());
   final int _minSeats = 5;
@@ -76,7 +74,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
             });
           }
         } catch (_) {
-          // Non-fatal — invitations can be resent from the workspace settings
+          // Non-fatal — invitations can be resent from workspace settings
         }
 
         if (mounted) {
@@ -109,8 +107,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                 workspaceId: workspaceId,
                 successUrl:
                     'https://app.reflect-os.com/#/settings/billing?success=true',
-                cancelUrl:
-                    'https://app.reflect-os.com/#/settings/billing',
+                cancelUrl: 'https://app.reflect-os.com/#/settings/billing',
               );
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } catch (e) {
@@ -195,7 +192,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
     final subscriptionAsync = ref.watch(subscriptionProvider);
     final workspaceId = ref.watch(currentWorkspaceProvider).valueOrNull;
 
-    // Compute valid emails on every build so UI stays reactive
+    // Computed on every build so UI stays reactive as email fields change
     final validEmails = _emailControllers
         .map((c) => c.text.trim())
         .where((e) => e.contains('@') && e.contains('.'))
@@ -252,8 +249,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color:
-                                AppColors.success.withValues(alpha: 0.15),
+                            color: AppColors.success.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -289,153 +285,206 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // ── Team plan ────────────────────────────────────
-                _PricingCard(
-                  name: 'Team',
-                  price: _annualBilling ? '£1,490/yr' : '£149/mo',
-                  priceNote: _annualBilling
-                      ? '£124.17/mo billed annually — min 5 seats'
-                      : 'Billed monthly — min 5 seats',
-                  features: const [
-                    'Everything in Individual',
-                    'Team workspace',
-                    'Approval workflows',
-                    'Audit log',
-                    'Workspace branding',
-                  ],
-                  isHighlighted: true,
-                  isLoading: _isCheckingOut && !_teamSelected,
-                  onSubscribe: () => setState(() => _teamSelected = true),
-                ),
-
-                // ── Team seat selector ───────────────────────────
-                if (_teamSelected) ...[
-                  const SizedBox(height: 12),
-                  Card(
-                    color: theme.colorScheme.surface,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(
-                          color: AppColors.accentPrimary, width: 2),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Team members',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Add the email addresses of your team members. Minimum 5.',
-                            style: theme.textTheme.bodySmall,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Dynamic pricing
-                          Text(
-                            '£${39 * _seatCount}/month',
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              color: AppColors.accentPrimary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            '$_seatCount users × £39/user/month',
-                            style: theme.textTheme.bodySmall,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Email fields
-                          ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _emailControllers.length,
-                            itemBuilder: (context, i) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: TextFormField(
-                                controller: _emailControllers[i],
-                                keyboardType: TextInputType.emailAddress,
-                                decoration: InputDecoration(
-                                  labelText: i < _minSeats
-                                      ? 'Email ${i + 1} *'
-                                      : 'Email ${i + 1}',
-                                  hintText: 'colleague@company.com',
-                                  prefixIcon:
-                                      const Icon(Icons.email_outlined),
-                                ),
-                                onChanged: (_) {
-                                  final count = _emailControllers
-                                      .map((c) => c.text.trim())
-                                      .where((e) =>
-                                          e.contains('@') &&
-                                          e.contains('.'))
-                                      .length;
-                                  setState(() => _seatCount =
-                                      max(_minSeats, count));
-                                },
+                // ── Unified Team card ────────────────────────────
+                Card(
+                  color: theme.colorScheme.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(
+                        color: AppColors.accentPrimary, width: 2),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header row
+                        Row(
+                          children: [
+                            Text(
+                              'Team',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                          ),
-
-                          // Add more fields
-                          TextButton.icon(
-                            onPressed: () => setState(() {
-                              _emailControllers
-                                  .add(TextEditingController());
-                            }),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Add another person'),
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Validation hint
-                          if (!canProceed)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.accentPrimary
+                                    .withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                               child: Text(
-                                'Add at least ${_minSeats - validEmails.length} more email address${_minSeats - validEmails.length == 1 ? '' : 'es'} to continue',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.error,
+                                'Popular',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: AppColors.accentHover,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
 
-                          // Proceed to payment
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton(
-                              onPressed:
-                                  canProceed && !_isCheckingOut
-                                      ? () =>
-                                          _startTeamCheckout(validEmails)
-                                      : null,
-                              child: _isCheckingOut
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Text(
-                                      canProceed
-                                          ? 'Proceed to payment — £${39 * max(_minSeats, validEmails.length)}/month'
-                                          : 'Add ${_minSeats - validEmails.length} more email${_minSeats - validEmails.length == 1 ? '' : 's'} to continue',
-                                    ),
+                        // Pricing headline
+                        Text(
+                          'from £195/month',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.accentPrimary,
+                          ),
+                        ),
+                        Text(
+                          '£39/user/month · minimum 5 users',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.5),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Feature list
+                        ...const [
+                          'Everything in Individual',
+                          'Team workspace',
+                          'Approval workflows',
+                          'Audit log',
+                          'Workspace branding',
+                        ].map(
+                          (f) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              children: [
+                                Icon(Icons.check_circle_outline,
+                                    size: 16, color: AppColors.success),
+                                const SizedBox(width: 8),
+                                Text(f,
+                                    style: theme.textTheme.bodySmall),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+
+                        const Divider(height: 24),
+
+                        // Team members section header
+                        Text(
+                          'Team members',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Add email addresses. Minimum 5 required.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.5),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Email fields
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _emailControllers.length,
+                          itemBuilder: (context, i) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: TextFormField(
+                              controller: _emailControllers[i],
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: InputDecoration(
+                                labelText: i < _minSeats
+                                    ? 'Email ${i + 1} *'
+                                    : 'Email ${i + 1}',
+                                hintText: 'colleague@company.com',
+                                prefixIcon:
+                                    const Icon(Icons.email_outlined),
+                              ),
+                              onChanged: (_) => setState(() {}),
+                            ),
+                          ),
+                        ),
+
+                        // Add more button
+                        TextButton.icon(
+                          onPressed: () => setState(() {
+                            _emailControllers.add(TextEditingController());
+                          }),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add another person'),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Running total (always visible)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Monthly total',
+                                  style: theme.textTheme.bodyMedium),
+                              Text(
+                                '£${39 * max(_minSeats, validEmails.length)}/month',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.accentPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Proceed to payment button
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: canProceed && !_isCheckingOut
+                                ? () => _startTeamCheckout(validEmails)
+                                : null,
+                            child: _isCheckingOut
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    canProceed
+                                        ? 'Proceed to payment'
+                                        : 'Add ${_minSeats - validEmails.length} more email${_minSeats - validEmails.length == 1 ? '' : 's'} to continue',
+                                  ),
+                          ),
+                        ),
+
+                        // Validation hint (only when < 5 valid emails)
+                        if (!canProceed)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              '${_minSeats - validEmails.length} more email address${_minSeats - validEmails.length == 1 ? '' : 'es'} needed',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.error,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ],
             ],
           );
@@ -516,10 +565,10 @@ class _ActivePlanCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         'Cancels on ${_dateFmt.format(sub.currentPeriodEnd.toLocal())} — your access continues until then.',
-                        style:
-                            Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.warning,
-                                ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: AppColors.warning),
                       ),
                     ),
                   ],
@@ -546,7 +595,7 @@ class _ActivePlanCard extends StatelessWidget {
   }
 }
 
-// ── Pricing Card ───────────────────────────────────────────────────────────────
+// ── Pricing Card (Individual) ──────────────────────────────────────────────────
 
 class _PricingCard extends StatelessWidget {
   const _PricingCard({
@@ -556,7 +605,6 @@ class _PricingCard extends StatelessWidget {
     required this.features,
     required this.isLoading,
     this.onSubscribe,
-    this.isHighlighted = false,
   });
 
   final String name;
@@ -565,7 +613,6 @@ class _PricingCard extends StatelessWidget {
   final List<String> features;
   final bool isLoading;
   final VoidCallback? onSubscribe;
-  final bool isHighlighted;
 
   @override
   Widget build(BuildContext context) {
@@ -573,43 +620,17 @@ class _PricingCard extends StatelessWidget {
       color: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: isHighlighted
-            ? const BorderSide(color: AppColors.accentPrimary, width: 2)
-            : BorderSide.none,
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Text(
-                  name,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                if (isHighlighted) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentPrimary.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'Popular',
-                      style:
-                          Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: AppColors.accentHover,
-                                fontWeight: FontWeight.w600,
-                              ),
-                    ),
+            Text(
+              name,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
-                ],
-              ],
             ),
             const SizedBox(height: 6),
             Text(
@@ -636,8 +657,7 @@ class _PricingCard extends StatelessWidget {
                     Icon(Icons.check_circle_outline,
                         size: 16, color: AppColors.success),
                     const SizedBox(width: 8),
-                    Text(f,
-                        style: Theme.of(context).textTheme.bodySmall),
+                    Text(f, style: Theme.of(context).textTheme.bodySmall),
                   ],
                 ),
               ),
