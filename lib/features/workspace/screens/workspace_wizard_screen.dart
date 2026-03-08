@@ -21,7 +21,6 @@ class _WorkspaceWizardScreenState
     extends ConsumerState<WorkspaceWizardScreen> {
   final _pageCtrl = PageController();
   int _currentPage = 0;
-  bool _isSaving = false;
 
   // Step 1 — name
   late final TextEditingController _nameCtrl;
@@ -83,7 +82,6 @@ class _WorkspaceWizardScreenState
     if (_currentPage == 0) {
       final newName = _nameCtrl.text.trim();
       if (newName.isNotEmpty && newName != _savedWorkspaceName) {
-        setState(() => _isSaving = true);
         try {
           final workspaceId =
               await ref.read(currentWorkspaceProvider.future);
@@ -105,8 +103,6 @@ class _WorkspaceWizardScreenState
             );
           }
           return;
-        } finally {
-          if (mounted) setState(() => _isSaving = false);
         }
       }
     }
@@ -117,7 +113,6 @@ class _WorkspaceWizardScreenState
   }
 
   Future<void> _onFinish() async {
-    setState(() => _isSaving = true);
     try {
       final workspaceId = await ref.read(currentWorkspaceProvider.future);
       if (workspaceId == null) {
@@ -164,8 +159,6 @@ class _WorkspaceWizardScreenState
           SnackBar(content: Text('Setup failed: $e')),
         );
       }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -347,9 +340,9 @@ class _WorkspaceWizardScreenState
 
   // ── Layout helpers ────────────────────────────────────────────────────────
 
-  Widget _wrapPage(Widget content, {required Widget navRow}) {
+  Widget _wrapPage(Widget content, Widget navRow) {
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -367,13 +360,12 @@ class _WorkspaceWizardScreenState
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        if (_currentPage > 0)
-          TextButton(
-            onPressed: _prevPage,
-            child: const Text('Back'),
-          )
-        else
-          const SizedBox(),
+        _currentPage > 0
+            ? TextButton(
+                onPressed: _prevPage,
+                child: const Text('Back'),
+              )
+            : const SizedBox.shrink(),
         Row(
           children: [
             TextButton(
@@ -382,14 +374,8 @@ class _WorkspaceWizardScreenState
             ),
             const SizedBox(width: 8),
             FilledButton(
-              onPressed: _isSaving ? null : _onNext,
-              child: _isSaving
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Next'),
+              onPressed: _onNext,
+              child: const Text('Next'),
             ),
           ],
         ),
@@ -401,14 +387,8 @@ class _WorkspaceWizardScreenState
     return SizedBox(
       width: double.infinity,
       child: FilledButton(
-        onPressed: _isSaving ? null : _onFinish,
-        child: _isSaving
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Text('Finish'),
+        onPressed: _onFinish,
+        child: const Text('Finish setup'),
       ),
     );
   }
@@ -452,11 +432,11 @@ class _WorkspaceWizardScreenState
         physics: const NeverScrollableScrollPhysics(),
         onPageChanged: (i) => setState(() => _currentPage = i),
         children: [
-          _wrapPage(_buildStep1(), navRow: _buildStandardNavRow()),
-          _wrapPage(_buildStep2(), navRow: _buildStandardNavRow()),
-          _wrapPage(_buildStep3(), navRow: _buildStandardNavRow()),
-          _wrapPage(_buildStep4(), navRow: _buildStandardNavRow()),
-          _wrapPage(_buildStep5(), navRow: _buildFinishNavRow()),
+          _wrapPage(_buildStep1(), _buildStandardNavRow()),
+          _wrapPage(_buildStep2(), _buildStandardNavRow()),
+          _wrapPage(_buildStep3(), _buildStandardNavRow()),
+          _wrapPage(_buildStep4(), _buildStandardNavRow()),
+          _wrapPage(_buildStep5(), _buildFinishNavRow()),
         ],
       ),
     );
