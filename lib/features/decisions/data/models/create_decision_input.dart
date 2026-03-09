@@ -31,7 +31,7 @@ class CreateDecisionInput {
         'workspace_id': workspaceId,
         'title': title,
         'state': state,
-        if (categoryId != null) 'category_id': categoryId,
+        if (categoryId != null && categoryId!.isNotEmpty) 'category_id': categoryId,
         if (stakes != null) 'stakes': stakes,
         if (initialConfidence != null) 'initial_confidence': initialConfidence,
         if (descriptionEncrypted != null)
