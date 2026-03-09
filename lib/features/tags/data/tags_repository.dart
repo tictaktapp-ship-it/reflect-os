@@ -47,10 +47,10 @@ class TagsRepository {
   Future<Tag> createTag(String workspaceId, String name) async {
     final row = await supabase
         .from('tags')
-        .insert({
-          'workspace_id': workspaceId,
-          'name': name,
-        })
+        .upsert(
+          {'workspace_id': workspaceId, 'name': name},
+          onConflict: 'workspace_id,name',
+        )
         .select()
         .single();
 
