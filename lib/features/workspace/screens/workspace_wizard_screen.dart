@@ -78,41 +78,6 @@ class _WorkspaceWizardScreenState
         curve: Curves.easeInOut,
       );
 
-  Future<void> _onNext() async {
-    debugPrint('Next tapped on page $_currentPage');
-    if (_currentPage == 0) {
-      final newName = _nameCtrl.text.trim();
-      if (newName.isNotEmpty && newName != _savedWorkspaceName) {
-        try {
-          final workspaceId =
-              await ref.read(currentWorkspaceProvider.future);
-          if (workspaceId != null) {
-            await ref
-                .read(workspaceRepositoryProvider)
-                .renameWorkspace(workspaceId, newName);
-            ref.invalidate(userWorkspacesProvider);
-            ref.invalidate(workspaceNameProvider);
-            setState(() {
-              _savedWorkspaceName = newName;
-              _brandingCtrl.text = newName;
-            });
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to save name: $e')),
-            );
-          }
-          return;
-        }
-      }
-    }
-    _pageCtrl.nextPage(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
-
   Future<void> _onFinish() async {
     try {
       final workspaceId = await ref.read(currentWorkspaceProvider.future);
@@ -349,43 +314,6 @@ class _WorkspaceWizardScreenState
     );
   }
 
-  Widget _buildStandardNavRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _currentPage > 0
-            ? TextButton(
-                onPressed: _prevPage,
-                child: const Text('Back'),
-              )
-            : const SizedBox.shrink(),
-        Row(
-          children: [
-            TextButton(
-              onPressed: () => context.go(Routes.settings),
-              child: const Text('Skip'),
-            ),
-            const SizedBox(width: 8),
-            FilledButton(
-              onPressed: _onNext,
-              child: const Text('Next'),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFinishNavRow() {
-    return SizedBox(
-      width: double.infinity,
-      child: FilledButton(
-        onPressed: _onFinish,
-        child: const Text('Finish setup'),
-      ),
-    );
-  }
-
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -420,7 +348,7 @@ class _WorkspaceWizardScreenState
           ),
         ],
       ),
-      // ── Nav row is OUTSIDE the PageView so it is never clipped by it ──────
+      resizeToAvoidBottomInset: false,
       body: Column(
         children: [
           Expanded(
@@ -437,11 +365,43 @@ class _WorkspaceWizardScreenState
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-            child: _currentPage == 4
-                ? _buildFinishNavRow()
-                : _buildStandardNavRow(),
+          // ── Hardcoded nav row — guaranteed visible regardless of keyboard ──
+          Container(
+            color: Theme.of(context).colorScheme.surface,
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (_currentPage > 0)
+                  TextButton(
+                    onPressed: () {
+                      _pageCtrl.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                      setState(() => _currentPage--);
+                    },
+                    child: const Text('Back'),
+                  )
+                else
+                  const SizedBox.shrink(),
+                ElevatedButton(
+                  onPressed: () {
+                    debugPrint('Next tapped on page $_currentPage');
+                    if (_currentPage < 4) {
+                      _pageCtrl.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                      setState(() => _currentPage++);
+                    } else {
+                      _onFinish();
+                    }
+                  },
+                  child: Text(_currentPage < 4 ? 'Next' : 'Finish'),
+                ),
+              ],
+            ),
           ),
         ],
       ),
