@@ -79,6 +79,7 @@ class _WorkspaceWizardScreenState
       );
 
   Future<void> _onNext() async {
+    debugPrint('Next tapped on page $_currentPage');
     if (_currentPage == 0) {
       final newName = _nameCtrl.text.trim();
       if (newName.isNotEmpty && newName != _savedWorkspaceName) {
@@ -340,19 +341,11 @@ class _WorkspaceWizardScreenState
 
   // ── Layout helpers ────────────────────────────────────────────────────────
 
-  Widget _wrapPage(Widget content, Widget navRow) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: SingleChildScrollView(child: content),
-          ),
-          const SizedBox(height: 16),
-          navRow,
-        ],
-      ),
+  // Wraps step content in a scrollable page — nav row is NOT included here.
+  Widget _buildPageContent(Widget content) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+      child: content,
     );
   }
 
@@ -427,16 +420,29 @@ class _WorkspaceWizardScreenState
           ),
         ],
       ),
-      body: PageView(
-        controller: _pageCtrl,
-        physics: const NeverScrollableScrollPhysics(),
-        onPageChanged: (i) => setState(() => _currentPage = i),
+      // ── Nav row is OUTSIDE the PageView so it is never clipped by it ──────
+      body: Column(
         children: [
-          _wrapPage(_buildStep1(), _buildStandardNavRow()),
-          _wrapPage(_buildStep2(), _buildStandardNavRow()),
-          _wrapPage(_buildStep3(), _buildStandardNavRow()),
-          _wrapPage(_buildStep4(), _buildStandardNavRow()),
-          _wrapPage(_buildStep5(), _buildFinishNavRow()),
+          Expanded(
+            child: PageView(
+              controller: _pageCtrl,
+              physics: const NeverScrollableScrollPhysics(),
+              onPageChanged: (i) => setState(() => _currentPage = i),
+              children: [
+                _buildPageContent(_buildStep1()),
+                _buildPageContent(_buildStep2()),
+                _buildPageContent(_buildStep3()),
+                _buildPageContent(_buildStep4()),
+                _buildPageContent(_buildStep5()),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: _currentPage == 4
+                ? _buildFinishNavRow()
+                : _buildStandardNavRow(),
+          ),
         ],
       ),
     );
