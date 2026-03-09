@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
-import 'package:reflect_os/features/demographic_packs/providers/demographic_packs_providers.dart';
 import 'package:reflect_os/features/settings/providers/vertical_provider.dart';
 import 'package:reflect_os/features/templates/providers/templates_provider.dart';
 
@@ -30,9 +29,6 @@ class _WorkspaceWizardScreenState
 
   // Step 3 — templates
   final _selectedTemplateIds = <String>{};
-
-  // Step 4 — demographic packs
-  final _enabledPackIds = <String>{};
 
   @override
   void initState() {
@@ -85,15 +81,6 @@ class _WorkspaceWizardScreenState
         ref.invalidate(currentVerticalProvider);
       }
 
-      // 2. Save default demographic pack (first enabled pack)
-      if (_enabledPackIds.isNotEmpty) {
-        await ref
-            .read(demographicPacksRepositoryProvider)
-            .setDefaultPack(
-                workspaceId: workspaceId,
-                packId: _enabledPackIds.first);
-      }
-
       if (mounted) {
         context.go(Routes.home);
       }
@@ -116,6 +103,16 @@ class _WorkspaceWizardScreenState
           "What's your workspace called?",
           style: Theme.of(context).textTheme.headlineSmall,
         ),
+        const SizedBox(height: 8),
+        Text(
+          'This is the name your team will see when switching between workspaces. You can change it later in workspace settings.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
+              ),
+        ),
         const SizedBox(height: 24),
         TextField(
           controller: _nameCtrl,
@@ -135,6 +132,16 @@ class _WorkspaceWizardScreenState
         Text(
           'Choose your vertical',
           style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'This helps us tailor suggested decision categories and analytics to your context. It does not restrict any features.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
+              ),
         ),
         const SizedBox(height: 16),
         verticalsAsync.when(
@@ -172,6 +179,16 @@ class _WorkspaceWizardScreenState
         Text(
           'Pick starter templates',
           style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Invite colleagues to collaborate on decisions. Invited members will receive an email to join your workspace. You can add more people at any time from workspace settings.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
+              ),
         ),
         const SizedBox(height: 16),
         templatesAsync.when(
@@ -215,41 +232,38 @@ class _WorkspaceWizardScreenState
   }
 
   Widget _buildStep4() {
-    final packsAsync = ref.watch(demographicPacksProvider);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Enable demographic packs',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: 16),
-        packsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Text('Failed to load packs: $e'),
-          data: (packs) => Column(
-            children: packs
-                .map(
-                  (p) => SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(p.displayName),
-                    subtitle: p.description.isNotEmpty
-                        ? Text(p.description)
-                        : null,
-                    value: _enabledPackIds.contains(p.id),
-                    onChanged: (v) => setState(() {
-                      if (v) {
-                        _enabledPackIds.add(p.id);
-                      } else {
-                        _enabledPackIds.remove(p.id);
-                      }
-                    }),
-                  ),
-                )
-                .toList(),
+    final workspaceName = _nameCtrl.text.trim();
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 48),
+          Icon(
+            Icons.check_circle,
+            size: 80,
+            color: Theme.of(context).colorScheme.primary,
           ),
-        ),
-      ],
+          const SizedBox(height: 24),
+          if (workspaceName.isNotEmpty) ...[
+            Text(
+              workspaceName,
+              style: Theme.of(context).textTheme.headlineSmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+          ],
+          Text(
+            'Your workspace is ready. You can start logging decisions straight away, or invite more team members from settings.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 
