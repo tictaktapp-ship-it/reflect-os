@@ -40,6 +40,18 @@ class _ToolResultsScreenState extends State<ToolResultsScreen> {
   bool _attachAudit  = false;
   bool _isInjecting  = false;
 
+  /// Builds the text returned to the caller in picker mode.
+  /// Prefers the narrative; falls back to formatted summary outputs.
+  String _buildAttachmentText() {
+    if (widget.result.narrative.isNotEmpty) return widget.result.narrative;
+    if (widget.result.summaryOutputs.isNotEmpty) {
+      return widget.result.summaryOutputs.entries
+          .map((e) => '${e.key}: ${_formatValue(e.value, null)}')
+          .join('\n');
+    }
+    return widget.tool.name;
+  }
+
   @override
   void dispose() {
     _descCtrl.dispose();
@@ -99,6 +111,9 @@ class _ToolResultsScreenState extends State<ToolResultsScreen> {
         .toList();
     final projColumns  = tool.annualProjectionColumns;
     final chartConfig  = tool.chartConfig;
+
+    final bool pickerMode =
+        GoRouterState.of(context).uri.queryParameters['pickerMode'] == 'true';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Results')),
@@ -180,7 +195,21 @@ class _ToolResultsScreenState extends State<ToolResultsScreen> {
             const SizedBox(height: 20),
           ],
 
-          // Section 6 — Inject to decision
+          // Section 6 — Picker mode: attach output back to decision form
+          if (pickerMode) ...[
+            _SectionHeader(title: 'Attach to Decision'),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                icon: const Icon(Icons.attach_file, size: 16),
+                label: const Text('Attach this output'),
+                onPressed: () => context.pop(_buildAttachmentText()),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+
+          // Section 7 — Inject to decision (only when linked to an existing decision)
           if (widget.decisionId != null) ...[
             _SectionHeader(title: 'Inject to Decision'),
             _InjectCard(

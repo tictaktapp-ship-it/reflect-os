@@ -108,30 +108,11 @@ class _ToolkitScreenState extends ConsumerState<ToolkitScreen> {
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final tool = filtered[index];
-                    if (pickerMode) {
-                      // Picker mode: tapping card or button returns tool name.
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          ToolCard(
-                            tool: tool,
-                            onTap: () => context.pop(tool.name),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: ElevatedButton.icon(
-                              icon:
-                                  const Icon(Icons.attach_file, size: 14),
-                              label: const Text('Attach this'),
-                              onPressed: () => context.pop(tool.name),
-                            ),
-                          ),
-                        ],
-                      );
-                    }
+                    // In picker mode, navigate into the tool so the user
+                    // can run it and attach the actual output text.
                     return ToolCard(
                       tool: tool,
-                      onTap: () => _openTool(tool),
+                      onTap: () => _openTool(tool, pickerMode: pickerMode),
                     );
                   },
                 );
@@ -143,11 +124,13 @@ class _ToolkitScreenState extends ConsumerState<ToolkitScreen> {
     );
   }
 
-  void _openTool(ToolDefinition tool) {
+  void _openTool(ToolDefinition tool, {bool pickerMode = false}) {
     final base = Routes.toolDetail.replaceFirst(':toolId', tool.id);
-    final path = widget.decisionId != null
-        ? '$base?decisionId=${widget.decisionId}'
-        : base;
+    final params = <String>[
+      if (widget.decisionId != null) 'decisionId=${widget.decisionId}',
+      if (pickerMode) 'pickerMode=true',
+    ];
+    final path = params.isNotEmpty ? '$base?${params.join('&')}' : base;
     context.push(path, extra: tool);
   }
 }

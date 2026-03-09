@@ -173,9 +173,11 @@ class _ToolDetailScreenState extends ConsumerState<ToolDetailScreen> {
 
       if (!mounted) return;
 
-      // Step 3: Navigate to results
-      final resultsPath =
-          Routes.toolResults.replaceFirst(':toolId', tool.id);
+      // Step 3: Navigate to results, forwarding pickerMode if present.
+      final pickerMode =
+          GoRouterState.of(context).uri.queryParameters['pickerMode'] == 'true';
+      var resultsPath = Routes.toolResults.replaceFirst(':toolId', tool.id);
+      if (pickerMode) resultsPath = '$resultsPath?pickerMode=true';
       context.push(
         resultsPath,
         extra: (
