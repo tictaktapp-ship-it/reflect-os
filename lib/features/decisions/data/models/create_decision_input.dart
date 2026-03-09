@@ -11,6 +11,7 @@ class CreateDecisionInput {
     this.isContinuous = false,
     this.visibility = 'workspace',
     this.requiresApproval = false,
+    this.projectedOutcome,
   });
 
   final String workspaceId;
@@ -24,6 +25,8 @@ class CreateDecisionInput {
   final bool isContinuous;
   final String visibility;
   final bool requiresApproval;
+  // NOTE: projected_outcome column pending migration — schema change handled separately.
+  final String? projectedOutcome;
 
   Map<String, dynamic> toJson() => {
         'workspace_id': workspaceId,
@@ -39,5 +42,6 @@ class CreateDecisionInput {
         'continuous': isContinuous,
         'visibility_mode': visibility,
         'requires_approval': requiresApproval,
+        if (projectedOutcome != null) 'projected_outcome': projectedOutcome,
       };
 }

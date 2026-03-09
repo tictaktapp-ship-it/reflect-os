@@ -11,6 +11,7 @@ import 'package:reflect_os/features/decisions/providers/decisions_provider.dart'
 import 'package:reflect_os/features/settings/providers/vertical_provider.dart';
 import 'package:reflect_os/features/tags/providers/tags_provider.dart';
 import 'package:reflect_os/features/templates/data/models/decision_template.dart';
+import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/templates/screens/templates_screen.dart';
 
 class CreateDecisionScreen extends ConsumerStatefulWidget {
@@ -46,6 +47,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
   bool _isContinuous = false;
   bool _isSubmitting = false;
   DecisionTemplate? _appliedTemplate;
+  String? _projectedOutcome;
   final Set<String> _selectedSuggestedTags = {};
 
   // Meeting capture banner state
@@ -93,6 +95,16 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
     if (template != null) _applyTemplate(template);
   }
 
+  Future<void> _openToolkitForProjectedOutcome() async {
+    final result = await context.push<String>(
+      Routes.toolkit,
+      extra: {'pickerMode': true},
+    );
+    if (result != null && mounted) {
+      setState(() => _projectedOutcome = result);
+    }
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -123,6 +135,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
         isContinuous: _isContinuous,
         visibility: _visibility,
         requiresApproval: _requiresApproval,
+        projectedOutcome: _projectedOutcome,
       );
 
       final id = await ref
@@ -202,17 +215,14 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            SvgPicture.asset(
-              Theme.of(context).brightness == Brightness.dark
-                  ? 'assets/images/reflect-icon-dark.svg'
-                  : 'assets/images/reflect-icon-light.svg',
-              height: 160,
-            ),
-            const SizedBox(width: 8),
-            const Text('New Decision'),
-          ],
+        title: SizedBox(
+          width: 28,
+          height: 28,
+          child: SvgPicture.asset(
+            Theme.of(context).brightness == Brightness.dark
+                ? 'assets/images/reflect-icon-dark.svg'
+                : 'assets/images/reflect-icon-light.svg',
+          ),
         ),
         actions: [
           Padding(
@@ -464,6 +474,58 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                     ],
                   ),
                 ],
+                const SizedBox(height: 8),
+                // ── Projected outcome attachment ──────────────────
+                Row(
+                  children: [
+                    Icon(Icons.lightbulb_outline,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Projected outcome',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                    ),
+                    const Spacer(),
+                    if (_projectedOutcome != null)
+                      Flexible(
+                        child: Text(
+                          _projectedOutcome!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                color:
+                                    Theme.of(context).colorScheme.primary,
+                              ),
+                        ),
+                      ),
+                    const SizedBox(width: 8),
+                    TextButton.icon(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      icon: Icon(
+                          _projectedOutcome == null
+                              ? Icons.add
+                              : Icons.edit,
+                          size: 14),
+                      label: Text(_projectedOutcome == null
+                          ? 'Add from toolkit'
+                          : 'Change'),
+                      onPressed: _openToolkitForProjectedOutcome,
+                    ),
+                  ],
+                ),
               ],
             ),
 
