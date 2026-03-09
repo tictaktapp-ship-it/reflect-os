@@ -82,9 +82,12 @@ class EncryptionService {
       },
     );
     if (response.status != 200) return {};
+    final masterKeyConfigured =
+        response.data['master_key_configured'] as bool? ?? false;
     final status =
         response.data['encryption_status'] as Map<String, dynamic>? ?? {};
-    return status.map((k, v) => MapEntry(k, v as bool));
+    final result = status.map((k, v) => MapEntry(k, v as bool));
+    return {'master_key_configured': masterKeyConfigured, ...result};
   }
 
   /// Quick local check (no network) — encrypted values start with `v1:`.

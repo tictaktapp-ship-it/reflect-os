@@ -38,7 +38,7 @@ class _EncryptionStatusScreenState
         workspaceId: workspaceId,
         fields: {},
       );
-      final keyOk = keyStatus['key_configured'] ?? keyStatus.isNotEmpty;
+      final keyOk = keyStatus['master_key_configured'] ?? false;
 
       // Check last 5 decisions.
       final decisions =
