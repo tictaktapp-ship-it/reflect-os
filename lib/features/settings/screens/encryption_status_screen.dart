@@ -140,7 +140,7 @@ class _EncryptionStatusScreenState
                               ? 'Tap Verify to check'
                               : _keyConfigured!
                                   ? 'AES-256-GCM key is active'
-                                  : 'Key not found — contact support',
+                                  : 'Secret ENCRYPTION_MASTER_KEY not set in Supabase Edge Function secrets',
                           style: theme.textTheme.bodySmall,
                         ),
                       ],

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:reflect_os/core/constants/supabase_constants.dart';
 import 'package:reflect_os/core/services/encryption_service.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
@@ -187,8 +188,9 @@ class DecisionsRepository {
           if (encrypted['outcome'] != null) {
             payload['projected_outcome_encrypted'] = encrypted['outcome'];
           }
-        } catch (_) {
+        } catch (e) {
           // Edge function unavailable — persist as plaintext (degraded mode).
+          debugPrint('Encryption failed, saving plaintext: $e');
         }
       }
     }
@@ -252,8 +254,9 @@ class DecisionsRepository {
             if (encrypted['outcome'] != null) {
               toSave['projected_outcome_encrypted'] = encrypted['outcome'];
             }
-          } catch (_) {
+          } catch (e) {
             // Edge function unavailable — persist as-is.
+            debugPrint('Encryption failed on update, saving plaintext: $e');
           }
         }
       }

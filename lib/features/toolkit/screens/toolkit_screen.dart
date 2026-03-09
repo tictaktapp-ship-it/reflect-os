@@ -31,12 +31,64 @@ class ToolkitScreen extends ConsumerStatefulWidget {
 
 class _ToolkitScreenState extends ConsumerState<ToolkitScreen> {
   String _query = '';
+  String? _readOnlyResult;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final extra = GoRouterState.of(context).extra;
+    if (extra is Map<String, dynamic>) {
+      _readOnlyResult = extra['readOnlyResult'] as String?;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final toolsAsync = ref.watch(toolDefinitionsProvider);
     final theme = Theme.of(context);
 
+    // ── Read-only result view ──────────────────────────────────────────────
+    if (_readOnlyResult != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Projected Outcome')),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              color: theme.colorScheme.primaryContainer,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(Icons.lightbulb_outline,
+                      size: 16,
+                      color: theme.colorScheme.onPrimaryContainer),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Viewing attached projected outcome',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  _readOnlyResult!,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ── Normal / picker mode view ──────────────────────────────────────────
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tool Kit'),

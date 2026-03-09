@@ -525,6 +525,19 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                                     child: const Text('Close'),
                                   ),
                                   TextButton(
+                                    onPressed: () async {
+                                      Navigator.pop(context);
+                                      await context.push(
+                                        Routes.toolkitPicker,
+                                        extra: {
+                                          'pickerMode': false,
+                                          'readOnlyResult': _projectedOutcome,
+                                        },
+                                      );
+                                    },
+                                    child: const Text('View full details'),
+                                  ),
+                                  TextButton(
                                     onPressed: () {
                                       Navigator.pop(context);
                                       _openToolkitForProjectedOutcome();
