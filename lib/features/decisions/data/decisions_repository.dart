@@ -50,6 +50,10 @@ class DecisionsRepository {
     final rawCtx = row['situational_context_encrypted'] as String?;
     final rawOutcome = row['projected_outcome_encrypted'] as String?;
 
+    // Preserve the raw DB value so the verification UI can detect the v1: prefix.
+    final out = Map<String, dynamic>.from(row);
+    out['raw_description_encrypted'] = rawDesc;
+
     try {
       final decrypted = await _enc.decryptFields(
         workspaceId: workspaceId,
@@ -59,14 +63,13 @@ class DecisionsRepository {
           'outcome': rawOutcome,
         },
       );
-      final out = Map<String, dynamic>.from(row);
       out['description_encrypted'] = decrypted['description'];
       out['situational_context_encrypted'] = decrypted['context'];
       out['projected_outcome_encrypted'] = decrypted['outcome'];
       return out;
     } catch (_) {
       // Edge function unavailable — return as-is (legacy plaintext or offline).
-      return row;
+      return out;
     }
   }
 
@@ -91,13 +94,18 @@ class DecisionsRepository {
       return rows.map((row) {
         final id = row['id'] as String;
         final out = Map<String, dynamic>.from(row);
+        out['raw_description_encrypted'] = row['description_encrypted'] as String?;
         out['description_encrypted'] = decrypted['$id:description'];
         out['situational_context_encrypted'] = decrypted['$id:context'];
         out['projected_outcome_encrypted'] = decrypted['$id:outcome'];
         return out;
       }).toList();
     } catch (_) {
-      return rows;
+      return rows.map((row) {
+        final out = Map<String, dynamic>.from(row);
+        out['raw_description_encrypted'] = row['description_encrypted'] as String?;
+        return out;
+      }).toList();
     }
   }
 

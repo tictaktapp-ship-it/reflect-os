@@ -48,7 +48,7 @@ class _EncryptionStatusScreenState
       for (final d in decisions) {
         final status = await service.checkEncryptionStatus(
           workspaceId: workspaceId,
-          fields: {'description': d.descriptionEncrypted},
+          fields: {'description': d.rawDescriptionEncrypted},
         );
         newStatus[d.id] = status;
       }

@@ -25,6 +25,9 @@ abstract class Decision with _$Decision {
     @JsonKey(name: 'source_decision_id') String? sourceDecisionId,
     @JsonKey(name: 'shared_to_team_at') DateTime? sharedToTeamAt,
     @JsonKey(name: 'shared_from_personal_at') DateTime? sharedFromPersonalAt,
+    // Raw DB value before decryption — used by the encryption verification UI.
+    @JsonKey(name: 'raw_description_encrypted', includeToJson: false)
+    String? rawDescriptionEncrypted,
   }) = _Decision;
 
   factory Decision.fromJson(Map<String, dynamic> json) =>

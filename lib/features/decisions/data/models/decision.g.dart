@@ -28,6 +28,7 @@ _Decision _$DecisionFromJson(Map<String, dynamic> json) => _Decision(
   sharedFromPersonalAt: json['shared_from_personal_at'] == null
       ? null
       : DateTime.parse(json['shared_from_personal_at'] as String),
+  rawDescriptionEncrypted: json['raw_description_encrypted'] as String?,
 );
 
 Map<String, dynamic> _$DecisionToJson(_Decision instance) => <String, dynamic>{
