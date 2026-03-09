@@ -178,15 +178,33 @@ class _ToolDetailScreenState extends ConsumerState<ToolDetailScreen> {
           GoRouterState.of(context).uri.queryParameters['pickerMode'] == 'true';
       var resultsPath = Routes.toolResults.replaceFirst(':toolId', tool.id);
       if (pickerMode) resultsPath = '$resultsPath?pickerMode=true';
-      context.push(
-        resultsPath,
-        extra: (
-          result:    result,
-          run:       toolRun,
-          tool:      tool,
-          decisionId: widget.decisionId,
-        ),
-      );
+
+      if (pickerMode) {
+        // Await the results screen so we can propagate the user's selection
+        // back through the toolkit picker chain to the decision form.
+        final pickerResult = await context.push<String?>(
+          resultsPath,
+          extra: (
+            result:     result,
+            run:        toolRun,
+            tool:       tool,
+            decisionId: widget.decisionId,
+          ),
+        );
+        if (pickerResult != null && pickerResult.isNotEmpty && mounted) {
+          context.pop(pickerResult);
+        }
+      } else {
+        context.push(
+          resultsPath,
+          extra: (
+            result:     result,
+            run:        toolRun,
+            tool:       tool,
+            decisionId: widget.decisionId,
+          ),
+        );
+      }
     } catch (e) {
       _showError('Failed to run tool: $e');
     } finally {

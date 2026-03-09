@@ -96,11 +96,10 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
   }
 
   Future<void> _openToolkitForProjectedOutcome() async {
-    final result = await context.push<String>(
-      Routes.toolkit,
-      extra: {'pickerMode': true},
-    );
-    if (result != null && mounted) {
+    debugPrint('OPENING TOOLKIT PICKER');
+    final result = await context.push<String>(Routes.toolkitPicker);
+    debugPrint('TOOLKIT PICKER RESULT: "$result"');
+    if (result != null && result.isNotEmpty && mounted) {
       setState(() => _projectedOutcome = result);
     }
   }

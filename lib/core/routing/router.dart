@@ -191,6 +191,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           decisionId: state.uri.queryParameters['decisionId'],
         ),
       ),
+      // Tool Kit picker — dedicated route for projected outcome selection.
+      // Outside the shell so context.push<String> / context.pop(value) works.
+      GoRoute(
+        path: Routes.toolkitPicker,
+        builder: (context, state) => const ToolkitScreen(pickerMode: true),
+      ),
       GoRoute(
         path: Routes.toolDetail,
         builder: (context, state) => ToolDetailScreen(

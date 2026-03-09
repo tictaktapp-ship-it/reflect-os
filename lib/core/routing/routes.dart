@@ -74,6 +74,7 @@ abstract final class Routes {
 
   // Tool Kit
   static const String toolkit = '/toolkit';
+  static const String toolkitPicker = '/toolkit-picker';
   static const String toolDetail = '/toolkit/:toolId';
   static const String toolResults = '/toolkit/:toolId/results';
 
