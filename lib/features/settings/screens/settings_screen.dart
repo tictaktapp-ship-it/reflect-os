@@ -895,6 +895,15 @@ class _EncryptionSection extends StatelessWidget {
           workspaceId: workspaceId,
           isOwner: isOwner,
         ),
+        const Divider(height: 1, indent: 40, endIndent: 0),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.verified_user_outlined),
+          title: const Text('Verify encryption'),
+          subtitle: const Text('Check that your data is actually encrypted'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(Routes.encryptionStatus),
+        ),
       ],
     );
   }

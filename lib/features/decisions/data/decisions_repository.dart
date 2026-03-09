@@ -1,5 +1,5 @@
 import 'package:reflect_os/core/constants/supabase_constants.dart';
-import 'package:reflect_os/core/security/encryption_service.dart';
+import 'package:reflect_os/core/services/encryption_service.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/approval_record.dart';
 import 'package:reflect_os/features/decisions/data/models/category.dart';
@@ -12,20 +12,14 @@ import 'package:reflect_os/features/decisions/data/models/decision_relationship.
 import 'package:reflect_os/features/decisions/data/models/decision_stakeholder.dart';
 import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
 
-// ── Column names that hold (possibly) encrypted content ──────────────────────
-const _encryptedColumns = {
-  'description_encrypted',
-  'situational_context_encrypted',
-  'projected_outcome_encrypted',
-};
-
 class DecisionsRepository {
   const DecisionsRepository();
 
   // ── Encryption helpers ────────────────────────────────────────────────────
 
-  /// Reads the workspace encryption mode from workspace_settings.
-  /// Returns null when no row exists — treat as 'encrypted' (the default).
+  EncryptionService get _enc => EncryptionService(supabase);
+
+  /// Reads encryption mode; defaults to 'encrypted' when no row exists.
   Future<String?> _getEncryptionMode(String workspaceId) async {
     final result = await supabase
         .from(SupabaseTables.workspaceSettings)
@@ -47,21 +41,64 @@ class DecisionsRepository {
     return row?['workspace_id'] as String?;
   }
 
-  /// Returns true when [mode] (or null → default) means content should be encrypted.
   bool _shouldEncrypt(String? mode) => mode != 'plaintext';
 
-  /// Decrypts all [_encryptedColumns] in [row] using [workspaceId].
-  /// Plaintext values (legacy or encryption-disabled workspaces) pass through unchanged.
-  Map<String, dynamic> _decryptRow(
-      Map<String, dynamic> row, String workspaceId) {
-    final out = Map<String, dynamic>.from(row);
-    for (final key in _encryptedColumns) {
-      final val = out[key];
-      if (val is String && val.isNotEmpty) {
-        out[key] = EncryptionService.decrypt(val, workspaceId);
-      }
+  /// Decrypts the three encrypted content fields for a single [row].
+  Future<Map<String, dynamic>> _decryptRow(
+      Map<String, dynamic> row, String workspaceId) async {
+    final rawDesc = row['description_encrypted'] as String?;
+    final rawCtx = row['situational_context_encrypted'] as String?;
+    final rawOutcome = row['projected_outcome_encrypted'] as String?;
+
+    try {
+      final decrypted = await _enc.decryptFields(
+        workspaceId: workspaceId,
+        fields: {
+          'description': rawDesc,
+          'context': rawCtx,
+          'outcome': rawOutcome,
+        },
+      );
+      final out = Map<String, dynamic>.from(row);
+      out['description_encrypted'] = decrypted['description'];
+      out['situational_context_encrypted'] = decrypted['context'];
+      out['projected_outcome_encrypted'] = decrypted['outcome'];
+      return out;
+    } catch (_) {
+      // Edge function unavailable — return as-is (legacy plaintext or offline).
+      return row;
     }
-    return out;
+  }
+
+  /// Decrypts all rows in a single batched edge-function call.
+  Future<List<Map<String, dynamic>>> _decryptRows(
+      List<Map<String, dynamic>> rows, String workspaceId) async {
+    if (rows.isEmpty) return rows;
+    // Batch all fields into one call, keyed by "<id>:field".
+    final batch = <String, String?>{};
+    for (final row in rows) {
+      final id = row['id'] as String;
+      batch['$id:description'] = row['description_encrypted'] as String?;
+      batch['$id:context'] =
+          row['situational_context_encrypted'] as String?;
+      batch['$id:outcome'] = row['projected_outcome_encrypted'] as String?;
+    }
+    try {
+      final decrypted = await _enc.decryptFields(
+        workspaceId: workspaceId,
+        fields: batch,
+      );
+      return rows.map((row) {
+        final id = row['id'] as String;
+        final out = Map<String, dynamic>.from(row);
+        out['description_encrypted'] = decrypted['$id:description'];
+        out['situational_context_encrypted'] = decrypted['$id:context'];
+        out['projected_outcome_encrypted'] = decrypted['$id:outcome'];
+        return out;
+      }).toList();
+    } catch (_) {
+      return rows;
+    }
   }
 
   // ── Reads ─────────────────────────────────────────────────────────────────
@@ -74,14 +111,13 @@ class DecisionsRepository {
 
     if (rows.isEmpty) return [];
 
-    // workspace_id is exposed by user_visible_decisions (sourced from decisions table).
+    // workspace_id is sourced from the decisions table via the view.
     // All rows belong to the same workspace under RLS.
     final workspaceId = rows.first['workspace_id'] as String?;
-    return rows.map((row) {
-      final mapped =
-          workspaceId != null ? _decryptRow(row, workspaceId) : row;
-      return Decision.fromJson(mapped);
-    }).toList();
+    final decryptedRows = workspaceId != null
+        ? await _decryptRows(rows, workspaceId)
+        : rows;
+    return decryptedRows.map(Decision.fromJson).toList();
   }
 
   Future<Decision?> getDecisionById(String id) async {
@@ -93,7 +129,8 @@ class DecisionsRepository {
 
     if (row == null) return null;
     final workspaceId = row['workspace_id'] as String?;
-    final mapped = workspaceId != null ? _decryptRow(row, workspaceId) : row;
+    final mapped =
+        workspaceId != null ? await _decryptRow(row, workspaceId) : row;
     return Decision.fromJson(mapped);
   }
 
@@ -101,8 +138,6 @@ class DecisionsRepository {
 
   /// Exception to the no-raw-tables rule: decisions table is written to
   /// directly. There is no RPC for creating decisions in the current schema.
-  /// RLS INSERT policy requires created_by_user_id = auth.uid(),
-  /// owner_user_id = auth.uid(), and state = 'Draft'.
   Future<String> createDecision(CreateDecisionInput input) async {
     final mode = await _getEncryptionMode(input.workspaceId);
     final doEncrypt = _shouldEncrypt(mode);
@@ -116,12 +151,36 @@ class DecisionsRepository {
       'state': 'Draft',
     };
 
-    // Encrypt sensitive content fields before persisting.
     if (doEncrypt) {
-      for (final key in _encryptedColumns) {
-        final val = payload[key];
-        if (val is String && val.isNotEmpty) {
-          payload[key] = EncryptionService.encrypt(val, workspaceId);
+      final desc = payload['description_encrypted'] as String?;
+      final ctx = payload['situational_context_encrypted'] as String?;
+      final outcome = payload['projected_outcome_encrypted'] as String?;
+
+      final hasContent = (desc != null && desc.isNotEmpty) ||
+          (ctx != null && ctx.isNotEmpty) ||
+          (outcome != null && outcome.isNotEmpty);
+
+      if (hasContent) {
+        try {
+          final encrypted = await _enc.encryptFields(
+            workspaceId: workspaceId,
+            fields: {
+              'description': desc,
+              'context': ctx,
+              'outcome': outcome,
+            },
+          );
+          if (encrypted['description'] != null) {
+            payload['description_encrypted'] = encrypted['description'];
+          }
+          if (encrypted['context'] != null) {
+            payload['situational_context_encrypted'] = encrypted['context'];
+          }
+          if (encrypted['outcome'] != null) {
+            payload['projected_outcome_encrypted'] = encrypted['outcome'];
+          }
+        } catch (_) {
+          // Edge function unavailable — persist as plaintext (degraded mode).
         }
       }
     }
@@ -145,12 +204,16 @@ class DecisionsRepository {
 
   /// Exception to the no-raw-tables rule: no RPC exists for updating decisions.
   /// Only sends the fields present in [fields] — callers diff before calling.
-  /// Encrypts any [_encryptedColumns] values when the workspace mode requires it.
   Future<void> updateDecision(String id, Map<String, dynamic> fields) async {
     if (fields.isEmpty) return;
 
-    // Only incur the extra lookups when there are actually encrypted fields.
-    final hasEncryptedContent = fields.keys.any(_encryptedColumns.contains);
+    const encryptedDbKeys = {
+      'description_encrypted',
+      'situational_context_encrypted',
+      'projected_outcome_encrypted',
+    };
+
+    final hasEncryptedContent = fields.keys.any(encryptedDbKeys.contains);
     Map<String, dynamic> toSave = fields;
 
     if (hasEncryptedContent) {
@@ -158,12 +221,31 @@ class DecisionsRepository {
       if (workspaceId != null) {
         final mode = await _getEncryptionMode(workspaceId);
         if (_shouldEncrypt(mode)) {
-          toSave = Map<String, dynamic>.from(fields);
-          for (final key in _encryptedColumns) {
-            final val = toSave[key];
-            if (val is String && val.isNotEmpty) {
-              toSave[key] = EncryptionService.encrypt(val, workspaceId);
+          final desc = fields['description_encrypted'] as String?;
+          final ctx = fields['situational_context_encrypted'] as String?;
+          final outcome = fields['projected_outcome_encrypted'] as String?;
+
+          try {
+            final encrypted = await _enc.encryptFields(
+              workspaceId: workspaceId,
+              fields: {
+                'description': desc,
+                'context': ctx,
+                'outcome': outcome,
+              },
+            );
+            toSave = Map<String, dynamic>.from(fields);
+            if (encrypted['description'] != null) {
+              toSave['description_encrypted'] = encrypted['description'];
             }
+            if (encrypted['context'] != null) {
+              toSave['situational_context_encrypted'] = encrypted['context'];
+            }
+            if (encrypted['outcome'] != null) {
+              toSave['projected_outcome_encrypted'] = encrypted['outcome'];
+            }
+          } catch (_) {
+            // Edge function unavailable — persist as-is.
           }
         }
       }
@@ -174,10 +256,6 @@ class DecisionsRepository {
 
   // ── Search ────────────────────────────────────────────────────────────────
 
-  /// Two-step search: calls search_decisions RPC (returns ranked decision_ids),
-  /// then fetches full rows from user_visible_decisions and reorders by rank.
-  /// workspace_id is read from the subscriptions table (same RLS exception as
-  /// createDecision). Returns empty list for blank queries.
   Future<List<Decision>> searchDecisions(String query) async {
     if (query.trim().isEmpty) return [];
 
@@ -190,7 +268,6 @@ class DecisionsRepository {
     final workspaceId = subRow?['workspace_id'] as String?;
     if (workspaceId == null) return [];
 
-    // Step 1: RPC returns [{decision_id, rank}, …] ordered by rank desc.
     final rpcRows = await supabase.rpc('search_decisions', params: {
       'query_text': query,
       'workspace_id': workspaceId,
@@ -202,16 +279,15 @@ class DecisionsRepository {
     final ranked = rpcRows.cast<Map<String, dynamic>>();
     final ids = ranked.map((r) => r['decision_id'] as String).toList();
 
-    // Step 2: Fetch full decision rows for those ids.
     final rows = await supabase
         .from('user_visible_decisions')
         .select()
         .inFilter('id', ids);
 
-    // Step 3: Decrypt and reorder by rank (preserve RPC order).
+    final decryptedRows = await _decryptRows(rows, workspaceId);
     final byId = <String, Decision>{
-      for (final row in rows)
-        row['id'] as String: Decision.fromJson(_decryptRow(row, workspaceId)),
+      for (final row in decryptedRows)
+        row['id'] as String: Decision.fromJson(row),
     };
     return ids.where(byId.containsKey).map((id) => byId[id]!).toList();
   }
@@ -260,9 +336,6 @@ class DecisionsRepository {
 
   // ── Checkpoints ───────────────────────────────────────────────────────────
 
-  /// Reads all Scheduled checkpoints due within the next 7 days across all
-  /// decisions visible to the current user. RLS limits results to the user's
-  /// workspace — no explicit workspace_id filter needed.
   Future<List<ReviewCheckpoint>> getUpcomingCheckpoints() async {
     final cutoff =
         DateTime.now().toUtc().add(const Duration(days: 7)).toIso8601String();
@@ -276,7 +349,6 @@ class DecisionsRepository {
     return rows.map((row) => ReviewCheckpoint.fromJson(row)).toList();
   }
 
-  /// RLS is SELECT-only — checkpoints are created by the activate_decision RPC.
   Future<List<ReviewCheckpoint>> getCheckpointsForDecision(
       String decisionId) async {
     final rows = await supabase
@@ -285,7 +357,6 @@ class DecisionsRepository {
         .eq('decision_id', decisionId)
         .isFilter('deleted_at', null)
         .order('due_at');
-
     return rows.map((row) => ReviewCheckpoint.fromJson(row)).toList();
   }
 
@@ -298,7 +369,6 @@ class DecisionsRepository {
         .select()
         .eq('decision_id', decisionId)
         .isFilter('deleted_at', null);
-
     return rows.map((row) => DecisionStakeholder.fromJson(row)).toList();
   }
 
@@ -322,7 +392,6 @@ class DecisionsRepository {
 
   // ── Audit ─────────────────────────────────────────────────────────────────
 
-  /// SELECT-only — audit_events_select_owner RLS policy gates access.
   Future<List<AuditEvent>> getAuditEventsForDecision(
       String decisionId, String workspaceId) async {
     final rows = await supabase
@@ -333,7 +402,6 @@ class DecisionsRepository {
         .eq('subject_entity_type', 'decision')
         .order('created_at', ascending: false)
         .limit(20);
-
     return rows.map((row) => AuditEvent.fromJson(row)).toList();
   }
 
@@ -346,7 +414,6 @@ class DecisionsRepository {
         .eq('decision_id', decisionId)
         .isFilter('deleted_at', null)
         .maybeSingle();
-
     if (row == null) return null;
     return CommentThread.fromJson(row);
   }
@@ -358,7 +425,6 @@ class DecisionsRepository {
         .eq('thread_id', threadId)
         .isFilter('deleted_at', null)
         .order('created_at');
-
     return rows.map((row) => Comment.fromJson(row)).toList();
   }
 
@@ -375,7 +441,6 @@ class DecisionsRepository {
 
   // ── Relationships ─────────────────────────────────────────────────────────
 
-  /// Reads via user_visible_decision_relationships — RLS scopes to workspace.
   Future<List<DecisionRelationship>> getRelationshipsForDecision(
       String decisionId) async {
     final rows = await supabase
@@ -383,7 +448,6 @@ class DecisionsRepository {
         .select()
         .or('from_decision_id.eq.$decisionId,to_decision_id.eq.$decisionId')
         .isFilter('deleted_at', null);
-
     return rows.map((row) => DecisionRelationship.fromJson(row)).toList();
   }
 
@@ -410,8 +474,6 @@ class DecisionsRepository {
 
   // ── Approval records ──────────────────────────────────────────────────────
 
-  /// Exception to the no-raw-tables rule: no user_visible_approval_records view.
-  /// RLS scopes reads to the decision owner and the approver.
   Future<List<ApprovalRecord>> getApprovalRecords(String decisionId) async {
     final rows = await supabase
         .from('approval_records')
@@ -447,16 +509,12 @@ class DecisionsRepository {
 
   // ── Categories ────────────────────────────────────────────────────────────
 
-  /// Exception to the no-raw-tables rule: there is no user_visible_categories
-  /// view in the schema. The categories table is queried directly here.
-  /// RLS ensures users can only read categories belonging to their workspace.
   Future<List<Category>> getCategories(String workspaceId) async {
     final rows = await supabase
         .from('categories')
         .select('id, name')
         .eq('workspace_id', workspaceId)
         .order('name');
-
     return rows.map((row) => Category.fromJson(row)).toList();
   }
 }

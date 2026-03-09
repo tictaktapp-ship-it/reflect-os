@@ -63,6 +63,9 @@ abstract final class Routes {
   // Workspace setup wizard
   static const String workspaceWizard = '/settings/workspace-wizard';
 
+  // Encryption status
+  static const String encryptionStatus = '/settings/encryption-status';
+
   // Coaching
   static const String coachingDashboard = '/coaching/dashboard';
 
