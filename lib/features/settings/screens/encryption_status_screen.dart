@@ -4,6 +4,7 @@ import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/services/encryption_service.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EncryptionStatusScreen extends ConsumerStatefulWidget {
   const EncryptionStatusScreen({super.key});
@@ -131,7 +132,11 @@ class _EncryptionStatusScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Master key configured',
+                          _keyConfigured == null
+                              ? 'Encryption status unknown'
+                              : _keyConfigured!
+                                  ? 'Encryption active'
+                                  : 'Encryption not active',
                           style: theme.textTheme.bodyMedium
                               ?.copyWith(fontWeight: FontWeight.w600),
                         ),
@@ -139,8 +144,8 @@ class _EncryptionStatusScreenState
                           _keyConfigured == null
                               ? 'Tap Verify to check'
                               : _keyConfigured!
-                                  ? 'AES-256-GCM key is active'
-                                  : 'Secret ENCRYPTION_MASTER_KEY not set in Supabase Edge Function secrets',
+                                  ? 'Your decision content is encrypted at rest using AES-256-GCM'
+                                  : 'Your decision content is currently stored as plaintext',
                           style: theme.textTheme.bodySmall,
                         ),
                       ],
@@ -151,6 +156,56 @@ class _EncryptionStatusScreenState
             ),
           ),
           const SizedBox(height: 16),
+
+          // ── Contextual cards shown once status is known ──────────
+          if (_keyConfigured == true) ...[
+            // What is encrypted
+            _InfoCard(
+              icon: Icons.lock_outline,
+              title: 'What is encrypted',
+              children: [
+                _BulletRow(label: 'Decision title'),
+                _BulletRow(label: 'Description'),
+                _BulletRow(label: 'Situational context'),
+                _BulletRow(label: 'Projected outcome'),
+                const SizedBox(height: 8),
+                Text(
+                  'Metadata such as category, stakes, deadline, and tags are not encrypted as they are used for filtering and analytics.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.55),
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // What this means for you
+            _InfoCard(
+              icon: Icons.info_outline,
+              title: 'What this means for you',
+              children: [
+                Text(
+                  'Your decision content is encrypted before it is stored. Even if the database were accessed directly, your content would be unreadable without the encryption key.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Encryption and decryption happens automatically when you save or open a decision — you don\'t need to do anything.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          if (_keyConfigured == false) ...[
+            // Action required warning card
+            _ActionRequiredCard(),
+            const SizedBox(height: 16),
+          ],
 
           // ── Per-decision status ──────────────────────────────────
           Text(
@@ -220,8 +275,8 @@ class _EncryptionStatusScreenState
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child:
-                          CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.verified_user),
               label: Text(_isVerifying ? 'Verifying…' : 'Verify'),
@@ -233,6 +288,140 @@ class _EncryptionStatusScreenState
     );
   }
 }
+
+// ── Shared info card ─────────────────────────────────────────────────────────
+
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({
+    required this.icon,
+    required this.title,
+    required this.children,
+  });
+
+  final IconData icon;
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      color: theme.colorScheme.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 18, color: AppColors.accentPrimary),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Bullet row (used inside "What is encrypted") ─────────────────────────────
+
+class _BulletRow extends StatelessWidget {
+  const _BulletRow({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle_outline,
+              size: 16, color: AppColors.success),
+          const SizedBox(width: 8),
+          Text(label, style: theme.textTheme.bodySmall),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Action required card (encryption not configured) ─────────────────────────
+
+class _ActionRequiredCard extends StatelessWidget {
+  const _ActionRequiredCard();
+
+  static final _mailUri = Uri.parse(
+    'mailto:contact@reflect-os.com'
+    '?subject=Encryption%20Setup'
+    '&body=Please%20help%20configure%20encryption%20for%20my%20workspace.',
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      color: AppColors.warning.withValues(alpha: 0.12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.warning_amber_rounded,
+                    size: 18, color: AppColors.warning),
+                const SizedBox(width: 8),
+                Text(
+                  'Action required',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.warning,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Encryption has not been configured for your workspace. Please contact us and we will get this resolved for you as quickly as possible.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () => launchUrl(_mailUri),
+              child: Text(
+                'contact@reflect-os.com',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Once configured, new decisions will be encrypted automatically.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Status row (per-decision list) ───────────────────────────────────────────
 
 class _StatusRow extends StatelessWidget {
   const _StatusRow({required this.label, required this.isEncrypted});
