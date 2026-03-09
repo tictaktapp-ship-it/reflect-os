@@ -496,10 +496,28 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                           onTap: () {
                             showDialog(
                               context: context,
-                              builder: (_) => AlertDialog(
-                                title: const Text('Projected outcome'),
-                                content: SingleChildScrollView(
-                                  child: Text(_projectedOutcome!),
+                              builder: (ctx) => AlertDialog(
+                                title: Row(
+                                  children: [
+                                    Icon(Icons.lightbulb_outline,
+                                        color: Theme.of(ctx)
+                                            .colorScheme
+                                            .primary,
+                                        size: 20),
+                                    const SizedBox(width: 8),
+                                    const Text('Projected outcome'),
+                                  ],
+                                ),
+                                content: SizedBox(
+                                  width: double.maxFinite,
+                                  child: SingleChildScrollView(
+                                    child: Text(
+                                      _projectedOutcome!,
+                                      style: Theme.of(ctx)
+                                          .textTheme
+                                          .bodyMedium,
+                                    ),
+                                  ),
                                 ),
                                 actions: [
                                   TextButton(
