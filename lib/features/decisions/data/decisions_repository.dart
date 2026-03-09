@@ -1,3 +1,5 @@
+import 'package:reflect_os/core/constants/supabase_constants.dart';
+import 'package:reflect_os/core/security/encryption_service.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/approval_record.dart';
 import 'package:reflect_os/features/decisions/data/models/category.dart';
@@ -10,8 +12,59 @@ import 'package:reflect_os/features/decisions/data/models/decision_relationship.
 import 'package:reflect_os/features/decisions/data/models/decision_stakeholder.dart';
 import 'package:reflect_os/features/decisions/data/models/review_checkpoint.dart';
 
+// ── Column names that hold (possibly) encrypted content ──────────────────────
+const _encryptedColumns = {
+  'description_encrypted',
+  'situational_context_encrypted',
+  'projected_outcome_encrypted',
+};
+
 class DecisionsRepository {
   const DecisionsRepository();
+
+  // ── Encryption helpers ────────────────────────────────────────────────────
+
+  /// Reads the workspace encryption mode from workspace_settings.
+  /// Returns null when no row exists — treat as 'encrypted' (the default).
+  Future<String?> _getEncryptionMode(String workspaceId) async {
+    final result = await supabase
+        .from(SupabaseTables.workspaceSettings)
+        .select('encryption_mode')
+        .eq('workspace_id', workspaceId)
+        .maybeSingle();
+    return result?['encryption_mode'] as String?;
+  }
+
+  /// Returns the current user's workspace_id via the subscriptions table.
+  Future<String?> _getWorkspaceId() async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return null;
+    final row = await supabase
+        .from('subscriptions')
+        .select('workspace_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+    return row?['workspace_id'] as String?;
+  }
+
+  /// Returns true when [mode] (or null → default) means content should be encrypted.
+  bool _shouldEncrypt(String? mode) => mode != 'plaintext';
+
+  /// Decrypts all [_encryptedColumns] in [row] using [workspaceId].
+  /// Plaintext values (legacy or encryption-disabled workspaces) pass through unchanged.
+  Map<String, dynamic> _decryptRow(
+      Map<String, dynamic> row, String workspaceId) {
+    final out = Map<String, dynamic>.from(row);
+    for (final key in _encryptedColumns) {
+      final val = out[key];
+      if (val is String && val.isNotEmpty) {
+        out[key] = EncryptionService.decrypt(val, workspaceId);
+      }
+    }
+    return out;
+  }
+
+  // ── Reads ─────────────────────────────────────────────────────────────────
 
   Future<List<Decision>> getDecisions() async {
     final rows = await supabase
@@ -19,7 +72,16 @@ class DecisionsRepository {
         .select()
         .order('created_at', ascending: false);
 
-    return rows.map((row) => Decision.fromJson(row)).toList();
+    if (rows.isEmpty) return [];
+
+    // workspace_id is exposed by user_visible_decisions (sourced from decisions table).
+    // All rows belong to the same workspace under RLS.
+    final workspaceId = rows.first['workspace_id'] as String?;
+    return rows.map((row) {
+      final mapped =
+          workspaceId != null ? _decryptRow(row, workspaceId) : row;
+      return Decision.fromJson(mapped);
+    }).toList();
   }
 
   Future<Decision?> getDecisionById(String id) async {
@@ -30,14 +92,22 @@ class DecisionsRepository {
         .maybeSingle();
 
     if (row == null) return null;
-    return Decision.fromJson(row);
+    final workspaceId = row['workspace_id'] as String?;
+    final mapped = workspaceId != null ? _decryptRow(row, workspaceId) : row;
+    return Decision.fromJson(mapped);
   }
+
+  // ── Writes ────────────────────────────────────────────────────────────────
 
   /// Exception to the no-raw-tables rule: decisions table is written to
   /// directly. There is no RPC for creating decisions in the current schema.
   /// RLS INSERT policy requires created_by_user_id = auth.uid(),
   /// owner_user_id = auth.uid(), and state = 'Draft'.
   Future<String> createDecision(CreateDecisionInput input) async {
+    final mode = await _getEncryptionMode(input.workspaceId);
+    final doEncrypt = _shouldEncrypt(mode);
+    final workspaceId = input.workspaceId;
+
     final userId = supabase.auth.currentUser!.id;
     final payload = {
       ...input.toJson(),
@@ -45,6 +115,16 @@ class DecisionsRepository {
       'owner_user_id': userId,
       'state': 'Draft',
     };
+
+    // Encrypt sensitive content fields before persisting.
+    if (doEncrypt) {
+      for (final key in _encryptedColumns) {
+        final val = payload[key];
+        if (val is String && val.isNotEmpty) {
+          payload[key] = EncryptionService.encrypt(val, workspaceId);
+        }
+      }
+    }
 
     final response = await supabase
         .from('decisions')
@@ -57,11 +137,42 @@ class DecisionsRepository {
     // Fire-and-forget: sync checkpoints/deadline to calendar if connected.
     supabase.functions.invoke(
       'calendar-sync',
-      body: {'workspace_id': input.workspaceId, 'decision_id': decisionId},
+      body: {'workspace_id': workspaceId, 'decision_id': decisionId},
     ).ignore();
 
     return decisionId;
   }
+
+  /// Exception to the no-raw-tables rule: no RPC exists for updating decisions.
+  /// Only sends the fields present in [fields] — callers diff before calling.
+  /// Encrypts any [_encryptedColumns] values when the workspace mode requires it.
+  Future<void> updateDecision(String id, Map<String, dynamic> fields) async {
+    if (fields.isEmpty) return;
+
+    // Only incur the extra lookups when there are actually encrypted fields.
+    final hasEncryptedContent = fields.keys.any(_encryptedColumns.contains);
+    Map<String, dynamic> toSave = fields;
+
+    if (hasEncryptedContent) {
+      final workspaceId = await _getWorkspaceId();
+      if (workspaceId != null) {
+        final mode = await _getEncryptionMode(workspaceId);
+        if (_shouldEncrypt(mode)) {
+          toSave = Map<String, dynamic>.from(fields);
+          for (final key in _encryptedColumns) {
+            final val = toSave[key];
+            if (val is String && val.isNotEmpty) {
+              toSave[key] = EncryptionService.encrypt(val, workspaceId);
+            }
+          }
+        }
+      }
+    }
+
+    await supabase.from('decisions').update(toSave).eq('id', id);
+  }
+
+  // ── Search ────────────────────────────────────────────────────────────────
 
   /// Two-step search: calls search_decisions RPC (returns ranked decision_ids),
   /// then fetches full rows from user_visible_decisions and reorders by rank.
@@ -97,20 +208,15 @@ class DecisionsRepository {
         .select()
         .inFilter('id', ids);
 
-    // Step 3: Reorder by rank (preserve RPC order).
+    // Step 3: Decrypt and reorder by rank (preserve RPC order).
     final byId = <String, Decision>{
       for (final row in rows)
-        row['id'] as String: Decision.fromJson(row),
+        row['id'] as String: Decision.fromJson(_decryptRow(row, workspaceId)),
     };
     return ids.where(byId.containsKey).map((id) => byId[id]!).toList();
   }
 
-  /// Exception to the no-raw-tables rule: no RPC exists for updating decisions.
-  /// Only sends the fields present in [fields] — callers diff before calling.
-  Future<void> updateDecision(String id, Map<String, dynamic> fields) async {
-    if (fields.isEmpty) return;
-    await supabase.from('decisions').update(fields).eq('id', id);
-  }
+  // ── Lifecycle RPCs ────────────────────────────────────────────────────────
 
   Future<void> shareDecisionToTeam(
       String decisionId, String targetWorkspaceId) async {
@@ -152,6 +258,8 @@ class DecisionsRepository {
     });
   }
 
+  // ── Checkpoints ───────────────────────────────────────────────────────────
+
   /// Reads all Scheduled checkpoints due within the next 7 days across all
   /// decisions visible to the current user. RLS limits results to the user's
   /// workspace — no explicit workspace_id filter needed.
@@ -180,6 +288,8 @@ class DecisionsRepository {
 
     return rows.map((row) => ReviewCheckpoint.fromJson(row)).toList();
   }
+
+  // ── Stakeholders ──────────────────────────────────────────────────────────
 
   Future<List<DecisionStakeholder>> getStakeholders(
       String decisionId) async {
@@ -210,6 +320,8 @@ class DecisionsRepository {
         .isFilter('deleted_at', null);
   }
 
+  // ── Audit ─────────────────────────────────────────────────────────────────
+
   /// SELECT-only — audit_events_select_owner RLS policy gates access.
   Future<List<AuditEvent>> getAuditEventsForDecision(
       String decisionId, String workspaceId) async {
@@ -224,6 +336,8 @@ class DecisionsRepository {
 
     return rows.map((row) => AuditEvent.fromJson(row)).toList();
   }
+
+  // ── Comments ──────────────────────────────────────────────────────────────
 
   Future<CommentThread?> getCommentThread(String decisionId) async {
     final row = await supabase
@@ -258,6 +372,8 @@ class DecisionsRepository {
       'updated_at': now,
     });
   }
+
+  // ── Relationships ─────────────────────────────────────────────────────────
 
   /// Reads via user_visible_decision_relationships — RLS scopes to workspace.
   Future<List<DecisionRelationship>> getRelationshipsForDecision(
