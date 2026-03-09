@@ -7,7 +7,6 @@ import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/demographic_packs/providers/demographic_packs_providers.dart';
 import 'package:reflect_os/features/settings/providers/vertical_provider.dart';
 import 'package:reflect_os/features/templates/providers/templates_provider.dart';
-import 'package:reflect_os/features/workspace/providers/workspace_providers.dart';
 
 class WorkspaceWizardScreen extends ConsumerStatefulWidget {
   const WorkspaceWizardScreen({super.key});
@@ -24,7 +23,6 @@ class _WorkspaceWizardScreenState
 
   // Step 1 — name
   late final TextEditingController _nameCtrl;
-  String? _savedWorkspaceName;
 
   // Step 2 — vertical
   String? _selectedVerticalId;
@@ -36,22 +34,16 @@ class _WorkspaceWizardScreenState
   // Step 4 — demographic packs
   final _enabledPackIds = <String>{};
 
-  // Step 5 — branding
-  late final TextEditingController _brandingCtrl;
-
   @override
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController();
-    _brandingCtrl = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Pre-fill workspace name
       final name = await ref.read(workspaceNameProvider.future);
       if (!mounted) return;
       setState(() {
         _nameCtrl.text = name ?? '';
-        _brandingCtrl.text = name ?? '';
-        _savedWorkspaceName = name;
       });
       // Pre-select current vertical
       final vertical = await ref.read(currentVerticalProvider.future);
@@ -67,7 +59,6 @@ class _WorkspaceWizardScreenState
   void dispose() {
     _pageCtrl.dispose();
     _nameCtrl.dispose();
-    _brandingCtrl.dispose();
     super.dispose();
   }
 
@@ -82,7 +73,7 @@ class _WorkspaceWizardScreenState
     try {
       final workspaceId = await ref.read(currentWorkspaceProvider.future);
       if (workspaceId == null) {
-        if (mounted) context.go(Routes.settings);
+        if (mounted) context.go(Routes.home);
         return;
       }
 
@@ -103,21 +94,8 @@ class _WorkspaceWizardScreenState
                 packId: _enabledPackIds.first);
       }
 
-      // 3. Save branding display name if changed
-      final brandingName = _brandingCtrl.text.trim();
-      if (brandingName.isNotEmpty && brandingName != _savedWorkspaceName) {
-        await ref
-            .read(workspaceRepositoryProvider)
-            .renameWorkspace(workspaceId, brandingName);
-        ref.invalidate(userWorkspacesProvider);
-        ref.invalidate(workspaceNameProvider);
-      }
-
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Workspace set up successfully')),
-        );
-        context.go(Routes.settings);
+        context.go(Routes.home);
       }
     } catch (e) {
       if (mounted) {
@@ -275,35 +253,6 @@ class _WorkspaceWizardScreenState
     );
   }
 
-  Widget _buildStep5() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Branding (optional)',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'You can update this any time in settings.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
-              ),
-        ),
-        const SizedBox(height: 24),
-        TextField(
-          controller: _brandingCtrl,
-          decoration:
-              const InputDecoration(labelText: 'Workspace display name'),
-          textCapitalization: TextCapitalization.words,
-        ),
-      ],
-    );
-  }
-
   // ── Layout helpers ────────────────────────────────────────────────────────
 
   // Wraps step content in a scrollable page — nav row is NOT included here.
@@ -326,7 +275,7 @@ class _WorkspaceWizardScreenState
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: List.generate(
-            5,
+            4,
             (i) => Container(
               margin: const EdgeInsets.symmetric(horizontal: 3),
               width: 8,
@@ -361,7 +310,6 @@ class _WorkspaceWizardScreenState
                 _buildPageContent(_buildStep2()),
                 _buildPageContent(_buildStep3()),
                 _buildPageContent(_buildStep4()),
-                _buildPageContent(_buildStep5()),
               ],
             ),
           ),
@@ -388,7 +336,7 @@ class _WorkspaceWizardScreenState
                 ElevatedButton(
                   onPressed: () {
                     debugPrint('Next tapped on page $_currentPage');
-                    if (_currentPage < 4) {
+                    if (_currentPage < 3) {
                       _pageCtrl.nextPage(
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
@@ -398,7 +346,7 @@ class _WorkspaceWizardScreenState
                       _onFinish();
                     }
                   },
-                  child: Text(_currentPage < 4 ? 'Next' : 'Finish'),
+                  child: Text(_currentPage < 3 ? 'Next' : 'Finish'),
                 ),
               ],
             ),
