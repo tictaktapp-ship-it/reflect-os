@@ -23,10 +23,10 @@ class DecisionsRepository {
   Future<String?> _getEncryptionMode(String workspaceId) async {
     final result = await supabase
         .from(SupabaseTables.workspaceSettings)
-        .select('encryption_mode')
+        .select('decision_encryption_mode')
         .eq('workspace_id', workspaceId)
         .maybeSingle();
-    return result?['encryption_mode'] as String?;
+    return result?['decision_encryption_mode'] as String?;
   }
 
   /// Returns the current user's workspace_id via the subscriptions table.

@@ -11,7 +11,7 @@ class EncryptionSettingsRepository {
     final row = await supabase
         .from(SupabaseTables.workspaceSettings)
         .select(
-          'workspace_id, encryption_mode, '
+          'workspace_id, decision_encryption_mode, '
           'encryption_mode_changed_at, encryption_mode_changed_by',
         )
         .eq('workspace_id', workspaceId)

@@ -19,7 +19,7 @@ class EncryptionSettings {
   });
 
   factory EncryptionSettings.fromJson(Map<String, dynamic> json) {
-    final modeStr = json['encryption_mode'] as String? ?? 'encrypted';
+    final modeStr = json['decision_encryption_mode'] as String? ?? 'encrypted';
     return EncryptionSettings(
       workspaceId: json['workspace_id'] as String,
       mode: modeStr == 'plaintext'

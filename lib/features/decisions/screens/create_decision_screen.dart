@@ -492,17 +492,43 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                     const Spacer(),
                     if (_projectedOutcome != null)
                       Flexible(
-                        child: Text(
-                          _projectedOutcome!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(
-                                color:
-                                    Theme.of(context).colorScheme.primary,
+                        child: GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (_) => AlertDialog(
+                                title: const Text('Projected outcome'),
+                                content: SingleChildScrollView(
+                                  child: Text(_projectedOutcome!),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Close'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      _openToolkitForProjectedOutcome();
+                                    },
+                                    child: const Text('Change'),
+                                  ),
+                                ],
                               ),
+                            );
+                          },
+                          child: Text(
+                            _projectedOutcome!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  decoration: TextDecoration.underline,
+                                ),
+                          ),
                         ),
                       ),
                     const SizedBox(width: 8),
