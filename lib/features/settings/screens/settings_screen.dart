@@ -1,20 +1,27 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:reflect_os/core/constants/legal_versions.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
-import 'package:reflect_os/core/routing/routes.dart';
-import 'package:reflect_os/core/supabase/supabase_client.dart';
+import 'package:reflect_os/core/providers/auth_state_provider.dart';
+import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/providers/package_info_provider.dart';
 import 'package:reflect_os/core/providers/theme_provider.dart';
-import 'package:reflect_os/core/providers/current_workspace_provider.dart';
+import 'package:reflect_os/core/routing/routes.dart';
+import 'package:reflect_os/core/supabase/supabase_client.dart';
+import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
+import 'package:reflect_os/features/legal/providers/legal_consent_provider.dart';
+import 'package:reflect_os/features/legal/screens/legal_acceptance_screen.dart';
+import 'package:reflect_os/features/legal/screens/legal_document_viewer_screen.dart';
 import 'package:reflect_os/features/settings/providers/profile_provider.dart';
 import 'package:reflect_os/features/settings/widgets/encryption_mode_tile.dart';
 import 'package:reflect_os/features/workspace/data/models/workspace_model.dart';
 import 'package:reflect_os/features/workspace/providers/workspace_providers.dart';
-import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -195,7 +202,10 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
 
-          // ── GROUP 5 — About & Feedback ───────────────────────────
+          // ── GROUP 5 — Legal & Privacy ─────────────────────────────
+          const _LegalPrivacySection(),
+
+          // ── GROUP 6 — About & Feedback ───────────────────────────
           _SettingsGroup(
             title: 'About & Feedback',
             children: [
@@ -857,6 +867,178 @@ class _WorkspaceManagementSection extends StatelessWidget {
           subtitle: const Text('Configure verticals, templates and branding'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push(Routes.workspaceWizard),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Legal & Privacy section ───────────────────────────────────────────────────
+
+class _LegalPrivacySection extends ConsumerWidget {
+  const _LegalPrivacySection();
+
+  static final _dateFmt = DateFormat('d MMM yyyy');
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authStatus = ref.watch(authStateProvider).valueOrNull;
+    final userId = authStatus is AuthAuthenticated
+        ? authStatus.session.user.id
+        : null;
+
+    final consentAsync =
+        userId != null ? ref.watch(latestConsentProvider(userId)) : null;
+    final consent = consentAsync?.valueOrNull;
+
+    final acceptedStr = consent != null
+        ? _dateFmt.format(consent.acceptedAt.toLocal())
+        : '—';
+
+    void pushViewer(String title, String asset) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => LegalDocumentViewerScreen(
+            title: title,
+            assetPath: asset,
+          ),
+        ),
+      );
+    }
+
+    void showCookieSheet() {
+      bool current = consent?.cookieConsent ?? false;
+      showModalBottomSheet<void>(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setSheet) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Cookie Preferences',
+                      style: Theme.of(ctx).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Functional cookies help remember your theme preference and '
+                    'selected workspace. They are never used for advertising.',
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(ctx)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
+                        ),
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Functional cookies'),
+                    subtitle: const Text('Theme and workspace memory'),
+                    value: current,
+                    onChanged: (v) => setSheet(() => current = v),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Done'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return _SettingsGroup(
+      title: 'Legal & Privacy',
+      children: [
+        _SectionCard(
+          children: [
+            // Terms & Conditions
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.gavel_outlined),
+              title: const Text('Terms & Conditions'),
+              subtitle: Text(
+                  'Version ${LegalVersions.tcVersion} · Accepted $acceptedStr'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => pushViewer(
+                'Terms & Conditions',
+                'assets/legal/terms_and_conditions.txt',
+              ),
+            ),
+            const Divider(height: 1, indent: 40, endIndent: 0),
+
+            // Privacy Policy
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.policy_outlined),
+              title: const Text('Privacy Policy'),
+              subtitle: Text(
+                  'Version ${LegalVersions.privacyVersion} · Accepted $acceptedStr'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => pushViewer(
+                'Privacy Policy',
+                'assets/legal/privacy_policy.txt',
+              ),
+            ),
+
+            // Cookie Preferences — web only
+            if (kIsWeb) ...[
+              const Divider(height: 1, indent: 40, endIndent: 0),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.cookie_outlined),
+                title: const Text('Cookie Preferences'),
+                subtitle: Text(consent?.cookieConsent == true
+                    ? 'Functional cookies enabled'
+                    : 'Functional cookies disabled'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: showCookieSheet,
+              ),
+            ],
+
+            const Divider(height: 1, indent: 40, endIndent: 0),
+
+            // Consent Receipt
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.receipt_long_outlined),
+              title: const Text('Consent Receipt'),
+              subtitle: Text(
+                consent != null
+                    ? '${consent.platform ?? 'unknown'} · $acceptedStr'
+                    : 'No consent record found',
+              ),
+              trailing: const Icon(Icons.info_outline),
+            ),
+
+            const Divider(height: 1, indent: 40, endIndent: 0),
+
+            // Re-accept
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.refresh_outlined),
+              title: const Text('Review & Re-accept Agreements'),
+              subtitle: const Text('A new consent record will be created'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      const LegalAcceptanceScreen(allowBack: true),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

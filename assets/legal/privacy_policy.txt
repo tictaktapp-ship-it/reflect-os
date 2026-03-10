@@ -1,0 +1,86 @@
+REFLECT OS — PRIVACY POLICY
+Version 1.0 | Effective date: 1 January 2025
+
+This Privacy Policy explains how Reflect OS Ltd ("we", "us", "our") collects,
+uses, and protects your personal data when you use Reflect OS ("the Service").
+
+1. DATA CONTROLLER
+Reflect OS Ltd is the data controller for personal data processed through
+the Service. Contact: privacy@reflect-os.com
+
+2. DATA WE COLLECT
+We collect the following categories of personal data:
+
+a) Account data: email address, display name, avatar image
+b) Decision data: decision titles, descriptions, outcomes, and related content
+   you enter into the Service (encrypted at rest where encryption is enabled)
+c) Usage data: login timestamps, feature usage patterns, device type, platform
+d) Consent records: your acceptance of these agreements including version,
+   timestamp, and platform
+
+3. HOW WE USE YOUR DATA
+We use your personal data to:
+- Provide, maintain, and improve the Service
+- Process your subscription and billing
+- Send service-related communications
+- Comply with legal obligations
+- Respond to your requests and support enquiries
+
+4. LEGAL BASIS FOR PROCESSING
+We process your data on the following legal bases:
+- Contractual necessity: to provide the Service you have signed up for
+- Legitimate interests: to improve the Service and prevent fraud
+- Legal obligation: to comply with applicable laws
+- Consent: for optional features such as functional cookies
+
+5. DATA RETENTION
+We retain your data for as long as your account is active or as needed to
+provide the Service. You may request deletion of your account and data at
+any time via Settings → Data & Privacy.
+
+6. DATA SECURITY
+All data is encrypted in transit (TLS) and at rest. We implement
+technical and organisational measures appropriate to the risk. Decision
+content may be end-to-end encrypted within your workspace.
+
+7. DATA SHARING
+We do not sell your personal data. We share data only with:
+- Service providers who help us operate the Service (e.g. Supabase for
+  database and authentication, hosted in the EU)
+- Law enforcement where required by applicable law
+
+8. YOUR RIGHTS (GDPR)
+If you are based in the EEA or UK, you have the right to:
+- Access your personal data
+- Rectify inaccurate data
+- Erasure ("right to be forgotten")
+- Data portability
+- Object to processing
+- Withdraw consent at any time
+
+To exercise these rights, use Settings → Data & Privacy or contact
+privacy@reflect-os.com
+
+9. COOKIES AND TRACKING
+We use only functional cookies necessary for the Service to operate, such
+as authentication tokens and theme preferences. We do not use advertising
+or analytics cookies. You can manage cookie preferences in Settings → Legal & Privacy.
+
+10. CHILDREN
+The Service is not directed at children under 16. We do not knowingly
+collect personal data from children.
+
+11. INTERNATIONAL TRANSFERS
+Data is hosted within the EU (Supabase eu-west-1 region). Any transfers
+outside the EU are subject to appropriate safeguards.
+
+12. CHANGES TO THIS POLICY
+We may update this Privacy Policy. We will notify you of material changes
+via the app and require re-acceptance where legally required.
+
+13. CONTACT AND COMPLAINTS
+For privacy enquiries: privacy@reflect-os.com
+You also have the right to lodge a complaint with your national data
+protection authority (e.g. ICO in the UK).
+
+© 2025 Reflect OS Ltd. All rights reserved.

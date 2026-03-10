@@ -1,0 +1,66 @@
+REFLECT OS — TERMS AND CONDITIONS
+Version 3.0 | Effective date: 1 January 2025
+
+Please read these Terms and Conditions carefully before using Reflect OS.
+
+1. ACCEPTANCE OF TERMS
+By creating an account and using Reflect OS ("the Service"), you agree to be
+bound by these Terms and Conditions ("Terms"). If you do not agree, you must
+not use the Service.
+
+2. DESCRIPTION OF SERVICE
+Reflect OS is a decision-logging and reflection platform that enables
+individuals and teams to capture, track, and review consequential decisions.
+
+3. USER ACCOUNTS
+You are responsible for maintaining the confidentiality of your account
+credentials and for all activities that occur under your account. You must
+notify us immediately of any unauthorised use.
+
+4. ACCEPTABLE USE
+You agree not to use the Service to:
+- Upload or transmit unlawful, harmful, or objectionable content
+- Infringe any third-party intellectual property rights
+- Attempt to gain unauthorised access to any part of the Service
+- Interfere with or disrupt the integrity of the Service
+
+5. INTELLECTUAL PROPERTY
+All content, features, and functionality of the Service are owned by
+Reflect OS Ltd and protected by applicable intellectual property laws.
+
+6. DATA AND PRIVACY
+Your use of the Service is also governed by our Privacy Policy (v1.0),
+which is incorporated into these Terms by reference.
+
+7. SUBSCRIPTION AND BILLING
+Access to certain features requires a paid subscription. Subscription fees
+are charged in advance on a monthly or annual basis and are non-refundable
+except as required by applicable law.
+
+8. TERMINATION
+We reserve the right to suspend or terminate your account at any time for
+violation of these Terms, with or without notice.
+
+9. DISCLAIMER OF WARRANTIES
+The Service is provided "as is" without warranties of any kind, express or
+implied, including but not limited to merchantability or fitness for a
+particular purpose.
+
+10. LIMITATION OF LIABILITY
+To the maximum extent permitted by law, Reflect OS Ltd shall not be liable
+for any indirect, incidental, special, or consequential damages arising from
+your use of the Service.
+
+11. GOVERNING LAW
+These Terms are governed by the laws of England and Wales. Any disputes
+shall be subject to the exclusive jurisdiction of the courts of England and
+Wales.
+
+12. CHANGES TO TERMS
+We may update these Terms from time to time. Continued use of the Service
+after changes constitutes acceptance of the revised Terms.
+
+13. CONTACT
+For questions about these Terms, contact us at legal@reflect-os.com
+
+© 2025 Reflect OS Ltd. All rights reserved.

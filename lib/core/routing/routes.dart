@@ -87,4 +87,8 @@ abstract final class Routes {
   // Share
   // Must work without authentication — this is the public share link entry point.
   static const String share = '/share/:token';
+
+  // Legal
+  static const String legalAcceptance = '/legal-acceptance';
+  static const String settingsLegal = '/settings/legal';
 }

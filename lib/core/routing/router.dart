@@ -46,6 +46,8 @@ import 'package:reflect_os/features/toolkit/screens/tool_results_screen.dart';
 import 'package:reflect_os/features/toolkit/screens/toolkit_screen.dart';
 import 'package:reflect_os/features/demographic_packs/screens/packs_screen.dart';
 import 'package:reflect_os/features/settings/screens/encryption_status_screen.dart';
+import 'package:reflect_os/features/legal/providers/legal_consent_provider.dart';
+import 'package:reflect_os/features/legal/screens/legal_acceptance_screen.dart';
 import 'package:reflect_os/features/workspace/screens/workspace_management_screen.dart';
 import 'package:reflect_os/features/workspace/screens/workspace_wizard_screen.dart';
 import 'routes.dart';
@@ -57,6 +59,9 @@ final routerProvider = Provider<GoRouter>((ref) {
   // Treat unknown/loading the same as active — only redirect when confirmed inactive.
   final isSubscribed =
       subscriptionStatus.valueOrNull != SubscriptionStatus.inactive;
+  // Treat unknown/loading as accepted — avoids flashing the gate on every cold start.
+  final hasAcceptedLegal =
+      ref.watch(legalConsentCheckProvider).valueOrNull ?? true;
 
   return GoRouter(
     initialLocation: Routes.dashboard,
@@ -68,7 +73,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         return Routes.login;
       }
 
-      if (isAuthenticated && !isSubscribed) {
+      // Legal gate — must be accepted before subscription screen or main app.
+      if (isAuthenticated && !hasAcceptedLegal) {
+        final isLegalRoute =
+            state.matchedLocation == Routes.legalAcceptance;
+        if (!isLegalRoute && !isPublicRoute) {
+          return Routes.legalAcceptance;
+        }
+      }
+
+      if (isAuthenticated && hasAcceptedLegal && !isSubscribed) {
         final isBillingRoute = state.matchedLocation.startsWith('/billing/');
         if (!isBillingRoute && !isPublicRoute) {
           return Routes.billingSubscribe;
@@ -260,6 +274,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => PublicDecisionView(
           token: state.pathParameters['token']!,
         ),
+      ),
+
+      // Legal acceptance gate — outside the shell, no back-navigation
+      GoRoute(
+        path: Routes.legalAcceptance,
+        builder: (context, state) => const LegalAcceptanceScreen(),
       ),
 
       // Billing gate — outside the shell
