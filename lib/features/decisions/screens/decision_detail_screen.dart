@@ -280,7 +280,7 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
               Theme.of(context).brightness == Brightness.dark
                   ? 'assets/images/reflect-icon-dark.svg'
                   : 'assets/images/reflect-icon-light.svg',
-              height: 160,
+              height: 20,
             ),
             const SizedBox(width: 8),
             Expanded(
