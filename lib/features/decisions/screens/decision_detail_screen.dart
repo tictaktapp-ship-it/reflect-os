@@ -8,6 +8,7 @@ import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
 import 'package:reflect_os/features/decisions/data/models/comment.dart';
+import 'package:reflect_os/features/decisions/data/models/comment_thread.dart';
 import 'package:reflect_os/features/decisions/data/models/approval_record.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/data/models/decision_stakeholder.dart';
@@ -1499,17 +1500,158 @@ class _TagsSectionState extends ConsumerState<_TagsSection> {
 
 // ── Checkpoints section ────────────────────────────────────────────────────────
 
-class _CheckpointsSection extends ConsumerWidget {
+class _CheckpointsSection extends ConsumerStatefulWidget {
   const _CheckpointsSection({required this.decisionId});
 
   final String decisionId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final checkpointsAsync = ref.watch(checkpointsProvider(decisionId));
+  ConsumerState<_CheckpointsSection> createState() =>
+      _CheckpointsSectionState();
+}
+
+class _CheckpointsSectionState extends ConsumerState<_CheckpointsSection> {
+  static const List<String> _checkpointTypes = [
+    '30_day',
+    '90_day',
+    '180_day',
+    '6_month',
+    '12_month',
+    '24_month',
+    'monthly_continuous',
+    'custom',
+  ];
+
+  static String _formatTypeLabel(String type) => switch (type) {
+        '30_day' => '30 Day',
+        '90_day' => '90 Day',
+        '180_day' => '180 Day',
+        '6_month' => '6 Month',
+        '12_month' => '12 Month',
+        '24_month' => '24 Month',
+        'monthly_continuous' => 'Monthly',
+        'custom' => 'Custom',
+        _ => type.replaceAll('_', ' '),
+      };
+
+  Future<void> _showAddSheet() async {
+    DateTime? pickedDate;
+    String selectedType = '30_day';
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSS) => Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Add Checkpoint',
+                  style: Theme.of(ctx).textTheme.titleMedium),
+              const SizedBox(height: 16),
+              InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Checkpoint type',
+                  border: OutlineInputBorder(),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                ),
+                child: DropdownButton<String>(
+                  value: selectedType,
+                  isExpanded: true,
+                  underline: const SizedBox.shrink(),
+                  items: _checkpointTypes
+                      .map((t) => DropdownMenuItem(
+                            value: t,
+                            child: Text(_formatTypeLabel(t)),
+                          ))
+                      .toList(),
+                  onChanged: (v) => setSS(() => selectedType = v!),
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.calendar_today_outlined, size: 16),
+                label: Text(
+                  pickedDate == null
+                      ? 'Pick a date'
+                      : DateFormat('d MMM yyyy').format(pickedDate!),
+                ),
+                onPressed: () async {
+                  final d = await showDatePicker(
+                    context: ctx,
+                    initialDate:
+                        DateTime.now().add(const Duration(days: 30)),
+                    firstDate: DateTime.now(),
+                    lastDate:
+                        DateTime.now().add(const Duration(days: 3650)),
+                  );
+                  if (d != null) setSS(() => pickedDate = d);
+                },
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: pickedDate == null
+                    ? null
+                    : () async {
+                        Navigator.of(ctx).pop();
+                        try {
+                          await ref
+                              .read(decisionsRepositoryProvider)
+                              .createCheckpoint(
+                                decisionId: widget.decisionId,
+                                checkpointType: selectedType,
+                                dueAt: pickedDate!,
+                              );
+                          ref.invalidate(
+                              checkpointsProvider(widget.decisionId));
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text(
+                                      'Failed to add checkpoint: $e')),
+                            );
+                          }
+                        }
+                      },
+                child: const Text('Add Checkpoint'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final checkpointsAsync =
+        ref.watch(checkpointsProvider(widget.decisionId));
 
     return _CollapsibleSection(
       title: 'Review Checkpoints',
+      trailing: IconButton(
+        icon: const Icon(Icons.add, size: 18),
+        tooltip: 'Add checkpoint',
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        onPressed: _showAddSheet,
+      ),
       child: checkpointsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Text(
@@ -1517,7 +1659,11 @@ class _CheckpointsSection extends ConsumerWidget {
           style: Theme.of(context)
               .textTheme
               .bodyMedium
-              ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+              ?.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.4)),
         ),
         data: (checkpoints) {
           if (checkpoints.isEmpty) {
@@ -1526,7 +1672,11 @@ class _CheckpointsSection extends ConsumerWidget {
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
-                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+                  ?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.4)),
             );
           }
           return Column(
@@ -1834,14 +1984,21 @@ class _CommentsSectionState extends ConsumerState<_CommentsSection> {
     super.dispose();
   }
 
-  Future<void> _send(String threadId) async {
+  Future<void> _send() async {
     final body = _controller.text.trim();
     if (body.isEmpty) return;
     setState(() => _isSending = true);
     try {
-      await ref.read(decisionsRepositoryProvider).postComment(threadId, body);
+      final repo = ref.read(decisionsRepositoryProvider);
+      CommentThread? thread =
+          ref.read(commentThreadProvider(widget.decisionId)).valueOrNull;
+      if (thread == null) {
+        thread = await repo.createCommentThread(widget.decisionId);
+        ref.invalidate(commentThreadProvider(widget.decisionId));
+      }
+      await repo.postComment(thread.id, body);
       _controller.clear();
-      ref.invalidate(commentsProvider(threadId));
+      ref.invalidate(commentsProvider(thread.id));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -1861,23 +2018,14 @@ class _CommentsSectionState extends ConsumerState<_CommentsSection> {
       title: 'Comments',
       child: threadAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => Text(
-          'Comments available once decision is activated.',
+        error: (e, _) => Text(
+          'Failed to load comments: $e',
           style: Theme.of(context)
               .textTheme
               .bodyMedium
               ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
         ),
         data: (thread) {
-          if (thread == null) {
-            return Text(
-              'Comments available once decision is activated.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-            );
-          }
           return _CommentsThreadBody(
             thread: thread,
             onSend: _send,
@@ -1899,14 +2047,17 @@ class _CommentsThreadBody extends ConsumerWidget {
     required this.isSending,
   });
 
-  final dynamic thread;
-  final Future<void> Function(String threadId) onSend;
+  final dynamic thread; // CommentThread? — null means no thread yet
+  final Future<void> Function() onSend;
   final TextEditingController controller;
   final bool isSending;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final commentsAsync = ref.watch(commentsProvider(thread.id as String));
+    final threadId = thread?.id as String?;
+    final commentsAsync = threadId != null
+        ? ref.watch(commentsProvider(threadId))
+        : const AsyncValue<List<dynamic>>.data([]);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1946,7 +2097,7 @@ class _CommentsThreadBody extends ConsumerWidget {
                 minLines: 1,
                 maxLines: 4,
                 decoration: const InputDecoration(hintText: 'Add a comment…'),
-                onSubmitted: isSending ? null : (_) => onSend(thread.id as String),
+                onSubmitted: isSending ? null : (_) => onSend(),
               ),
             ),
             const SizedBox(width: 8),
@@ -1962,7 +2113,7 @@ class _CommentsThreadBody extends ConsumerWidget {
                 : IconButton(
                     icon: const Icon(Icons.send_outlined),
                     tooltip: 'Send',
-                    onPressed: () => onSend(thread.id as String),
+                    onPressed: onSend,
                   ),
           ],
         ),
@@ -3146,15 +3297,9 @@ class _RiskAssessmentSectionState
       ref.invalidate(riskAssessmentProvider(widget.decisionId));
     } catch (e) {
       if (!mounted) return;
-      final isNetworkError = e.toString().contains('Failed to fetch') ||
-          e.toString().contains('XMLHttpRequest');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            isNetworkError
-                ? 'Risk assessment unavailable in this network environment.'
-                : 'Failed to generate risk assessment: $e',
-          ),
+          content: Text('Failed to generate risk assessment: $e'),
         ),
       );
     } finally {
@@ -4195,9 +4340,11 @@ class _LinkedAssetsSectionState extends ConsumerState<_LinkedAssetsSection> {
     final available = all.where((a) => !linkedIds.contains(a.id)).toList();
 
     if (available.isEmpty) {
+      final message = all.isEmpty
+          ? 'No portfolio assets exist yet.'
+          : 'All portfolio assets are already linked.';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('All portfolio assets are already linked.')),
+        SnackBar(content: Text(message)),
       );
       return;
     }
@@ -4312,7 +4459,7 @@ class _IcVoteSectionState extends ConsumerState<_IcVoteSection> {
   bool _isSaving = false;
 
   void _showVoteSheet(IcVote? existing) {
-    String selectedVote = existing?.vote ?? 'Yes';
+    String selectedVote = existing?.vote ?? 'approve';
     final notesCtrl = TextEditingController(text: existing?.dissentNotes ?? '');
 
     showModalBottomSheet(
@@ -4340,14 +4487,14 @@ class _IcVoteSectionState extends ConsumerState<_IcVoteSection> {
               const SizedBox(height: 16),
               SegmentedButton<String>(
                 segments: const [
-                  ButtonSegment(value: 'Yes', label: Text('Yes')),
-                  ButtonSegment(value: 'No', label: Text('No')),
-                  ButtonSegment(value: 'Abstain', label: Text('Abstain')),
+                  ButtonSegment(value: 'approve', label: Text('Approve')),
+                  ButtonSegment(value: 'reject', label: Text('Reject')),
+                  ButtonSegment(value: 'defer', label: Text('Defer')),
                 ],
                 selected: {selectedVote},
                 onSelectionChanged: (s) => setSS(() => selectedVote = s.first),
               ),
-              if (selectedVote == 'No' || selectedVote == 'Abstain') ...[
+              if (selectedVote == 'reject' || selectedVote == 'defer') ...[
                 const SizedBox(height: 12),
                 TextField(
                   controller: notesCtrl,
@@ -4937,6 +5084,7 @@ class _ToolRunRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(Icons.calculate_outlined, size: 16),
           const SizedBox(width: 8),
@@ -4956,6 +5104,18 @@ class _ToolRunRow extends StatelessWidget {
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
+                if (run.finalDescription != null &&
+                    run.finalDescription!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    run.finalDescription!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color:
+                          theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

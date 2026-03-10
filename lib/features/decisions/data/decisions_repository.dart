@@ -367,6 +367,22 @@ class DecisionsRepository {
     return rows.map((row) => ReviewCheckpoint.fromJson(row)).toList();
   }
 
+  Future<void> createCheckpoint({
+    required String decisionId,
+    required String checkpointType,
+    required DateTime dueAt,
+  }) async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    await supabase.from('review_checkpoints').insert({
+      'decision_id': decisionId,
+      'checkpoint_type': checkpointType,
+      'due_at': dueAt.toUtc().toIso8601String(),
+      'status': 'Scheduled',
+      'created_at': now,
+      'updated_at': now,
+    });
+  }
+
   // ── Stakeholders ──────────────────────────────────────────────────────────
 
   Future<List<DecisionStakeholder>> getStakeholders(
@@ -422,6 +438,17 @@ class DecisionsRepository {
         .isFilter('deleted_at', null)
         .maybeSingle();
     if (row == null) return null;
+    return CommentThread.fromJson(row);
+  }
+
+  Future<CommentThread> createCommentThread(String decisionId) async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    final row = await supabase.from('comment_threads').insert({
+      'decision_id': decisionId,
+      'state': 'Open',
+      'created_at': now,
+      'updated_at': now,
+    }).select().single();
     return CommentThread.fromJson(row);
   }
 

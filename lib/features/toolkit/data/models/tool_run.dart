@@ -16,6 +16,7 @@ class ToolRun {
   final String confidenceScenario; // 'base' | 'optimistic' | 'pessimistic'
   final List<dynamic> annualProjectionsJsonb;
   final String? presetId;
+  final String? finalDescription;
   // Joined fields from view
   final String toolName;
   final String toolKey;
@@ -38,6 +39,7 @@ class ToolRun {
     required this.confidenceScenario,
     required this.annualProjectionsJsonb,
     this.presetId,
+    this.finalDescription,
     required this.toolName,
     required this.toolKey,
     required this.toolCategory,
@@ -64,6 +66,7 @@ class ToolRun {
       annualProjectionsJsonb:
           (json['annual_projections_jsonb'] as List<dynamic>?) ?? [],
       presetId: json['preset_id'] as String?,
+      finalDescription: json['final_description'] as String?,
       toolName: json['tool_name'] as String? ?? '',
       toolKey: json['tool_key'] as String? ?? '',
       toolCategory: json['tool_category'] as String? ?? '',
