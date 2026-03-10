@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/outcomes/providers/outcomes_provider.dart';
 
 class CreateOutcomeScreen extends ConsumerStatefulWidget {
@@ -47,6 +48,17 @@ class _CreateOutcomeScreenState extends ConsumerState<CreateOutcomeScreen> {
           );
 
       ref.invalidate(outcomesProvider(widget.decisionId));
+
+      // Re-infer confidence triggers after outcome review saved
+      try {
+        await supabase.functions.invoke(
+          'infer-confidence-triggers',
+          body: {'decision_id': widget.decisionId},
+        );
+      } catch (e) {
+        // Non-fatal — triggers will be stale until next review save
+        debugPrint('infer-confidence-triggers failed: $e');
+      }
 
       if (mounted) context.pop();
     } catch (e) {
