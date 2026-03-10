@@ -5,10 +5,11 @@ import 'package:reflect_os/features/initiatives/data/models/initiative.dart';
 class InitiativesRepository {
   const InitiativesRepository();
 
-  Future<List<Initiative>> getInitiatives() async {
+  Future<List<Initiative>> getInitiatives({required String workspaceId}) async {
     final rows = await supabase
         .from('user_visible_initiatives')
         .select()
+        .eq('workspace_id', workspaceId)
         .order('name');
 
     return rows.map((row) => Initiative.fromJson(row)).toList();
