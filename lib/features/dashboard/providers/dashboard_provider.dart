@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 
 class DashboardAnalytics {
@@ -39,11 +40,13 @@ class DashboardAnalytics {
   final double? confidenceCalibrationDelta;
 }
 
-/// Reads from the precomputed analytics_summary view.
-/// RLS ensures the user sees only their workspace's data.
+/// Reads from the precomputed analytics_summary view filtered by workspace.
 /// Never aggregate outcome scores in Flutter — use this view instead.
 final dashboardAnalyticsProvider =
-    FutureProvider<DashboardAnalytics>((ref) async {
+    FutureProvider.autoDispose<DashboardAnalytics>((ref) async {
+  final workspaceId = await ref.watch(currentWorkspaceProvider.future);
+  if (workspaceId == null) return const DashboardAnalytics();
+
   final row = await supabase.from('analytics_summary').select(
       'rolling_30d_avg_quality, rolling_90d_avg_quality, all_time_avg_quality, '
       'all_time_decisions_logged, rolling_30d_decisions_reviewed, '
@@ -52,7 +55,9 @@ final dashboardAnalyticsProvider =
       'rolling_30d_needs_attention_count, rolling_30d_overdue_count, '
       'rolling_90d_decisions_logged, rolling_90d_on_track_count, '
       'rolling_90d_needs_attention_count, rolling_90d_overdue_count, '
-      'confidence_calibration_delta').maybeSingle();
+      'confidence_calibration_delta')
+      .eq('workspace_id', workspaceId)
+      .maybeSingle();
 
   if (row == null) return const DashboardAnalytics();
 
