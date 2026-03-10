@@ -1,3 +1,4 @@
+import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/data/models/decision_lens_data.dart';
 import 'package:reflect_os/features/decisions/data/models/decision_stakeholder.dart';
@@ -8,13 +9,13 @@ import 'package:reflect_os/features/risk/data/models/risk_assessment.dart';
 class DecisionLensRepository {
   const DecisionLensRepository();
 
-  DecisionLensData compute({
+  Future<DecisionLensData> compute({
     required Decision decision,
     required List<DecisionStakeholder> stakeholders,
     required RiskAssessment? riskAssessment,
     required List<EvidenceItem> evidence,
     required List<OutcomeUpdate> outcomes,
-  }) {
+  }) async {
     final confidenceScore = (decision.initialConfidence ?? 5).toDouble();
 
     final healthScore = switch (decision.healthState) {
@@ -76,12 +77,27 @@ class DecisionLensRepository {
       ),
     ];
 
+    final triggers = await _fetchTriggers(decision.id);
+
     return DecisionLensData(
       confidenceScore: confidenceScore,
       healthScore: healthScore,
       influenceNodes: nodes,
       scoreComponents: scoreComponents,
+      triggers: triggers,
     );
+  }
+
+  Future<List<ConfidenceTrigger>> _fetchTriggers(String decisionId) async {
+    final response = await supabase
+        .from('confidence_triggers')
+        .select()
+        .eq('decision_id', decisionId)
+        .order('arc_position', ascending: true);
+
+    return (response as List)
+        .map((j) => ConfidenceTrigger.fromJson(j as Map<String, dynamic>))
+        .toList();
   }
 
   double _riskScore(RiskAssessment? assessment) {

@@ -25,7 +25,7 @@ final decisionLensProvider =
   final outcomes =
       await ref.watch(outcomesProvider(decisionId).future);
 
-  return ref.read(decisionLensRepositoryProvider).compute(
+  return await ref.read(decisionLensRepositoryProvider).compute(
         decision: decision,
         stakeholders: stakeholders,
         riskAssessment: riskAssessment,
