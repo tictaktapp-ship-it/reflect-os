@@ -1,66 +1,189 @@
-REFLECT OS — TERMS AND CONDITIONS
-Version 3.0 | Effective date: 1 January 2025
+REFLECT OS — TERMS AND CONDITIONS OF USE
+Version 3.0 | Effective date: [Insert date]
 
-Please read these Terms and Conditions carefully before using Reflect OS.
+1. ABOUT US AND HOW TO CONTACT US
+These Terms and Conditions ("Terms") are a legally binding agreement between you and Euan Pallister trading as Reflect OS, or any successor entity operating the Service ("Reflect OS", "we", "us", "our").
+Contact us at: contact@reflect-os.com
+Support: [Insert support URL or email]
 
-1. ACCEPTANCE OF TERMS
-By creating an account and using Reflect OS ("the Service"), you agree to be
-bound by these Terms and Conditions ("Terms"). If you do not agree, you must
-not use the Service.
+2. ACCEPTANCE
+You accept these Terms by ticking the "I agree to the Terms and Conditions" checkbox during account registration, or by otherwise accessing or using the Service after these Terms have been presented to you. If you do not agree, do not create an account or use the Service.
+If you are accepting on behalf of an organisation, you confirm that you have authority to bind that organisation. These Terms, together with our Privacy Policy, Cookie Notice, and any applicable subscription order, constitute the entire agreement between you and us.
 
-2. DESCRIPTION OF SERVICE
-Reflect OS is a decision-logging and reflection platform that enables
-individuals and teams to capture, track, and review consequential decisions.
+3. VERSIONING AND CHANGES
+These Terms carry a version number and effective date shown at the top of this document. We may update these Terms from time to time. For material changes (those that affect your rights, obligations, or costs), we will give you at least 14 days' advance notice by email and/or prominent in-app notification before the change takes effect. For minor or clarificatory changes, we may update with shorter notice. If you do not accept a material change, you may close your account before the effective date and receive a pro-rata refund of any prepaid fees for the unused period. Continued use of the Service after the effective date constitutes acceptance of the updated Terms.
 
-3. USER ACCOUNTS
-You are responsible for maintaining the confidentiality of your account
-credentials and for all activities that occur under your account. You must
-notify us immediately of any unauthorised use.
+4. ELIGIBILITY
+To use the Service, you must be at least 18 years old, have legal capacity to enter into a binding contract, and if acting on behalf of an organisation, have authority to bind it. We do not knowingly permit persons under 18 to use the Service. The Service is available worldwide but we make no representation that it is appropriate or lawful in all jurisdictions.
 
-4. ACCEPTABLE USE
-You agree not to use the Service to:
-- Upload or transmit unlawful, harmful, or objectionable content
-- Infringe any third-party intellectual property rights
-- Attempt to gain unauthorised access to any part of the Service
-- Interfere with or disrupt the integrity of the Service
+5. THE SERVICE
+Reflect OS is a decision intelligence platform that enables individuals and teams to log decisions, schedule reviews, track outcomes, and generate analytics. Features may include decision logging and outcome tracking, team workspaces and access controls, AI-assisted outputs, analytics and reporting, calendar integrations, coaching features, file attachments, CSV and PDF exports, and notifications. The Service is a productivity and governance tool only. It is not a substitute for professional legal, financial, regulatory, strategic, or other professional advice.
 
-5. INTELLECTUAL PROPERTY
-All content, features, and functionality of the Service are owned by
-Reflect OS Ltd and protected by applicable intellectual property laws.
+6. ACCOUNT REGISTRATION AND SECURITY
+You must provide accurate, complete, and up-to-date registration information. You are solely responsible for maintaining the confidentiality of your login credentials and for all activity that occurs under your account. You must notify us immediately at contact@reflect-os.com if you become aware of any unauthorised access. You must not share your account credentials or allow others to access the Service through your account.
 
-6. DATA AND PRIVACY
-Your use of the Service is also governed by our Privacy Policy (v1.0),
-which is incorporated into these Terms by reference.
+7. SUBSCRIPTIONS, BILLING, AND PAYMENT
 
-7. SUBSCRIPTION AND BILLING
-Access to certain features requires a paid subscription. Subscription fees
-are charged in advance on a monthly or annual basis and are non-refundable
-except as required by applicable law.
+7.1 Plans and pricing
+We offer subscription plans as described at the point of purchase. Prices are clearly displayed at checkout, inclusive or exclusive of VAT as indicated. There are no hidden fees.
 
-8. TERMINATION
-We reserve the right to suspend or terminate your account at any time for
-violation of these Terms, with or without notice.
+7.2 Payment processing
+Payments are processed by Stripe, Inc. By subscribing, you authorise Stripe to charge your nominated payment method on a recurring basis. We do not store your full payment card details.
 
-9. DISCLAIMER OF WARRANTIES
-The Service is provided "as is" without warranties of any kind, express or
-implied, including but not limited to merchantability or fitness for a
-particular purpose.
+7.3 Automatic renewal — important notice
+YOUR SUBSCRIPTION WILL RENEW AUTOMATICALLY at the end of each billing period at the then-current price, unless you cancel before the renewal date.
 
-10. LIMITATION OF LIABILITY
-To the maximum extent permitted by law, Reflect OS Ltd shall not be liable
-for any indirect, incidental, special, or consequential damages arising from
-your use of the Service.
+7.4 Cancellation
+You may cancel your subscription at any time via in-app settings or by emailing contact@reflect-os.com. Cancellation takes effect at the end of the current billing period. We do not provide refunds for unused portions of a billing period, except as required by law.
 
-11. GOVERNING LAW
-These Terms are governed by the laws of England and Wales. Any disputes
-shall be subject to the exclusive jurisdiction of the courts of England and
-Wales.
+7.5 Price changes
+We will give you at least 30 days' written notice before any price increase takes effect.
 
-12. CHANGES TO TERMS
-We may update these Terms from time to time. Continued use of the Service
-after changes constitutes acceptance of the revised Terms.
+7.6 Consumer cooling-off rights (14-day right to cancel)
+If you are a consumer, you have a 14-day right to cancel your subscription under the Consumer Contracts (Information, Cancellation and Additional Charges) Regulations 2013. Where you request that we begin supplying the Service immediately, you acknowledge that if the Service is fully performed within the 14-day period, you may lose your right to cancel; and if you cancel after the Service has begun but before fully performed, you may be required to pay a proportionate amount. To cancel within 14 days, contact contact@reflect-os.com.
 
-13. CONTACT
-For questions about these Terms, contact us at legal@reflect-os.com
+7.7 Refunds
+Refunds are issued only as required by law, where expressly stated in a refund policy, or at our sole discretion in exceptional circumstances.
 
-© 2025 Reflect OS Ltd. All rights reserved.
+7.8 Failed payments
+If payment fails, we may suspend access after reasonable notice.
+
+7.9 Taxes
+Prices are displayed inclusive or exclusive of VAT as indicated at checkout.
+
+8. TRIAL AND PROMOTIONAL OFFERS
+If we offer a free trial, the specific terms shown at the time apply. Unless you cancel before the end of the trial period, you will automatically be charged the applicable subscription fee at the end of the trial.
+
+9. USER CONTENT
+
+9.1 Ownership
+You retain full ownership of your User Content. We do not claim ownership of anything you create.
+
+9.2 Licence
+By submitting User Content, you grant us a limited, non-exclusive, royalty-free, worldwide licence to host, store, copy, transmit, display, and process your User Content solely as necessary to provide the Service. This licence does not permit us to sell or commercially exploit your User Content.
+
+9.3 Sensitive content
+You are responsible for determining whether the Service is appropriate for the sensitivity of information you input. We apply security measures including encryption but no system is completely immune to security incidents.
+
+9.4 Prohibited conduct
+You must not use the Service to: violate any applicable law; infringe intellectual property or privacy rights; upload unlawful or harmful content; impersonate any person; upload malware or disruptive code; attempt unauthorised access; scrape data without consent; use the Service to develop competing products; or harass or threaten any person.
+
+10. TEAM WORKSPACES
+
+10.1 Workspace owner responsibilities
+If you create a team workspace, you are responsible for managing membership and permissions, ensuring members comply with these Terms, and complying with data protection law in relation to members' data.
+
+10.2 Workspace member rights
+Your content and activity within a workspace may be visible to the Workspace Owner and authorised members. Actions may be recorded in audit logs.
+
+10.3 Loss of access
+If your access is revoked, you may lose access to content within that workspace. We strongly recommend you export your content regularly.
+
+11. AI-ASSISTED FEATURES
+
+11.1 What AI features do
+The Service includes AI-assisted features that generate risk assessments, decision debrief summaries, toolkit outputs, and analytical outputs ("AI Outputs"). AI Outputs may be incomplete, inaccurate, or outdated, are not independently verified, and may not be suitable for your circumstances.
+
+11.2 AI Outputs are not professional advice
+AI OUTPUTS ARE PROVIDED FOR INFORMATIONAL AND PRODUCTIVITY PURPOSES ONLY. THEY DO NOT CONSTITUTE PROFESSIONAL, LEGAL, REGULATORY, MEDICAL, FINANCIAL, INVESTMENT, OR OTHER PROFESSIONAL ADVICE. You remain solely responsible for all decisions and actions, regardless of any AI Output.
+
+11.3 Regulated industries
+If you operate in a regulated industry, you are solely responsible for ensuring that your use of the Service complies with all applicable regulatory requirements. We make no representation that the Service or AI Outputs are suitable, compliant, or approved for regulated environments.
+
+11.4 Prohibited uses of AI features
+You must not use AI features to generate illegal content, content that threatens or incites harm, discriminatory content, content that infringes intellectual property, or content designed to deceive or defraud.
+
+11.5 AI providers
+We use third-party AI providers. We do not use your individual User Content as training data for third-party foundation AI models without explicit prior disclosure and, where required, your consent.
+
+12. COACHING FEATURES
+Coaching sessions are treated as confidential. Coaches are independent professionals and are not employees or agents of Reflect OS. Coaching does not constitute therapy, counselling, or regulated advice. We are not responsible for coaching content, quality, or outcomes.
+
+13. PRIVACY AND DATA PROTECTION
+Your use is governed by our Privacy Policy [insert URL]. We process personal data as a data controller under the UK GDPR and Data Protection Act 2018. Your rights include access, rectification, erasure, portability, restriction, and objection. Contact contact@reflect-os.com to exercise these rights. You may lodge a complaint with the ICO: ico.org.uk / 0303 123 1113.
+
+14. COOKIES
+We use cookies as described in our Cookie Notice [insert URL]. Where required by PECR, we will obtain consent before placing non-essential cookies.
+
+15. THIRD-PARTY SERVICES
+The Service uses: Stripe (payment processing), Google (Calendar API, Firebase), Microsoft (Graph API), Resend (email), Supabase (infrastructure and data storage), and third-party AI providers. Your use of third-party services is subject to their own terms. We are not responsible for third-party services.
+
+16. INTELLECTUAL PROPERTY
+
+16.1 Our intellectual property
+We and our licensors own all intellectual property rights in the Service. These Terms do not transfer any ownership to you.
+
+16.2 Licence to use
+Subject to these Terms and payment of fees, we grant you a limited, non-exclusive, non-transferable, revocable licence to access and use the Service for your internal purposes during your subscription.
+
+16.3 Restrictions
+You must not copy, modify, distribute, sell, reverse engineer, or frame the Service without our prior written consent, except as expressly permitted by law including Section 50B of the Copyright, Designs and Patents Act 1988.
+
+17. FEEDBACK
+Feedback you submit to us may be used by us freely without obligation or compensation to you.
+
+18. CONFIDENTIALITY
+Each party will keep the other's confidential information using at least reasonable care, and will not disclose it to third parties or use it for purposes other than these Terms.
+
+19. CONSUMER RIGHTS
+If you are a consumer in the United Kingdom, statutory rights under the Consumer Rights Act 2015 apply. Nothing in these Terms removes, excludes, or restricts your statutory consumer rights.
+
+20. SERVICE AVAILABILITY
+We aim to provide high availability but do not guarantee uninterrupted or error-free access. We may carry out maintenance that temporarily affects availability.
+
+21. SUSPENSION AND TERMINATION
+
+21.1 Termination by us
+We may suspend or terminate your access if you breach these Terms and fail to remedy the breach within 7 days of notice, fail to pay fees, or if required by law or to protect the Service or other users.
+
+21.2 Termination by you
+You may close your account at any time. Account closure does not entitle you to a refund for the current billing period except as required by law.
+
+22. DATA EXPORT AND DELETION
+You may export your data using in-product tools. We will process deletion requests within 30 days, subject to legal retention obligations. We strongly recommend you export your data before closing your account.
+
+23. LIMITATION OF LIABILITY
+
+23.1 Liability that cannot be excluded
+Nothing excludes our liability for death or personal injury caused by our negligence, fraud or fraudulent misrepresentation, or any liability that cannot lawfully be excluded.
+
+23.2 Excluded losses (business users only)
+For business users, we exclude liability for indirect, special, incidental, or consequential loss; loss of profits, revenue, or business; loss of goodwill; and loss or corruption of data, except where caused by our failure to exercise reasonable care.
+
+23.3 Liability cap
+Our total aggregate liability shall not exceed the greater of: (a) the total subscription fees you paid to us in the 12 months before the event; or (b) £2,000.
+
+23.4 Consumer rights preserved
+If you are a consumer, exclusions in 23.2 and 23.3 apply only to the extent permitted by law. Nothing affects your statutory rights.
+
+23.5 AI outputs disclaimer
+We expressly disclaim all liability for any loss arising from decisions made in reliance on AI Outputs. You are solely responsible for all decisions and their consequences.
+
+24. INDEMNITY (BUSINESS USERS ONLY)
+You shall indemnify Reflect OS against claims arising from your breach of these Terms, User Content that infringes third-party rights, or your misuse of AI Outputs causing harm to any third party.
+
+25. FORCE MAJEURE
+We will not be liable for failure or delay caused by events beyond our reasonable control. If a force majeure event continues for more than 30 days, either party may terminate on written notice with a refund of prepaid fees for the unused period.
+
+26. COMPLAINTS AND DISPUTE RESOLUTION
+Support: [Insert support URL or email]
+Complaints: contact@reflect-os.com
+We aim to acknowledge complaints within 5 business days and provide a final response within 28 days. If we cannot resolve your complaint within 8 weeks, you may be entitled to refer it to an Alternative Dispute Resolution (ADR) provider.
+
+27. GOVERNING LAW AND COURTS
+These Terms are governed by the laws of England and Wales. The courts of England and Wales have exclusive jurisdiction, except that if you are a consumer, you may also bring proceedings in the courts of the country in which you are habitually resident.
+
+28. GENERAL PROVISIONS
+Entire agreement: These Terms, the Privacy Policy, the Cookie Notice, and any applicable order form constitute the entire agreement between us.
+Severability: Invalid provisions will be modified to the minimum extent necessary or severed without affecting the rest.
+No waiver: Our failure to enforce any provision does not waive our right to enforce it in future.
+No third-party rights: These Terms do not confer rights on third parties under the Contracts (Rights of Third Parties) Act 1999.
+Assignment: You may not assign your rights without our written consent. We may assign in connection with a merger, acquisition, or sale of assets.
+Relationship: Nothing creates a partnership, joint venture, agency, franchise, or employment relationship between us.
+Notices: Legal notices to us must be sent to [insert registered address] or contact@reflect-os.com. Notices to you will be sent to your registered email address.
+
+---
+REFLECT OS — TERMS AND CONDITIONS v3.0
+Governing law: England and Wales
+Contact: contact@reflect-os.com
+---
