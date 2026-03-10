@@ -5,6 +5,8 @@ class WorkspaceMembership {
     required this.userId,
     required this.role,
     required this.createdAt,
+    this.displayName,
+    this.avatarUrl,
   });
 
   final String id;
@@ -12,6 +14,8 @@ class WorkspaceMembership {
   final String userId;
   final String role;
   final DateTime createdAt;
+  final String? displayName;
+  final String? avatarUrl;
 
   factory WorkspaceMembership.fromJson(Map<String, dynamic> json) =>
       WorkspaceMembership(
@@ -20,5 +24,7 @@ class WorkspaceMembership {
         userId: json['user_id'] as String,
         role: json['role'] as String,
         createdAt: DateTime.parse(json['created_at'] as String),
+        displayName: json['display_name'] as String?,
+        avatarUrl: json['avatar_url'] as String?,
       );
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
+import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
 import 'package:reflect_os/features/coaching/data/models/coach_client_relationship.dart';
 import 'package:reflect_os/features/coaching/providers/coaching_provider.dart';
 
@@ -17,10 +18,24 @@ class CoachDashboardScreen extends ConsumerWidget {
     final coachesAsync = ref.watch(myCoachesProvider);
 
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(title: const WorkspaceSwitcherChip()),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // ── Screen description ─────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Work with your assigned coach to reflect on decisions and improve your decision-making over time.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
+                  ),
+            ),
+          ),
+
           // ── Visibility note ────────────────────────────────────────
           Card(
             color: Theme.of(context).colorScheme.surface,

@@ -80,15 +80,15 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
   static String _toCsv(List<Decision> decisions) {
     final buf = StringBuffer();
     buf.writeln(
-        'Title,State,Stakes,Category,Initial Confidence,Visibility,Created,Updated');
+        'Title,State,Stakes,Category,Owner,Initial Confidence,Created Date,Last Updated');
     for (final d in decisions) {
       buf.writeln([
         _csvField(d.title),
         _csvField(d.state),
         _csvField(d.stakes),
         _csvField(d.categoryName),
+        '', // Owner — not present in current model
         _csvField(d.initialConfidence?.toString()),
-        '', // Visibility — not present in current model
         _csvField(_isoDate(d.createdAt)),
         _csvField(_isoDate(d.updatedAt)),
       ].join(','));
@@ -375,34 +375,53 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
         tooltip: 'New decision',
         child: const Icon(Icons.add),
       ),
-      body: decisionsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Text(
-              'Failed to load decisions: $error',
-              textAlign: TextAlign.center,
+              'Log, track, and review every significant decision made in this workspace.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
+                  ),
             ),
           ),
-        ),
-        data: (_) {
-          if (allDecisions.isEmpty) {
-            return const Center(child: Text('No decisions yet.'));
-          }
-          if (filtered.isEmpty) {
-            return const Center(
-              child: Text('No decisions match the current filters.'),
-            );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-            itemCount: filtered.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (_, index) =>
-                _DecisionTile(decision: filtered[index]),
-          );
-        },
+          Expanded(
+            child: decisionsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'Failed to load decisions: $error',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+              data: (_) {
+                if (allDecisions.isEmpty) {
+                  return const Center(child: Text('No decisions yet.'));
+                }
+                if (filtered.isEmpty) {
+                  return const Center(
+                    child: Text('No decisions match the current filters.'),
+                  );
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (_, index) =>
+                      _DecisionTile(decision: filtered[index]),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

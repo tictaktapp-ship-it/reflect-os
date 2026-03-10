@@ -14,6 +14,26 @@ class TeamRepository {
         .order('role')
         .order('created_at');
 
-    return rows.map((row) => WorkspaceMembership.fromJson(row)).toList();
+    if (rows.isEmpty) return [];
+
+    // Fetch display names and avatars from profiles.
+    final userIds = rows.map((r) => r['user_id'] as String).toList();
+    final profileRows = await supabase
+        .from('profiles')
+        .select('id, display_name, avatar_url')
+        .inFilter('id', userIds);
+
+    final profileMap = {
+      for (final p in profileRows) p['id'] as String: p,
+    };
+
+    return rows.map((row) {
+      final profile = profileMap[row['user_id'] as String];
+      return WorkspaceMembership.fromJson({
+        ...row,
+        'display_name': profile?['display_name'],
+        'avatar_url': profile?['avatar_url'],
+      });
+    }).toList();
   }
 }

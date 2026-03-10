@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
-import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/dashboard/providers/dashboard_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
@@ -60,7 +59,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final decisionsAsync = ref.watch(decisionsProvider);
     final analyticsAsync = ref.watch(dashboardAnalyticsProvider);
     final checkpointsAsync = ref.watch(upcomingCheckpointsProvider);
-    final workspaceName = ref.watch(workspaceNameProvider).valueOrNull;
     final analytics = analyticsAsync.valueOrNull;
 
     final avgQuality = switch (_selectedRange) {
@@ -116,6 +114,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ),
         data: (decisions) {
+          // Fix 2: log quality data for debugging
+          debugPrint('[Dashboard] analyticsAsync=${analyticsAsync.runtimeType} '
+              'rolling30dAvgQuality=${analytics?.rolling30dAvgQuality} '
+              'rolling90dAvgQuality=${analytics?.rolling90dAvgQuality} '
+              'allTimeAvgQuality=${analytics?.allTimeAvgQuality}');
           final rangeDecisions = _forRange(decisions);
           final draft =
               rangeDecisions.where((d) => d.state == 'Draft').length;
@@ -151,31 +154,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // ── Workspace indicator ───────────────────────────────────
-              if (workspaceName != null) ...[
-                Row(
-                  children: [
-                    Icon(Icons.business_outlined,
-                        size: 13,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6)),
-                    const SizedBox(width: 4),
-                    Text(
-                      workspaceName,
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-              ],
-
               // ── Date range selector ───────────────────────────────────
               SegmentedButton<_DateRange>(
                 segments: const [
