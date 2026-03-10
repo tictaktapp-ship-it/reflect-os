@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
-import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/dashboard/providers/dashboard_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
@@ -31,8 +30,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Future<void> _refreshAnalytics() async {
     setState(() => _isRefreshing = true);
     try {
-      await supabase.functions.invoke('refresh-analytics');
+      // Analytics are now computed directly from decisions — just re-fetch.
       ref.invalidate(dashboardAnalyticsProvider);
+      ref.invalidate(decisionsProvider);
     } finally {
       if (mounted) setState(() => _isRefreshing = false);
     }
