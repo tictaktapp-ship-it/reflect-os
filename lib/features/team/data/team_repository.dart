@@ -20,11 +20,11 @@ class TeamRepository {
     final userIds = rows.map((r) => r['user_id'] as String).toList();
     final profileRows = await supabase
         .from('profiles')
-        .select('id, display_name, avatar_url')
-        .inFilter('id', userIds);
+        .select('user_id, display_name, avatar_url')
+        .inFilter('user_id', userIds);
 
     final profileMap = {
-      for (final p in profileRows) p['id'] as String: p,
+      for (final p in profileRows) p['user_id'] as String: p,
     };
 
     return rows.map((row) {
