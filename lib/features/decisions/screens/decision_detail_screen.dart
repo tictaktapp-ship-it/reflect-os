@@ -39,6 +39,7 @@ import 'package:reflect_os/features/debrief/providers/debrief_provider.dart';
 import 'package:reflect_os/features/toolkit/data/models/tool_run.dart';
 import 'package:reflect_os/features/toolkit/providers/toolkit_providers.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:reflect_os/features/decisions/widgets/decision_lens/decision_lens_tab.dart';
 
 class DecisionDetailScreen extends ConsumerWidget {
   const DecisionDetailScreen({required this.id, super.key});
@@ -269,7 +270,9 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
       if (context.mounted) context.go(Routes.decisionsList);
     }
 
-    return Scaffold(
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
@@ -343,6 +346,12 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
             ],
           ),
         ],
+        bottom: const TabBar(
+          tabs: [
+            Tab(text: 'Details'),
+            Tab(text: 'Lens'),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () =>
@@ -350,7 +359,9 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
         tooltip: 'Add outcome',
         child: const Icon(Icons.add_chart_outlined),
       ),
-      body: ListView(
+      body: TabBarView(
+        children: [
+          ListView(
         padding: const EdgeInsets.all(16),
         children: [
           // ── State transitions ─────────────────────────────────────
@@ -586,6 +597,10 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
 
           const SizedBox(height: 80), // clear the FAB
         ],
+          ),
+          DecisionLensTab(decision: decision),
+        ],
+      ),
       ),
     );
   }
