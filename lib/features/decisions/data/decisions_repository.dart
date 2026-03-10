@@ -112,20 +112,16 @@ class DecisionsRepository {
 
   // ── Reads ─────────────────────────────────────────────────────────────────
 
-  Future<List<Decision>> getDecisions() async {
+  Future<List<Decision>> getDecisions({required String workspaceId}) async {
     final rows = await supabase
         .from('user_visible_decisions')
         .select()
+        .eq('workspace_id', workspaceId)
         .order('created_at', ascending: false);
 
     if (rows.isEmpty) return [];
 
-    // workspace_id is sourced from the decisions table via the view.
-    // All rows belong to the same workspace under RLS.
-    final workspaceId = rows.first['workspace_id'] as String?;
-    final decryptedRows = workspaceId != null
-        ? await _decryptRows(rows, workspaceId)
-        : rows;
+    final decryptedRows = await _decryptRows(rows, workspaceId);
     return decryptedRows.map(Decision.fromJson).toList();
   }
 
