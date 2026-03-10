@@ -110,7 +110,6 @@ class _ToolResultsScreenState extends State<ToolResultsScreen> {
         .where((f) => (f as Map<String, dynamic>)['is_hero'] != true)
         .toList();
     final projColumns  = tool.annualProjectionColumns;
-    final chartConfig  = tool.chartConfig;
 
     final bool pickerMode =
         GoRouterState.of(context).uri.queryParameters['pickerMode'] == 'true';
@@ -184,13 +183,14 @@ class _ToolResultsScreenState extends State<ToolResultsScreen> {
           ],
 
           // Section 5 — Chart
-          if (chartConfig.isNotEmpty && result.annualProjections.isNotEmpty) ...[
+          if (result.annualProjections.isNotEmpty) ...[
             _SectionHeader(title: 'Chart'),
             _ToolChart(
-              chartConfig: chartConfig,
+              toolKey: tool.key,
               projections: result.annualProjections
                   .map((r) => r as Map<String, dynamic>)
                   .toList(),
+              currencyCode: widget.run.currencyCode,
             ),
             const SizedBox(height: 20),
           ],
@@ -442,68 +442,51 @@ class _ProjectionsTable extends StatelessWidget {
 
 class _ToolChart extends StatelessWidget {
   const _ToolChart({
-    required this.chartConfig,
+    required this.toolKey,
     required this.projections,
+    this.currencyCode = 'GBP',
   });
 
-  final Map<String, dynamic> chartConfig;
+  final String toolKey;
   final List<Map<String, dynamic>> projections;
+  final String currencyCode;
 
-  // ── Pure helpers ──────────────────────────────────────────────────────────
+  static const _chartH = 240.0;
 
-  static List<Map<String, dynamic>>? _parseSeries(List<dynamic> raw) {
-    try {
-      return raw.map((e) => e as Map<String, dynamic>).toList();
-    } catch (_) {
-      return null;
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  double _n(dynamic v) => (v as num?)?.toDouble() ?? 0.0;
+
+  String _xLabel(Map<String, dynamic> row, int index) {
+    for (final k in ['year', 'month', 'week']) {
+      final v = row[k];
+      if (v != null) return v.toString();
     }
+    return '${index + 1}';
   }
 
-  List<double> _valsFor(Map<String, dynamic> s) {
-    final key = s['key'] as String?;
-    if (key == null) return [];
-    return projections
-        .map((row) => ((row[key] as num?) ?? 0).toDouble())
-        .toList();
-  }
-
-  String _xLabel(int i) {
-    if (i < projections.length) {
-      final yr = projections[i]['year'];
-      if (yr != null) return yr.toString();
-    }
-    return 'Y${i + 1}';
-  }
-
-  // ── Shared chart helpers ──────────────────────────────────────────────────
-
-  static Widget _card(BuildContext context, Widget child) => Card(
-        color: Theme.of(context).colorScheme.surface,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: child,
-        ),
-      );
-
-  static FlGridData _lineGrid(BuildContext context) => FlGridData(
+  static FlGridData _grid() => FlGridData(
         show: true,
         drawVerticalLine: false,
-        getDrawingHorizontalLine: (_) => FlLine(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.07),
+        getDrawingHorizontalLine: (_) => const FlLine(
+          color: Color(0x26808080),
           strokeWidth: 1,
         ),
       );
 
-  FlTitlesData _lineTitles(BuildContext context, int maxPoints) {
-    final rotate = maxPoints > 6;
+  FlTitlesData _xTitles(BuildContext context, int count) {
+    final rotate = count > 8;
     return FlTitlesData(
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 52,
+          reservedSize: 56,
           getTitlesWidget: (v, _) => Text(
             _fmtShort(v),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(fontSize: 9),
+            style: TextStyle(
+              fontSize: 10,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
           ),
         ),
       ),
@@ -512,439 +495,892 @@ class _ToolChart extends StatelessWidget {
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: rotate ? 36 : 20,
+          reservedSize: rotate ? 38 : 22,
           getTitlesWidget: (v, _) {
             final i = v.toInt();
-            if (v != i.toDouble() || i < 0 || i >= maxPoints) {
+            if (v != i.toDouble() || i < 0 || i >= projections.length) {
               return const SizedBox.shrink();
             }
-            final lbl = _xLabel(i);
+            final lbl = _xLabel(projections[i], i);
             if (rotate) {
               return Transform.rotate(
                 angle: -math.pi / 4,
-                child: Text(lbl,
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelSmall
-                        ?.copyWith(fontSize: 9)),
+                child: Text(lbl, style: TextStyle(fontSize: 9,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
               );
             }
-            return Text(lbl,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelSmall
-                    ?.copyWith(fontSize: 9));
+            return Text(lbl, style: TextStyle(fontSize: 9,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)));
           },
         ),
       ),
     );
   }
 
+  static Widget _card(BuildContext context, Widget child) => Card(
+        color: Theme.of(context).colorScheme.surface,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+          child: child,
+        ),
+      );
+
+  static Widget _legend(BuildContext context, List<_LegendEntry> entries) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 4,
+        children: entries.map((e) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 12, height: 3,
+                decoration: BoxDecoration(color: e.color, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(width: 4),
+            Text(e.label, style: TextStyle(fontSize: 10,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
+          ],
+        )).toList(),
+      ),
+    );
+  }
+
+  String _fmtShort(double v) {
+    if (v.abs() >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
+    if (v.abs() >= 1000) return '${(v / 1000).toStringAsFixed(0)}k';
+    return v.toStringAsFixed(0);
+  }
+
   // ── Dispatch ──────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final chartType = chartConfig['primary_chart'] as String?;
-    final rawSeries = chartConfig['series'] as List<dynamic>? ?? [];
-    if (projections.isEmpty) {
-      return const Center(child: Text('No data'));
-    }
-    return switch (chartType) {
-      'cumulative_line'     => _cumulativeLine(context, rawSeries),
-      'breakeven_crossover' => _breakevenCrossover(context, rawSeries),
-      'fan_chart'           => _fanChart(context, rawSeries),
-      'tornado'             => _tornado(context, rawSeries),
-      'risk_heatmap'        => _heatmap(context, rawSeries),
-      _                     => const Center(child: Text('Chart type not supported')),
+    if (projections.isEmpty) return const SizedBox.shrink();
+
+    return switch (toolKey) {
+      'roi_calculator_v2' => _roiLines(context),
+      'break_even_calculator_v2' => _breakEvenLines(context),
+      'pricing_change_impact_v2' => _pricingLines(context),
+      'cost_of_inaction_v2' => _coiBar(context),
+      'headcount_runway_v2' => _headcountLines(context),
+      'scenario_builder_v2' => _fanBand(context,
+          upperKey: 'best_case', baseKey: 'expected_case', lowerKey: 'worst_case',
+          upperLabel: 'Best', baseLabel: 'Expected', lowerLabel: 'Worst'),
+      'reference_class_forecast_v2' => _fanBand(context,
+          upperKey: 'optimistic', baseKey: 'base_forecast', lowerKey: 'pessimistic',
+          upperLabel: 'Optimistic', baseLabel: 'Base', lowerLabel: 'Pessimistic'),
+      'sensitivity_analysis_v2' => _tornadoChart(context),
+      'risk_matrix_v2' => _riskBubbles(context),
+      'attrition_risk_v2' => _attritionBars(context),
+      'hiring_success_ramp_v2' => _hiringLines(context),
+      'reorg_impact_v2' => _reorgLines(context),
+      'ab_test_calculator_v2' || 'delivery_confidence_v2' => _confidenceBand(context),
+      'stakeholder_alignment_v2' => _stakeholderBars(context),
+      'outcome_metric_builder_v2' => _progressBars(context),
+      'base_rate_lookup_v2' => _baseRateBars(context),
+      _ => _fallbackBar(context),
     };
   }
 
-  // ── cumulative_line ───────────────────────────────────────────────────────
+  // ── ROI: revenue / ongoing cost / net cashflow lines ─────────────────────
 
-  Widget _cumulativeLine(BuildContext context, List<dynamic> rawSeries) {
-    final series = _parseSeries(rawSeries);
-    if (series == null) return const Center(child: Text('No data'));
-    final cs      = Theme.of(context).colorScheme;
-    final palette = [cs.primary, cs.secondary, cs.tertiary];
+  Widget _roiLines(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    double maxY = 0, minY = 0;
+    final benefitSpots = <FlSpot>[];
+    final costSpots    = <FlSpot>[];
+    final netSpots     = <FlSpot>[];
 
-    int    maxPoints = 0;
-    double maxY      = 0;
-    final  lines     = <LineChartBarData>[];
-
-    for (var i = 0; i < series.length; i++) {
-      final vals = _valsFor(series[i]);
-      if (vals.isEmpty) continue;
-      maxPoints = math.max(maxPoints, vals.length);
-      double cum = 0;
-      final spots = <FlSpot>[];
-      for (var j = 0; j < vals.length; j++) {
-        cum += vals[j];
-        spots.add(FlSpot(j.toDouble(), cum));
-        maxY = math.max(maxY, cum.abs());
-      }
-      lines.add(LineChartBarData(
-        spots:   spots,
-        isCurved: true,
-        color:   palette[i % palette.length],
-        barWidth: 2,
-        dotData: const FlDotData(show: false),
-      ));
+    for (var i = 0; i < projections.length; i++) {
+      final r = projections[i];
+      final b = _n(r['benefit']);
+      final c = _n(r['ongoing_cost']);
+      final n = _n(r['net_cashflow']);
+      benefitSpots.add(FlSpot(i.toDouble(), b));
+      costSpots.add(FlSpot(i.toDouble(), c));
+      netSpots.add(FlSpot(i.toDouble(), n));
+      maxY = math.max(maxY, math.max(b, math.max(c, n)));
+      minY = math.min(minY, n);
     }
 
-    if (lines.isEmpty) return const Center(child: Text('No data'));
-    return _card(
-      context,
-      SizedBox(
-        height: 220,
-        child: LineChart(LineChartData(
-          minY:        0,
-          maxY:        maxY * 1.25,
-          borderData:  FlBorderData(show: false),
-          gridData:    _lineGrid(context),
-          titlesData:  _lineTitles(context, maxPoints),
-          lineBarsData: lines,
-        )),
-      ),
-    );
+    return _card(context, Column(children: [
+      SizedBox(height: _chartH, child: LineChart(LineChartData(
+        minY: minY * 1.15,
+        maxY: maxY * 1.25,
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        titlesData: _xTitles(context, projections.length),
+        lineBarsData: [
+          _line(benefitSpots, cs.primary),
+          _line(costSpots, cs.error),
+          _line(netSpots, cs.tertiary,
+              belowBar: BarAreaData(show: true,
+                  color: cs.tertiary.withValues(alpha: 0.1))),
+        ],
+      ))),
+      _legend(context, [
+        _LegendEntry(cs.primary, 'Revenue'),
+        _LegendEntry(cs.error, 'Costs'),
+        _LegendEntry(cs.tertiary, 'Net'),
+      ]),
+    ]));
   }
 
-  // ── breakeven_crossover ───────────────────────────────────────────────────
+  // ── Break-Even: revenue / total costs / profit lines ─────────────────────
 
-  Widget _breakevenCrossover(BuildContext context, List<dynamic> rawSeries) {
-    final series = _parseSeries(rawSeries);
-    if (series == null || series.length < 2) {
-      return const Center(child: Text('No data'));
-    }
-    final cs       = Theme.of(context).colorScheme;
-    final revVals  = _valsFor(series[0]);
-    final costVals = _valsFor(series[1]);
-    if (revVals.isEmpty || costVals.isEmpty) {
-      return const Center(child: Text('No data'));
+  Widget _breakEvenLines(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    double maxY = 0, minY = 0;
+    final revSpots  = <FlSpot>[];
+    final costSpots = <FlSpot>[];
+    final plSpots   = <FlSpot>[];
+
+    for (var i = 0; i < projections.length; i++) {
+      final r = projections[i];
+      final rev  = _n(r['revenue']);
+      final cost = _n(r['variable_costs']) + _n(r['fixed_costs']);
+      final pl   = _n(r['profit_loss']);
+      revSpots.add(FlSpot(i.toDouble(), rev));
+      costSpots.add(FlSpot(i.toDouble(), cost));
+      plSpots.add(FlSpot(i.toDouble(), pl));
+      maxY = math.max(maxY, math.max(rev, cost));
+      minY = math.min(minY, pl);
     }
 
-    final maxPoints = math.max(revVals.length, costVals.length);
+    return _card(context, Column(children: [
+      SizedBox(height: _chartH, child: LineChart(LineChartData(
+        minY: minY * 1.15,
+        maxY: maxY * 1.25,
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        titlesData: _xTitles(context, projections.length),
+        lineBarsData: [
+          _line(revSpots, cs.primary),
+          _line(costSpots, cs.error),
+          _line(plSpots, cs.secondary,
+              belowBar: BarAreaData(show: true,
+                  color: cs.secondary.withValues(alpha: 0.08))),
+        ],
+      ))),
+      _legend(context, [
+        _LegendEntry(cs.primary, 'Revenue'),
+        _LegendEntry(cs.error, 'Total Costs'),
+        _LegendEntry(cs.secondary, 'Profit / Loss'),
+      ]),
+    ]));
+  }
+
+  // ── Pricing: revenue / COGS / gross profit ────────────────────────────────
+
+  Widget _pricingLines(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    double maxY = 0, minY = 0;
+    final revSpots = <FlSpot>[];
+    final gpSpots  = <FlSpot>[];
+    final cogsSpots = <FlSpot>[];
+
+    for (var i = 0; i < projections.length; i++) {
+      final r = projections[i];
+      final rev  = _n(r['revenue']);
+      final gp   = _n(r['gross_profit']);
+      final cogs = _n(r['cogs']);
+      revSpots.add(FlSpot(i.toDouble(), rev));
+      gpSpots.add(FlSpot(i.toDouble(), gp));
+      cogsSpots.add(FlSpot(i.toDouble(), cogs));
+      maxY = math.max(maxY, math.max(rev, gp));
+      minY = math.min(minY, gp);
+    }
+
+    return _card(context, Column(children: [
+      SizedBox(height: _chartH, child: LineChart(LineChartData(
+        minY: minY < 0 ? minY * 1.15 : 0,
+        maxY: maxY * 1.25,
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        titlesData: _xTitles(context, projections.length),
+        lineBarsData: [
+          _line(revSpots, cs.primary),
+          _line(cogsSpots, cs.error),
+          _line(gpSpots, cs.tertiary,
+              belowBar: BarAreaData(show: true,
+                  color: cs.tertiary.withValues(alpha: 0.1))),
+        ],
+      ))),
+      _legend(context, [
+        _LegendEntry(cs.primary, 'Revenue'),
+        _LegendEntry(cs.error, 'COGS'),
+        _LegendEntry(cs.tertiary, 'Gross Profit'),
+      ]),
+    ]));
+  }
+
+  // ── Cost of Inaction: monthly costs bar chart ─────────────────────────────
+
+  Widget _coiBar(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final show = projections.take(24).toList();
     double maxY = 0;
-    for (final v in [...revVals, ...costVals]) {
-      maxY = math.max(maxY, v.abs());
-    }
+    final groups = show.asMap().entries.map((e) {
+      final r    = e.value;
+      final mc   = _n(r['monthly_cost']);
+      final opp  = _n(r['opportunity_cost']);
+      maxY = math.max(maxY, mc + opp);
+      return BarChartGroupData(x: e.key, barRods: [
+        BarChartRodData(toY: mc, color: cs.error.withValues(alpha: 0.8),
+            width: 6, borderRadius: BorderRadius.circular(3)),
+        BarChartRodData(toY: opp, color: cs.primary.withValues(alpha: 0.5),
+            width: 6, borderRadius: BorderRadius.circular(3)),
+      ]);
+    }).toList();
 
-    int? crossX;
-    for (var i = 0; i < math.min(revVals.length, costVals.length) - 1; i++) {
-      if ((revVals[i] - costVals[i]) * (revVals[i + 1] - costVals[i + 1]) <= 0) {
-        crossX = i;
-        break;
-      }
-    }
-
-    FlSpot toSpot(MapEntry<int, double> e) => FlSpot(e.key.toDouble(), e.value);
-
-    return _card(
-      context,
-      SizedBox(
-        height: 220,
-        child: LineChart(LineChartData(
-          maxY:       maxY * 1.25,
-          borderData: FlBorderData(show: false),
-          gridData:   _lineGrid(context),
-          titlesData: _lineTitles(context, maxPoints),
-          extraLinesData: ExtraLinesData(
-            verticalLines: crossX != null
-                ? [
-                    VerticalLine(
-                      x:           crossX.toDouble() + 0.5,
-                      color:       cs.onSurface.withValues(alpha: 0.4),
-                      strokeWidth: 1.5,
-                      dashArray:   [4, 4],
-                    )
-                  ]
-                : [],
-          ),
-          lineBarsData: [
-            LineChartBarData(
-              spots:    revVals.asMap().entries.map(toSpot).toList(),
-              isCurved: true,
-              color:    cs.primary,
-              barWidth: 2,
-              dotData:  const FlDotData(show: false),
-            ),
-            LineChartBarData(
-              spots:    costVals.asMap().entries.map(toSpot).toList(),
-              isCurved: true,
-              color:    cs.error,
-              barWidth: 2,
-              dotData:  const FlDotData(show: false),
-            ),
-          ],
-        )),
-      ),
-    );
+    return _card(context, Column(children: [
+      SizedBox(height: _chartH, child: BarChart(BarChartData(
+        maxY: maxY * 1.25,
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        barTouchData: BarTouchData(enabled: false),
+        titlesData: _xTitles(context, show.length),
+        barGroups: groups,
+      ))),
+      _legend(context, [
+        _LegendEntry(cs.error.withValues(alpha: 0.8), 'Monthly Cost'),
+        _LegendEntry(cs.primary.withValues(alpha: 0.5), 'Opportunity Cost'),
+      ]),
+    ]));
   }
 
-  // ── fan_chart ─────────────────────────────────────────────────────────────
+  // ── Headcount: cash balance lines ─────────────────────────────────────────
 
-  Widget _fanChart(BuildContext context, List<dynamic> rawSeries) {
-    final series = _parseSeries(rawSeries);
-    if (series == null || series.length < 3) {
-      return const Center(child: Text('No data'));
+  Widget _headcountLines(BuildContext context) {
+    final cs   = Theme.of(context).colorScheme;
+    final show = projections.take(24).toList();
+    double maxY = 0, minY = 0;
+    final baseSpots = <FlSpot>[];
+    final newSpots  = <FlSpot>[];
+
+    for (var i = 0; i < show.length; i++) {
+      final r = show[i];
+      final b = _n(r['cash_balance_base']);
+      final n = _n(r['cash_balance_new']);
+      baseSpots.add(FlSpot(i.toDouble(), b));
+      newSpots.add(FlSpot(i.toDouble(), n));
+      maxY = math.max(maxY, math.max(b, n));
+      minY = math.min(minY, math.min(b, n));
     }
-    final cs = Theme.of(context).colorScheme;
 
-    // Identify base, upper, lower by label; fall back to index 0/1/2
-    Map<String, dynamic>? base, upper, lower;
-    for (final s in series) {
-      final lbl = (s['label'] as String? ?? '').toLowerCase();
-      if (lbl.contains('upper') || lbl.contains('best')) {
-        upper ??= s;
-      } else if (lbl.contains('lower') || lbl.contains('worst')) {
-        lower ??= s;
-      } else {
-        base ??= s;
-      }
-    }
-    base  ??= series[0];
-    upper ??= series[1];
-    lower ??= series[2];
-
-    final baseVals  = _valsFor(base);
-    final upperVals = _valsFor(upper);
-    final lowerVals = _valsFor(lower);
-    if (baseVals.isEmpty) return const Center(child: Text('No data'));
-
-    final maxPoints = [baseVals.length, upperVals.length, lowerVals.length]
-        .reduce(math.max);
-    final allVals = [...baseVals, ...upperVals, ...lowerVals];
-    final maxY    = allVals.reduce(math.max) * 1.25;
-    final rawMin  = allVals.reduce(math.min);
-    final minY    = rawMin < 0 ? rawMin * 1.25 : rawMin * 0.75;
-
-    FlSpot toSpot(MapEntry<int, double> e) => FlSpot(e.key.toDouble(), e.value);
-
-    return _card(
-      context,
-      SizedBox(
-        height: 220,
-        child: LineChart(LineChartData(
-          minY:        minY,
-          maxY:        maxY,
-          borderData:  FlBorderData(show: false),
-          gridData:    _lineGrid(context),
-          titlesData:  _lineTitles(context, maxPoints),
-          betweenBarsData: upperVals.isNotEmpty && lowerVals.isNotEmpty
-              ? [
-                  BetweenBarsData(
-                    fromIndex: 0,
-                    toIndex:   2,
-                    color: cs.primary.withValues(alpha: 0.08),
-                  )
-                ]
-              : [],
-          lineBarsData: [
-            // Upper bound — index 0 (referenced by betweenBarsData)
-            LineChartBarData(
-              spots:    upperVals.asMap().entries.map(toSpot).toList(),
-              isCurved: true,
-              color:    cs.primary.withValues(alpha: 0.35),
-              barWidth: 1.5,
-              dotData:  const FlDotData(show: false),
-            ),
-            // Base — index 1
-            LineChartBarData(
-              spots:    baseVals.asMap().entries.map(toSpot).toList(),
-              isCurved: true,
-              color:    cs.primary,
-              barWidth: 2.5,
-              dotData:  const FlDotData(show: false),
-            ),
-            // Lower bound — index 2 (referenced by betweenBarsData)
-            LineChartBarData(
-              spots:    lowerVals.asMap().entries.map(toSpot).toList(),
-              isCurved: true,
-              color:    cs.primary.withValues(alpha: 0.35),
-              barWidth: 1.5,
-              dotData:  const FlDotData(show: false),
-            ),
-          ],
-        )),
-      ),
-    );
+    return _card(context, Column(children: [
+      SizedBox(height: _chartH, child: LineChart(LineChartData(
+        minY: minY < 0 ? minY * 1.15 : 0,
+        maxY: maxY * 1.25,
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        titlesData: _xTitles(context, show.length),
+        lineBarsData: [
+          _line(baseSpots, cs.secondary),
+          _line(newSpots, cs.primary),
+        ],
+      ))),
+      _legend(context, [
+        _LegendEntry(cs.secondary, 'Current trajectory'),
+        _LegendEntry(cs.primary, 'With headcount change'),
+      ]),
+    ]));
   }
 
-  // ── tornado (horizontal bar, custom layout) ───────────────────────────────
+  // ── Fan/band chart (scenario, reference class) ────────────────────────────
 
-  Widget _tornado(BuildContext context, List<dynamic> rawSeries) {
-    final series = _parseSeries(rawSeries);
-    if (series == null || series.isEmpty) {
-      return const Center(child: Text('No data'));
-    }
+  Widget _fanBand(BuildContext context, {
+    required String upperKey, required String baseKey, required String lowerKey,
+    required String upperLabel, required String baseLabel, required String lowerLabel,
+  }) {
     final cs = Theme.of(context).colorScheme;
+    double maxY = 0, minY = 0;
+    final upperSpots = <FlSpot>[];
+    final baseSpots  = <FlSpot>[];
+    final lowerSpots = <FlSpot>[];
 
-    double firstVal(Map<String, dynamic> s) {
-      final vals = _valsFor(s);
-      return vals.isNotEmpty ? vals.first : 0.0;
+    for (var i = 0; i < projections.length; i++) {
+      final r = projections[i];
+      final u = _n(r[upperKey]);
+      final b = _n(r[baseKey]);
+      final l = _n(r[lowerKey]);
+      upperSpots.add(FlSpot(i.toDouble(), u));
+      baseSpots.add(FlSpot(i.toDouble(), b));
+      lowerSpots.add(FlSpot(i.toDouble(), l));
+      maxY = math.max(maxY, u);
+      minY = math.min(minY, l);
     }
 
-    final labels = series.map((s) => s['label'] as String? ?? '').toList();
-    final values = series.map((s) => firstVal(s)).toList();
-    double maxAbs = values.map((v) => v.abs()).fold(0.0, math.max);
-    if (maxAbs == 0) maxAbs = 1;
-
-    const labelWidth   = 100.0;
-    const gapWidth     = 4.0;
-    const dividerWidth = 1.0;
-    const rowHeight    = 36.0;
-    const barHeight    = 24.0;
-    final chartHeight  = math.max(180.0, series.length * rowHeight);
-
-    return _card(
-      context,
-      SizedBox(
-        height: chartHeight,
-        child: LayoutBuilder(builder: (ctx, constraints) {
-          final barAreaWidth =
-              (constraints.maxWidth - labelWidth - gapWidth - dividerWidth) / 2;
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(series.length, (i) {
-              final v    = values[i];
-              final frac = v.abs() / maxAbs;
-              final posW = v >= 0
-                  ? (barAreaWidth * frac).clamp(0.0, barAreaWidth)
-                  : 0.0;
-              final negW = v < 0
-                  ? (barAreaWidth * frac).clamp(0.0, barAreaWidth)
-                  : 0.0;
-              return SizedBox(
-                height: rowHeight,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: labelWidth,
-                      child: Text(
-                        labels[i],
-                        textAlign: TextAlign.right,
-                        overflow:  TextOverflow.ellipsis,
-                        style: Theme.of(ctx)
-                            .textTheme
-                            .labelSmall
-                            ?.copyWith(fontSize: 9),
-                      ),
-                    ),
-                    SizedBox(width: gapWidth),
-                    // Negative half — bar extends rightward from right edge
-                    SizedBox(
-                      width: barAreaWidth,
-                      height: barHeight,
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: Container(
-                          width:  negW,
-                          height: barHeight,
-                          color:  cs.error.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ),
-                    Container(
-                      width:  dividerWidth,
-                      height: barHeight,
-                      color:  cs.onSurface.withValues(alpha: 0.2),
-                    ),
-                    // Positive half — bar extends leftward from left edge
-                    SizedBox(
-                      width: barAreaWidth,
-                      height: barHeight,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          width:  posW,
-                          height: barHeight,
-                          color:  cs.primary.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          );
-        }),
-      ),
-    );
+    return _card(context, Column(children: [
+      SizedBox(height: _chartH, child: LineChart(LineChartData(
+        minY: minY < 0 ? minY * 1.15 : minY * 0.8,
+        maxY: maxY * 1.25,
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        titlesData: _xTitles(context, projections.length),
+        betweenBarsData: [
+          BetweenBarsData(fromIndex: 0, toIndex: 2,
+              color: cs.primary.withValues(alpha: 0.08)),
+        ],
+        lineBarsData: [
+          // upper — index 0 (referenced by betweenBarsData)
+          LineChartBarData(spots: upperSpots, isCurved: true,
+              color: cs.primary.withValues(alpha: 0.4), barWidth: 1.5,
+              dotData: const FlDotData(show: false)),
+          // base — index 1
+          LineChartBarData(spots: baseSpots, isCurved: true,
+              color: cs.primary, barWidth: 2.5,
+              dotData: FlDotData(show: true,
+                  getDotPainter: (p0, p1, p2, p3) =>
+                      FlDotCirclePainter(radius: 3, color: cs.primary,
+                          strokeWidth: 0, strokeColor: Colors.transparent))),
+          // lower — index 2 (referenced by betweenBarsData)
+          LineChartBarData(spots: lowerSpots, isCurved: true,
+              color: cs.primary.withValues(alpha: 0.4), barWidth: 1.5,
+              dotData: const FlDotData(show: false)),
+        ],
+      ))),
+      _legend(context, [
+        _LegendEntry(cs.primary.withValues(alpha: 0.4), upperLabel),
+        _LegendEntry(cs.primary, baseLabel),
+        _LegendEntry(cs.primary.withValues(alpha: 0.4), lowerLabel),
+      ]),
+    ]));
   }
 
-  // ── risk_heatmap (DataTable) ──────────────────────────────────────────────
+  // ── Sensitivity: tornado horizontal bars ─────────────────────────────────
 
-  Widget _heatmap(BuildContext context, List<dynamic> rawSeries) {
-    final series = _parseSeries(rawSeries);
-    if (series == null || series.isEmpty) {
-      return const Center(child: Text('No data'));
-    }
-    final cs = Theme.of(context).colorScheme;
-
-    final allVals = series.expand((s) => _valsFor(s)).toList();
-    if (allVals.isEmpty) return const Center(child: Text('No data'));
-
-    final minVal = allVals.reduce(math.min);
-    final maxVal = allVals.reduce(math.max);
-    final range  = maxVal - minVal;
-
-    Color cellColor(double v) {
-      if (range == 0) return cs.primary.withValues(alpha: 0.1);
-      final t = (v - minVal) / range; // 0 = low, 1 = high
-      if (t < 0.5) {
-        return Color.lerp(
-          Colors.green.withValues(alpha: 0.25),
-          Colors.amber.withValues(alpha: 0.25),
-          t * 2,
-        )!;
-      }
-      return Color.lerp(
-        Colors.amber.withValues(alpha: 0.25),
-        Colors.red.withValues(alpha: 0.25),
-        (t - 0.5) * 2,
-      )!;
-    }
-
-    final maxCols = series.map((s) => _valsFor(s).length).fold(0, math.max);
+  Widget _tornadoChart(BuildContext context) {
+    final cs   = Theme.of(context).colorScheme;
+    final show = projections.take(10).toList();
+    final vals = show.map((r) => _n(r['swing_range'])).toList();
+    final maxV = vals.fold(0.0, math.max).clamp(1.0, double.infinity);
+    const rowH = 36.0;
+    const labelW = 110.0;
 
     return Card(
       color: cs.surface,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowColor:
-              WidgetStatePropertyAll(cs.primary.withValues(alpha: 0.08)),
-          columns: [
-            const DataColumn(label: Text('Factor')),
-            ...List.generate(maxCols, (i) => DataColumn(label: Text('${i + 1}'))),
-          ],
-          rows: series.map((s) {
-            final label = s['label'] as String? ?? '';
-            final vals  = _valsFor(s);
-            return DataRow(cells: [
-              DataCell(Text(label,
-                  style: Theme.of(context).textTheme.labelSmall)),
-              ...List.generate(maxCols, (i) {
-                if (i >= vals.length) return const DataCell(Text('—'));
-                final v = vals[i];
-                return DataCell(
-                  Container(
-                    color:   cellColor(v),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    child: Text(
-                      _formatValue(v, null),
-                      style: Theme.of(context).textTheme.labelSmall,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+        child: SizedBox(
+          height: math.max(180.0, show.length * rowH + 24),
+          child: LayoutBuilder(builder: (ctx, box) {
+            final barW = (box.maxWidth - labelW - 8).clamp(40.0, double.infinity);
+            return Column(
+              children: show.asMap().entries.map((e) {
+                final r    = e.value;
+                final lbl  = (r['label'] as String?) ?? '${e.key + 1}';
+                final frac = vals[e.key] / maxV;
+                return SizedBox(
+                  height: rowH,
+                  child: Row(children: [
+                    SizedBox(width: labelW,
+                        child: Text(lbl, textAlign: TextAlign.right,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 10,
+                                color: cs.onSurface.withValues(alpha: 0.7)))),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          width: barW * frac,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: cs.primary.withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                  ]),
                 );
-              }),
-            ]);
-          }).toList(),
+              }).toList(),
+            );
+          }),
         ),
       ),
     );
   }
+
+  // ── Risk Matrix: horizontal risk-score bars ───────────────────────────────
+
+  Widget _riskBubbles(BuildContext context) {
+    final cs   = Theme.of(context).colorScheme;
+    final show = projections.take(10).toList();
+    double maxV = 1;
+    for (final r in show) { maxV = math.max(maxV, _n(r['risk_score'])); }
+    const rowH = 36.0;
+    const labelW = 120.0;
+
+    Color riskColor(String? level) => switch (level) {
+      'Critical' => cs.error,
+      'High'     => Colors.orange,
+      'Medium'   => Colors.amber,
+      _          => cs.secondary,
+    };
+
+    return Card(
+      color: cs.surface,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+        child: SizedBox(
+          height: math.max(180.0, show.length * rowH + 24),
+          child: LayoutBuilder(builder: (ctx, box) {
+            final barW = (box.maxWidth - labelW - 8).clamp(40.0, double.infinity);
+            return Column(
+              children: show.asMap().entries.map((e) {
+                final r     = e.value;
+                final lbl   = (r['label'] as String?) ?? '${e.key + 1}';
+                final score = _n(r['risk_score']);
+                final level = r['risk_level'] as String?;
+                final frac  = score / maxV;
+                return SizedBox(
+                  height: rowH,
+                  child: Row(children: [
+                    SizedBox(width: labelW,
+                        child: Text(lbl, textAlign: TextAlign.right,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 10,
+                                color: cs.onSurface.withValues(alpha: 0.7)))),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          width: barW * frac,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: riskColor(level).withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          alignment: Alignment.centerLeft,
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: score > 0 ? Text(score.toStringAsFixed(0),
+                              style: const TextStyle(fontSize: 9,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700)) : null,
+                        ),
+                      ),
+                    ),
+                  ]),
+                );
+              }).toList(),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+
+  // ── Attrition: grouped cost vs investment bars ────────────────────────────
+
+  Widget _attritionBars(BuildContext context) {
+    final cs    = Theme.of(context).colorScheme;
+    double maxY = 0;
+    final groups = projections.asMap().entries.map((e) {
+      final r    = e.value;
+      final cost = _n(r['attrition_cost']);
+      final inv  = _n(r['retention_investment']);
+      maxY = math.max(maxY, cost);
+      return BarChartGroupData(x: e.key, groupVertically: false, barRods: [
+        BarChartRodData(toY: cost, color: cs.error.withValues(alpha: 0.8),
+            width: 12, borderRadius: BorderRadius.circular(4)),
+        BarChartRodData(toY: inv, color: cs.primary.withValues(alpha: 0.7),
+            width: 12, borderRadius: BorderRadius.circular(4)),
+      ], barsSpace: 4);
+    }).toList();
+
+    return _card(context, Column(children: [
+      SizedBox(height: _chartH, child: BarChart(BarChartData(
+        maxY: maxY * 1.25,
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        barTouchData: BarTouchData(enabled: false),
+        titlesData: _xTitles(context, projections.length),
+        barGroups: groups,
+      ))),
+      _legend(context, [
+        _LegendEntry(cs.error.withValues(alpha: 0.8), 'Attrition Cost'),
+        _LegendEntry(cs.primary.withValues(alpha: 0.7), 'Retention Investment'),
+      ]),
+    ]));
+  }
+
+  // ── Hiring: value generated vs salary cost + cumulative ──────────────────
+
+  Widget _hiringLines(BuildContext context) {
+    final cs   = Theme.of(context).colorScheme;
+    final show = projections.take(24).toList();
+    double maxY = 0, minY = 0;
+    final valSpots  = <FlSpot>[];
+    final costSpots = <FlSpot>[];
+    final cumSpots  = <FlSpot>[];
+
+    for (var i = 0; i < show.length; i++) {
+      final r = show[i];
+      final v = _n(r['value_generated']);
+      final c = _n(r['salary_cost']);
+      final n = _n(r['cumulative_net']);
+      valSpots.add(FlSpot(i.toDouble(), v));
+      costSpots.add(FlSpot(i.toDouble(), c));
+      cumSpots.add(FlSpot(i.toDouble(), n));
+      maxY = math.max(maxY, math.max(v, c));
+      minY = math.min(minY, n);
+    }
+
+    return _card(context, Column(children: [
+      SizedBox(height: _chartH, child: LineChart(LineChartData(
+        minY: minY < 0 ? minY * 1.15 : 0,
+        maxY: maxY * 1.25,
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        titlesData: _xTitles(context, show.length),
+        lineBarsData: [
+          _line(valSpots, cs.primary),
+          _line(costSpots, cs.error),
+          _line(cumSpots, cs.tertiary,
+              belowBar: BarAreaData(show: true,
+                  color: cs.tertiary.withValues(alpha: 0.1))),
+        ],
+      ))),
+      _legend(context, [
+        _LegendEntry(cs.primary, 'Value Generated'),
+        _LegendEntry(cs.error, 'Salary Cost'),
+        _LegendEntry(cs.tertiary, 'Cumulative Net'),
+      ]),
+    ]));
+  }
+
+  // ── Reorg: efficiency saving vs cumulative net ────────────────────────────
+
+  Widget _reorgLines(BuildContext context) {
+    final cs   = Theme.of(context).colorScheme;
+    final show = projections.take(36).toList();
+    double maxY = 0, minY = 0;
+    final savingSpots = <FlSpot>[];
+    final cumSpots    = <FlSpot>[];
+
+    for (var i = 0; i < show.length; i++) {
+      final r = show[i];
+      final s = _n(r['efficiency_saving']);
+      final c = _n(r['cumulative_net']);
+      savingSpots.add(FlSpot(i.toDouble(), s));
+      cumSpots.add(FlSpot(i.toDouble(), c));
+      maxY = math.max(maxY, s);
+      minY = math.min(minY, c);
+    }
+
+    return _card(context, Column(children: [
+      SizedBox(height: _chartH, child: LineChart(LineChartData(
+        minY: minY < 0 ? minY * 1.15 : 0,
+        maxY: maxY * 1.25,
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        titlesData: _xTitles(context, show.length),
+        lineBarsData: [
+          _line(savingSpots, cs.primary),
+          _line(cumSpots, cs.tertiary,
+              belowBar: BarAreaData(show: true,
+                  color: cs.tertiary.withValues(alpha: 0.08))),
+        ],
+      ))),
+      _legend(context, [
+        _LegendEntry(cs.primary, 'Monthly Saving'),
+        _LegendEntry(cs.tertiary, 'Cumulative Net'),
+      ]),
+    ]));
+  }
+
+  // ── A/B test & Delivery: confidence band ─────────────────────────────────
+
+  Widget _confidenceBand(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    double maxY = 0, minY = 100;
+    final metricSpots = <FlSpot>[];
+    final upperSpots  = <FlSpot>[];
+    final lowerSpots  = <FlSpot>[];
+
+    for (var i = 0; i < projections.length; i++) {
+      final r = projections[i];
+      final m = _n(r['metric']);
+      final u = _n(r['upper_bound']);
+      final l = _n(r['lower_bound']);
+      metricSpots.add(FlSpot(i.toDouble(), m));
+      upperSpots.add(FlSpot(i.toDouble(), u));
+      lowerSpots.add(FlSpot(i.toDouble(), l));
+      maxY = math.max(maxY, u);
+      minY = math.min(minY, l);
+    }
+
+    return _card(context, Column(children: [
+      SizedBox(height: _chartH, child: LineChart(LineChartData(
+        minY: (minY - 5).clamp(0, 100),
+        maxY: (maxY + 5).clamp(0, 110),
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        titlesData: _xTitles(context, projections.length),
+        betweenBarsData: [
+          BetweenBarsData(fromIndex: 0, toIndex: 2,
+              color: cs.primary.withValues(alpha: 0.1)),
+        ],
+        lineBarsData: [
+          // upper — index 0
+          LineChartBarData(spots: upperSpots, isCurved: true,
+              color: cs.primary.withValues(alpha: 0.3), barWidth: 1,
+              dotData: const FlDotData(show: false)),
+          // metric — index 1
+          _line(metricSpots, cs.primary),
+          // lower — index 2
+          LineChartBarData(spots: lowerSpots, isCurved: true,
+              color: cs.primary.withValues(alpha: 0.3), barWidth: 1,
+              dotData: const FlDotData(show: false)),
+        ],
+      ))),
+      _legend(context, [
+        _LegendEntry(cs.primary.withValues(alpha: 0.3), '95% CI'),
+        _LegendEntry(cs.primary, 'Metric'),
+      ]),
+    ]));
+  }
+
+  // ── Stakeholder: influence × support bars ─────────────────────────────────
+
+  Widget _stakeholderBars(BuildContext context) {
+    final cs   = Theme.of(context).colorScheme;
+    final show = projections.take(12).toList();
+    final groups = show.asMap().entries.map((e) {
+      final r = e.value;
+      final inf = _n(r['influence']);
+      final sup = _n(r['support']);
+      return BarChartGroupData(x: e.key, barRods: [
+        BarChartRodData(toY: inf, color: cs.primary.withValues(alpha: 0.8),
+            width: 10, borderRadius: BorderRadius.circular(4)),
+        BarChartRodData(toY: sup, color: cs.secondary.withValues(alpha: 0.8),
+            width: 10, borderRadius: BorderRadius.circular(4)),
+      ], barsSpace: 4);
+    }).toList();
+
+    return _card(context, Column(children: [
+      SizedBox(height: _chartH, child: BarChart(BarChartData(
+        maxY: 5.5,
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        barTouchData: BarTouchData(enabled: false),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(sideTitles: SideTitles(
+            showTitles: true, reservedSize: 24,
+            getTitlesWidget: (v, _) => Text(v.toStringAsFixed(0),
+                style: TextStyle(fontSize: 9,
+                    color: cs.onSurface.withValues(alpha: 0.6))),
+          )),
+          rightTitles: const AxisTitles(),
+          topTitles: const AxisTitles(),
+          bottomTitles: AxisTitles(sideTitles: SideTitles(
+            showTitles: true, reservedSize: 52,
+            getTitlesWidget: (v, _) {
+              final i = v.toInt();
+              if (i < 0 || i >= show.length) return const SizedBox.shrink();
+              final name = (show[i]['name'] as String?) ?? '${i + 1}';
+              return Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Transform.rotate(
+                  angle: -math.pi / 4,
+                  child: Text(name, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 9,
+                          color: cs.onSurface.withValues(alpha: 0.7))),
+                ),
+              );
+            },
+          )),
+        ),
+        barGroups: groups,
+      ))),
+      _legend(context, [
+        _LegendEntry(cs.primary.withValues(alpha: 0.8), 'Influence (1–5)'),
+        _LegendEntry(cs.secondary.withValues(alpha: 0.8), 'Support (1–5)'),
+      ]),
+    ]));
+  }
+
+  // ── Outcome Metric Builder: progress bars ─────────────────────────────────
+
+  Widget _progressBars(BuildContext context) {
+    final cs   = Theme.of(context).colorScheme;
+    final show = projections.where((r) => r['progress'] != null).take(10).toList();
+    if (show.isEmpty) return _fallbackBar(context);
+
+    final groups = show.asMap().entries.map((e) {
+      final progress = _n(e.value['progress']).clamp(0.0, 100.0);
+      final color = progress >= 80
+          ? Colors.green.withValues(alpha: 0.8)
+          : progress >= 50
+              ? Colors.amber.withValues(alpha: 0.8)
+              : cs.error.withValues(alpha: 0.8);
+      return BarChartGroupData(x: e.key, barRods: [
+        BarChartRodData(toY: progress, color: color, width: 20,
+            borderRadius: BorderRadius.circular(4)),
+      ]);
+    }).toList();
+
+    final labels = show.map((r) => (r['label'] as String?) ?? '').toList();
+
+    return _card(context, SizedBox(
+      height: _chartH,
+      child: BarChart(BarChartData(
+        maxY: 110,
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        barTouchData: BarTouchData(enabled: false),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(sideTitles: SideTitles(
+            showTitles: true, reservedSize: 32,
+            getTitlesWidget: (v, _) => Text('${v.toStringAsFixed(0)}%',
+                style: TextStyle(fontSize: 9,
+                    color: cs.onSurface.withValues(alpha: 0.6))),
+          )),
+          rightTitles: const AxisTitles(),
+          topTitles: const AxisTitles(),
+          bottomTitles: AxisTitles(sideTitles: SideTitles(
+            showTitles: true, reservedSize: 52,
+            getTitlesWidget: (v, _) {
+              final i = v.toInt();
+              if (i < 0 || i >= labels.length) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Transform.rotate(
+                  angle: -math.pi / 4,
+                  child: Text(labels[i], overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 9,
+                          color: cs.onSurface.withValues(alpha: 0.7))),
+                ),
+              );
+            },
+          )),
+        ),
+        barGroups: groups,
+      )),
+    ));
+  }
+
+  // ── Base Rate: 3-bar comparison ───────────────────────────────────────────
+
+  Widget _baseRateBars(BuildContext context) {
+    final cs     = Theme.of(context).colorScheme;
+    final labels = projections.map((r) => (r['label'] as String?) ?? '').toList();
+    final vals   = projections.map((r) => _n(r['metric'])).toList();
+    final maxY   = vals.fold(0.0, math.max).clamp(1.0, 100.0);
+    final colors = [cs.secondary, cs.error, cs.primary];
+
+    final groups = projections.asMap().entries.map((e) {
+      return BarChartGroupData(x: e.key, barRods: [
+        BarChartRodData(toY: vals[e.key],
+            color: colors[e.key % colors.length].withValues(alpha: 0.8),
+            width: 40, borderRadius: BorderRadius.circular(4)),
+      ]);
+    }).toList();
+
+    return _card(context, Column(children: [
+      SizedBox(height: _chartH - 40, child: BarChart(BarChartData(
+        maxY: maxY * 1.25,
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        barTouchData: BarTouchData(enabled: false),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(sideTitles: SideTitles(
+            showTitles: true, reservedSize: 32,
+            getTitlesWidget: (v, _) => Text('${v.toStringAsFixed(0)}%',
+                style: TextStyle(fontSize: 9,
+                    color: cs.onSurface.withValues(alpha: 0.6))),
+          )),
+          rightTitles: const AxisTitles(),
+          topTitles: const AxisTitles(),
+          bottomTitles: AxisTitles(sideTitles: SideTitles(
+            showTitles: true, reservedSize: 20,
+            getTitlesWidget: (v, _) {
+              final i = v.toInt();
+              if (i < 0 || i >= labels.length) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(labels[i], style: TextStyle(fontSize: 10,
+                    color: cs.onSurface.withValues(alpha: 0.7))),
+              );
+            },
+          )),
+        ),
+        barGroups: groups,
+      ))),
+      _legend(context, labels.asMap().entries.map((e) =>
+          _LegendEntry(colors[e.key % colors.length], '${vals[e.key].toStringAsFixed(1)}%')).toList()),
+    ]));
+  }
+
+  // ── Fallback: generic bar chart ───────────────────────────────────────────
+
+  Widget _fallbackBar(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    // Try to find any numeric key to plot
+    final numKeys = projections.first.entries
+        .where((e) => e.value is num && e.key != 'year' && e.key != 'month')
+        .map((e) => e.key)
+        .take(3)
+        .toList();
+    if (numKeys.isEmpty) return const SizedBox.shrink();
+
+    double maxY = 0;
+    final palette = [cs.primary, cs.secondary, cs.tertiary];
+    final seriesSpots = numKeys.map((_) => <FlSpot>[]).toList();
+
+    for (var i = 0; i < projections.length; i++) {
+      final r = projections[i];
+      for (var k = 0; k < numKeys.length; k++) {
+        final v = _n(r[numKeys[k]]);
+        seriesSpots[k].add(FlSpot(i.toDouble(), v));
+        maxY = math.max(maxY, v.abs());
+      }
+    }
+
+    return _card(context, Column(children: [
+      SizedBox(height: _chartH, child: LineChart(LineChartData(
+        maxY: maxY * 1.25,
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        titlesData: _xTitles(context, projections.length),
+        lineBarsData: seriesSpots.asMap().entries.map((e) =>
+            _line(e.value, palette[e.key % palette.length])).toList(),
+      ))),
+      _legend(context, numKeys.asMap().entries.map((e) =>
+          _LegendEntry(palette[e.key % palette.length], e.value)).toList()),
+    ]));
+  }
+
+  // ── Shared line builder ───────────────────────────────────────────────────
+
+  LineChartBarData _line(List<FlSpot> spots, Color color,
+      {BarAreaData? belowBar}) {
+    return LineChartBarData(
+      spots: spots,
+      isCurved: true,
+      color: color,
+      barWidth: 2.5,
+      dotData: FlDotData(
+        show: true,
+        getDotPainter: (p0, p1, p2, p3) => FlDotCirclePainter(
+          radius: 3,
+          color: color,
+          strokeWidth: 0,
+          strokeColor: Colors.transparent,
+        ),
+      ),
+      belowBarData: belowBar ?? BarAreaData(show: false),
+    );
+  }
+}
+
+class _LegendEntry {
+  const _LegendEntry(this.color, this.label);
+  final Color color;
+  final String label;
 }
 
 // ── Inject card ───────────────────────────────────────────────────────────────
@@ -1048,8 +1484,3 @@ String _fmtCurrency(double v) {
   return '£${v.toStringAsFixed(0)}';
 }
 
-String _fmtShort(double v) {
-  if (v.abs() >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
-  if (v.abs() >= 1000)    return '${(v / 1000).toStringAsFixed(0)}k';
-  return v.toStringAsFixed(0);
-}

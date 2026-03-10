@@ -566,7 +566,21 @@ class CalculatorEngine {
         'annual_value_of_improvement':    annualValue,
         'test_roi':                       testRoi,
       },
-      annualProjections: [],
+      annualProjections: () {
+        final estDays = days ?? 30;
+        final pts = estDays.clamp(5, 30);
+        return List<Map<String, dynamic>>.generate(pts, (i) {
+          final d = (i + 1) * (estDays / pts);
+          final sample = traffic > 0 ? traffic * d : (i + 1) * 100.0;
+          final se = sample > 0 ? sqrt(p1 * (1 - p1) / sample) : 0.05;
+          return {
+            'year': (d).round(),
+            'metric': p1 * 100,
+            'lower_bound': ((p1 - 1.96 * se) * 100).clamp(0.0, 100.0),
+            'upper_bound': ((p1 + 1.96 * se) * 100).clamp(0.0, 100.0),
+          };
+        });
+      }(),
       narrative:
           'To detect a ${(mde * 100).toStringAsFixed(0)}% relative improvement '
           'with ${power.toStringAsFixed(0)}% power, you need $n visitors per variant'
@@ -607,7 +621,21 @@ class CalculatorEngine {
         'p90_weeks':      p90,
         'adjusted_p90':   adjP90,
       },
-      annualProjections: [],
+      annualProjections: () {
+        final maxWk = adjP90.ceil().clamp(1, 52);
+        return List<Map<String, dynamic>>.generate(maxWk, (i) {
+          final w = (i + 1).toDouble();
+          final z = stdDev > 0 ? (w - pert) / stdDev : (w >= pert ? 6.0 : -6.0);
+          // Approximation of Φ(z) — logistic approximation
+          final prob = (100.0 / (1.0 + exp(-1.7 * z))).clamp(0.0, 100.0);
+          return {
+            'year': i + 1,
+            'metric': prob,
+            'lower_bound': (prob - 8.0).clamp(0.0, 100.0),
+            'upper_bound': (prob + 8.0).clamp(0.0, 100.0),
+          };
+        });
+      }(),
       narrative: 'PERT estimate: ${pert.toStringAsFixed(1)} weeks. '
           'Buffer vs target: ${buffer.toStringAsFixed(1)} weeks. '
           'Risk: $risk. P80: ${p80.toStringAsFixed(1)} weeks, '
@@ -650,7 +678,11 @@ class CalculatorEngine {
         'calibration_gap':           gap,
         'calibration_interpretation': interp,
       },
-      annualProjections: [],
+      annualProjections: [
+        {'year': 1, 'label': 'Base Rate',   'metric': baseRate,   'lower_bound': 0.0, 'upper_bound': baseRate},
+        {'year': 2, 'label': 'Inside View', 'metric': insideView, 'lower_bound': 0.0, 'upper_bound': insideView},
+        {'year': 3, 'label': 'Blended',     'metric': blended,    'lower_bound': 0.0, 'upper_bound': blended},
+      ],
       narrative: 'Historical base rate: ${baseRate.toStringAsFixed(1)}%. '
           'Your inside view: ${insideView.toStringAsFixed(1)}% '
           '(gap: ${gap.toStringAsFixed(1)}%). '
