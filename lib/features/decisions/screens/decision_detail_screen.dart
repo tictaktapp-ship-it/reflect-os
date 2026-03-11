@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -3352,10 +3355,26 @@ class _RiskAssessmentSectionState
       title: 'Risk Assessment',
       trailing: _isGenerating
           ? null
-          : IconButton(
-              icon: const Icon(Icons.auto_awesome_outlined, size: 20),
-              tooltip: 'Generate risk assessment',
-              onPressed: _generate,
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  tooltip: 'Manual entry',
+                  onPressed: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    useSafeArea: true,
+                    builder: (_) => _ManualRiskAssessmentSheet(
+                        decisionId: widget.decisionId),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.auto_awesome_outlined, size: 20),
+                  tooltip: 'Generate risk assessment',
+                  onPressed: _generate,
+                ),
+              ],
             ),
       child: _isGenerating
           ? const Padding(
@@ -3451,35 +3470,59 @@ class _AssessmentBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Overall risk badge + confidence
-        Row(
-          children: [
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                level ?? '—',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-            ),
-            if (confidence != null) ...[
-              const SizedBox(width: 8),
+        // Overall risk badge
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            level ?? '—',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
+
+        // Confidence bar
+        if (confidence != null) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
               Text(
-                '${(confidence * 100).round()}% confidence',
+                'Confidence',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: AppColors.textSecondary,
                     ),
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: confidence.clamp(0.0, 1.0),
+                    backgroundColor: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.1),
+                    color: color,
+                    minHeight: 6,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${(confidence * 100).round()}%',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
             ],
-          ],
-        ),
+          ),
+        ],
 
         // Summary
         if (assessment.summary != null) ...[
@@ -3552,16 +3595,23 @@ class _AssessmentBody extends StatelessWidget {
   }
 }
 
-class _RiskCard extends StatelessWidget {
+class _RiskCard extends StatefulWidget {
   const _RiskCard({required this.risk});
   final Map<String, dynamic> risk;
 
   @override
+  State<_RiskCard> createState() => _RiskCardState();
+}
+
+class _RiskCardState extends State<_RiskCard> {
+  bool _mitigationExpanded = false;
+
+  @override
   Widget build(BuildContext context) {
-    final category = risk['category'] as String?;
-    final severity = risk['severity'] as String?;
-    final description = risk['description'] as String?;
-    final mitigation = risk['mitigation'] as String?;
+    final category = widget.risk['category'] as String?;
+    final severity = widget.risk['severity'] as String?;
+    final description = widget.risk['description'] as String?;
+    final mitigation = widget.risk['mitigation'] as String?;
     final severityColor = _RiskAssessmentSectionState._riskColor(severity);
 
     return Container(
@@ -3623,14 +3673,44 @@ class _RiskCard extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
-          if (mitigation != null) ...[
+          if (mitigation != null && mitigation.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(
-              'Mitigation: $mitigation',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+            InkWell(
+              onTap: () =>
+                  setState(() => _mitigationExpanded = !_mitigationExpanded),
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Text(
+                      'Mitigation',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      _mitigationExpanded
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      size: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                  ],
+                ),
+              ),
             ),
+            if (_mitigationExpanded) ...[
+              const SizedBox(height: 4),
+              Text(
+                mitigation,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+              ),
+            ],
           ],
         ],
       ),
@@ -5155,7 +5235,815 @@ class _ToolRunRow extends StatelessWidget {
               ],
             ),
           ),
+          TextButton(
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            onPressed: () => _showRunOutputSheet(context, run),
+            child: const Text('View'),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+void _showRunOutputSheet(BuildContext context, ToolRun run) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (_) => _ToolRunOutputSheet(run: run),
+  );
+}
+
+// ── Tool Run Output Sheet ──────────────────────────────────────────────────────
+
+class _ToolRunOutputSheet extends StatelessWidget {
+  const _ToolRunOutputSheet({required this.run});
+
+  final ToolRun run;
+
+  /// Returns the first numeric value per projection row to drive the line chart.
+  /// Prefers 'net_cashflow', 'cumulative_net', or the first non-year numeric key.
+  String _primaryKey(List<dynamic> projections) {
+    if (projections.isEmpty) return '';
+    final entry = projections.first as Map<String, dynamic>?;
+    if (entry == null) return '';
+    for (final preferred in ['cumulative_net', 'net_cashflow', 'value']) {
+      if (entry.containsKey(preferred)) return preferred;
+    }
+    for (final key in entry.keys) {
+      if (key == 'year') continue;
+      if (entry[key] is num) return key;
+    }
+    return '';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final projections = run.annualProjectionsJsonb;
+    final primaryKey = _primaryKey(projections);
+    final hasChart = projections.isNotEmpty && primaryKey.isNotEmpty;
+
+    // Build chart spots
+    List<FlSpot> spots = [];
+    double minY = 0, maxY = 0;
+    if (hasChart) {
+      spots = projections.map((raw) {
+        final row = raw as Map<String, dynamic>;
+        final x = (row['year'] as num?)?.toDouble() ?? 0;
+        final y = (row[primaryKey] as num?)?.toDouble() ?? 0;
+        return FlSpot(x, y);
+      }).toList();
+      minY = spots.map((s) => s.y).reduce(math.min);
+      maxY = spots.map((s) => s.y).reduce(math.max);
+      final pad = (maxY - minY).abs() * 0.1;
+      minY -= pad;
+      maxY += pad;
+    }
+
+    final outputs = run.outputsJsonb;
+    final breakdown = run.calculationBreakdownJsonb;
+    final d = run.createdAt;
+    final dateStr =
+        '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (ctx, scrollCtrl) => Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 10),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            run.toolName,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            '$dateStr · ${run.confidenceScenario} scenario',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Status chip
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: run.status == 'Completed'
+                            ? AppColors.success.withValues(alpha: 0.15)
+                            : AppColors.textMuted.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        run.status,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: run.status == 'Completed'
+                              ? AppColors.success
+                              : AppColors.textMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Scrollable body
+              Expanded(
+                child: ListView(
+                  controller: scrollCtrl,
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    // Final description
+                    if (run.finalDescription != null &&
+                        run.finalDescription!.isNotEmpty) ...[
+                      Text(
+                        run.finalDescription!,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+
+                    // ── Line chart ────────────────────────────────────────
+                    if (hasChart) ...[
+                      Text(
+                        'Annual Projections — ${primaryKey.replaceAll('_', ' ')}',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 200,
+                        child: LineChart(
+                          LineChartData(
+                            minY: minY,
+                            maxY: maxY,
+                            gridData: const FlGridData(show: true),
+                            borderData: FlBorderData(show: false),
+                            titlesData: FlTitlesData(
+                              leftTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              rightTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              topTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  getTitlesWidget: (val, _) => Text(
+                                    'Y${val.toInt()}',
+                                    style:
+                                        theme.textTheme.labelSmall?.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            lineBarsData: [
+                              LineChartBarData(
+                                spots: spots,
+                                isCurved: true,
+                                color: theme.colorScheme.primary,
+                                barWidth: 2,
+                                dotData: const FlDotData(show: true),
+                                belowBarData: BarAreaData(
+                                  show: true,
+                                  color: theme.colorScheme.primary
+                                      .withValues(alpha: 0.1),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+
+                    // ── Outputs key-value cards ───────────────────────────
+                    if (outputs.isNotEmpty) ...[
+                      Text(
+                        'Summary Outputs',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...outputs.entries.map(
+                        (e) => _OutputKVCard(
+                          label: e.key.replaceAll('_', ' '),
+                          value: e.value,
+                          currency: run.currencyCode,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
+                    // ── Breakdown table ───────────────────────────────────
+                    if (projections.isNotEmpty) ...[
+                      Text(
+                        'Year-by-Year Breakdown',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _ProjectionsTable(
+                          projections: projections,
+                          currency: run.currencyCode),
+                      const SizedBox(height: 12),
+                    ],
+
+                    // ── Inputs used ───────────────────────────────────────
+                    if (run.inputsJsonb.isNotEmpty) ...[
+                      Text(
+                        'Inputs Used',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...run.inputsJsonb.entries
+                          .where((e) => !e.key.startsWith('__'))
+                          .map(
+                            (e) => _OutputKVCard(
+                              label: e.key.replaceAll('_', ' '),
+                              value: e.value,
+                              currency: run.currencyCode,
+                            ),
+                          ),
+                      const SizedBox(height: 12),
+                    ],
+
+                    // ── Narrative ─────────────────────────────────────────
+                    if (breakdown['narrative'] != null) ...[
+                      Text(
+                        'Analysis Narrative',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        breakdown['narrative'].toString(),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OutputKVCard extends StatelessWidget {
+  const _OutputKVCard({
+    required this.label,
+    required this.value,
+    required this.currency,
+  });
+
+  final String label;
+  final dynamic value;
+  final String currency;
+
+  String _format(dynamic v) {
+    if (v is double) {
+      if (v.abs() >= 1000) {
+        return '$currency ${v.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+      }
+      return v.toStringAsFixed(2);
+    }
+    if (v is int) return v.toString();
+    return v?.toString() ?? '—';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color:
+            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          Text(
+            _format(value),
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProjectionsTable extends StatelessWidget {
+  const _ProjectionsTable(
+      {required this.projections, required this.currency});
+
+  final List<dynamic> projections;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (projections.isEmpty) return const SizedBox.shrink();
+
+    final headers = (projections.first as Map<String, dynamic>).keys.toList();
+
+    String formatCell(dynamic v) {
+      if (v is double) return v.toStringAsFixed(0);
+      if (v is int) return v.toString();
+      return v?.toString() ?? '—';
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Table(
+        defaultColumnWidth: const IntrinsicColumnWidth(),
+        border: TableBorder.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        children: [
+          TableRow(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest,
+            ),
+            children: headers
+                .map(
+                  (h) => Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    child: Text(
+                      h.toString().replaceAll('_', ' '),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+          ...projections.map((raw) {
+            final row = raw as Map<String, dynamic>;
+            return TableRow(
+              children: headers
+                  .map(
+                    (h) => Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      child: Text(
+                        formatCell(row[h]),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                  )
+                  .toList(),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Manual Risk Assessment Sheet ───────────────────────────────────────────────
+
+class _ManualRiskAssessmentSheet extends ConsumerStatefulWidget {
+  const _ManualRiskAssessmentSheet({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  ConsumerState<_ManualRiskAssessmentSheet> createState() =>
+      _ManualRiskAssessmentSheetState();
+}
+
+class _ManualRiskAssessmentSheetState
+    extends ConsumerState<_ManualRiskAssessmentSheet> {
+  String _riskLevel = 'Medium';
+  double _confidence = 0.7;
+  final _summaryCtrl = TextEditingController();
+  bool _isSaving = false;
+
+  final List<_RiskEntry> _entries = [_RiskEntry()];
+
+  static const _levels = ['Low', 'Medium', 'High', 'Critical'];
+
+  @override
+  void dispose() {
+    _summaryCtrl.dispose();
+    for (final e in _entries) {
+      e.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final summary = _summaryCtrl.text.trim();
+    if (summary.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a summary.')),
+      );
+      return;
+    }
+    setState(() => _isSaving = true);
+    try {
+      final risks = _entries
+          .where((e) => e.descriptionCtrl.text.trim().isNotEmpty)
+          .map((e) => {
+                'category': e.categoryCtrl.text.trim(),
+                'severity': e.severity,
+                'description': e.descriptionCtrl.text.trim(),
+                'mitigation': e.mitigationCtrl.text.trim(),
+              })
+          .toList();
+      await ref.read(riskRepositoryProvider).saveManualRiskAssessment(
+            decisionId: widget.decisionId,
+            overallRiskLevel: _riskLevel,
+            confidence: _confidence,
+            summary: summary,
+            risks: risks,
+          );
+      ref.invalidate(riskAssessmentProvider(widget.decisionId));
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  static Color _levelColor(String level) => switch (level.toLowerCase()) {
+        'low' => AppColors.success,
+        'medium' => const Color(0xFFFFC107),
+        'high' => const Color(0xFFFF9800),
+        'critical' => AppColors.destructive,
+        _ => AppColors.textSecondary,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (ctx, scrollCtrl) => Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 10),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color:
+                        theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Row(
+                  children: [
+                    Text(
+                      'Manual Risk Assessment',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (_isSaving)
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else
+                      FilledButton(
+                        onPressed: _save,
+                        child: const Text('Save'),
+                      ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView(
+                  controller: scrollCtrl,
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    // ── Overall risk level ──────────────────────────────
+                    Text(
+                      'Overall Risk Level',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: _levels.map((level) {
+                        final selected = _riskLevel == level;
+                        final color = _levelColor(level);
+                        return ChoiceChip(
+                          label: Text(level),
+                          selected: selected,
+                          selectedColor: color.withValues(alpha: 0.2),
+                          labelStyle: theme.textTheme.labelSmall?.copyWith(
+                            color: selected ? color : null,
+                            fontWeight: selected ? FontWeight.w600 : null,
+                          ),
+                          onSelected: (_) =>
+                              setState(() => _riskLevel = level),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── Confidence ──────────────────────────────────────
+                    Row(
+                      children: [
+                        Text(
+                          'Confidence',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${(_confidence * 100).round()}%',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Slider(
+                      value: _confidence,
+                      onChanged: (v) => setState(() => _confidence = v),
+                      divisions: 10,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ── Summary ─────────────────────────────────────────
+                    Text(
+                      'Summary',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _summaryCtrl,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        hintText:
+                            'Brief summary of the overall risk profile…',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── Risk entries ────────────────────────────────────
+                    Row(
+                      children: [
+                        Text(
+                          'Risk Items',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton.icon(
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Add'),
+                          onPressed: () => setState(
+                              () => _entries.add(_RiskEntry())),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ..._entries.asMap().entries.map((mapEntry) {
+                      final idx = mapEntry.key;
+                      final entry = mapEntry.value;
+                      return _RiskEntryCard(
+                        entry: entry,
+                        index: idx,
+                        onRemove: _entries.length > 1
+                            ? () => setState(() => _entries.removeAt(idx))
+                            : null,
+                        onChanged: () => setState(() {}),
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RiskEntry {
+  final categoryCtrl = TextEditingController();
+  final descriptionCtrl = TextEditingController();
+  final mitigationCtrl = TextEditingController();
+  String severity = 'Medium';
+
+  void dispose() {
+    categoryCtrl.dispose();
+    descriptionCtrl.dispose();
+    mitigationCtrl.dispose();
+  }
+}
+
+class _RiskEntryCard extends StatelessWidget {
+  const _RiskEntryCard({
+    required this.entry,
+    required this.index,
+    required this.onRemove,
+    required this.onChanged,
+  });
+
+  final _RiskEntry entry;
+  final int index;
+  final VoidCallback? onRemove;
+  final VoidCallback onChanged;
+
+  static const _severities = ['Low', 'Medium', 'High', 'Critical'];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Risk ${index + 1}',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                if (onRemove != null)
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 16),
+                    onPressed: onRemove,
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: entry.categoryCtrl,
+              onChanged: (_) => onChanged(),
+              decoration: const InputDecoration(
+                labelText: 'Category',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 8),
+            InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Severity',
+                border: OutlineInputBorder(),
+                isDense: true,
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              child: DropdownButton<String>(
+                value: entry.severity,
+                isDense: true,
+                isExpanded: true,
+                underline: const SizedBox.shrink(),
+                items: _severities
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) {
+                    entry.severity = v;
+                    onChanged();
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: entry.descriptionCtrl,
+              onChanged: (_) => onChanged(),
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: entry.mitigationCtrl,
+              onChanged: (_) => onChanged(),
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Mitigation',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

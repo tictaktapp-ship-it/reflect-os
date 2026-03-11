@@ -23,6 +23,28 @@ class RiskRepository {
   /// Authorization header is always present (required by verify_jwt: true).
   /// Refreshes the session first to avoid sending a stale/expired token.
   /// Uses a 30-second timeout to accommodate Anthropic latency.
+  Future<void> saveManualRiskAssessment({
+    required String decisionId,
+    required String overallRiskLevel,
+    required double confidence,
+    required String summary,
+    required List<Map<String, String>> risks,
+  }) async {
+    final outputJsonb = {
+      'overall_risk_level': overallRiskLevel,
+      'confidence': confidence,
+      'summary': summary,
+      'risks': risks,
+    };
+    await supabase.from('risk_assessments').insert({
+      'decision_id': decisionId,
+      'provider': 'manual',
+      'model': 'user',
+      'status': 'Complete',
+      'output_jsonb': outputJsonb,
+    });
+  }
+
   Future<void> generateRiskAssessment(String decisionId) async {
     await Supabase.instance.client.auth.refreshSession();
     final token =

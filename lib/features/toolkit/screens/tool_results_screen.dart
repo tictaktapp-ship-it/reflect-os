@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+import '../providers/toolkit_providers.dart';
 import '../data/models/tool_definition.dart';
 import '../data/models/tool_run.dart';
 import '../data/toolkit_repository.dart';
@@ -84,6 +85,7 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
       // Invalidate cached providers so the detail screen reloads fresh data.
       ref.invalidate(decisionDetailProvider(decisionId));
       ref.invalidate(projectedOutcomeProvider(decisionId));
+      ref.invalidate(decisionToolRunsProvider(decisionId));
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Result injected into decision')),
       );
