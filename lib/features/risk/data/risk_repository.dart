@@ -21,10 +21,15 @@ class RiskRepository {
 
   /// Invokes the assess-risk Edge Function via a direct HTTP POST so the
   /// Authorization header is always present (required by verify_jwt: true).
+  /// Refreshes the session first to avoid sending a stale/expired token.
   /// Uses a 30-second timeout to accommodate Anthropic latency.
   Future<void> generateRiskAssessment(String decisionId) async {
+    await Supabase.instance.client.auth.refreshSession();
     final token =
-        Supabase.instance.client.auth.currentSession?.accessToken ?? '';
+        Supabase.instance.client.auth.currentSession?.accessToken;
+    if (token == null) {
+      throw Exception('No active session — please sign in again.');
+    }
     final url = '$supabaseProjectUrl/functions/v1/assess-risk';
     final response = await http
         .post(

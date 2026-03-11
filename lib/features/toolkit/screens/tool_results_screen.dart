@@ -2,9 +2,11 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
+import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import '../data/models/tool_definition.dart';
 import '../data/models/tool_run.dart';
 import '../data/toolkit_repository.dart';
@@ -16,7 +18,7 @@ import '../engine/calculator_engine.dart';
 /// ```
 /// ({ToolCalculationResult result, ToolRun run, ToolDefinition tool, String? decisionId})
 /// ```
-class ToolResultsScreen extends StatefulWidget {
+class ToolResultsScreen extends ConsumerStatefulWidget {
   const ToolResultsScreen({
     super.key,
     required this.result,
@@ -31,10 +33,10 @@ class ToolResultsScreen extends StatefulWidget {
   final String? decisionId;
 
   @override
-  State<ToolResultsScreen> createState() => _ToolResultsScreenState();
+  ConsumerState<ToolResultsScreen> createState() => _ToolResultsScreenState();
 }
 
-class _ToolResultsScreenState extends State<ToolResultsScreen> {
+class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
   late final TextEditingController _descCtrl =
       TextEditingController(text: widget.result.narrative);
   bool _attachAudit  = false;
@@ -79,6 +81,9 @@ class _ToolResultsScreenState extends State<ToolResultsScreen> {
       );
 
       if (!mounted) return;
+      // Invalidate cached providers so the detail screen reloads fresh data.
+      ref.invalidate(decisionDetailProvider(decisionId));
+      ref.invalidate(projectedOutcomeProvider(decisionId));
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Result injected into decision')),
       );
