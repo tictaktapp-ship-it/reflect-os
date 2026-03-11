@@ -56,8 +56,8 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
                   Center(
                     child: SvgPicture.asset(
                       isDark
-                          ? 'assets/images/reflect-icon-dark.svg'
-                          : 'assets/images/reflect-icon-light.svg',
+                          ? 'assets/branding/icon.svg'
+                          : 'assets/branding/icon.svg',
                       height: 128,
                     ),
                   ),
@@ -280,8 +280,8 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
               Center(
                 child: SvgPicture.asset(
                   isDark
-                      ? 'assets/images/reflect-icon-dark.svg'
-                      : 'assets/images/reflect-icon-light.svg',
+                      ? 'assets/branding/icon.svg'
+                      : 'assets/branding/icon.svg',
                   height: 128,
                 ),
               ),
@@ -742,8 +742,8 @@ Future<DecisionTemplate?> showTemplatePicker(
             Center(
               child: SvgPicture.asset(
                 isDark
-                    ? 'assets/images/reflect-icon-dark.svg'
-                    : 'assets/images/reflect-icon-light.svg',
+                    ? 'assets/branding/icon.svg'
+                    : 'assets/branding/icon.svg',
                 height: 128,
               ),
             ),

@@ -74,8 +74,8 @@ class _LegalAcceptanceScreenState
                       Center(
                         child: SvgPicture.asset(
                           isDark
-                              ? 'assets/images/reflect-icon-dark.svg'
-                              : 'assets/images/reflect-icon-light.svg',
+                              ? 'assets/branding/icon.svg'
+                              : 'assets/branding/icon.svg',
                           height: 72,
                         ),
                       ),

@@ -146,8 +146,8 @@ class CoachDashboardScreen extends ConsumerWidget {
                     Center(
                       child: SvgPicture.asset(
                         Theme.of(sheetCtx).brightness == Brightness.dark
-                            ? 'assets/images/reflect-icon-dark.svg'
-                            : 'assets/images/reflect-icon-light.svg',
+                            ? 'assets/branding/icon.svg'
+                            : 'assets/branding/icon.svg',
                         height: 128,
                       ),
                     ),

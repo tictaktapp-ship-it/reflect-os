@@ -92,8 +92,8 @@ class _PublicDecisionViewState extends State<PublicDecisionView> {
           children: [
             SvgPicture.asset(
               Theme.of(context).brightness == Brightness.dark
-                  ? 'assets/images/reflect-icon-dark.svg'
-                  : 'assets/images/reflect-icon-light.svg',
+                  ? 'assets/branding/icon.svg'
+                  : 'assets/branding/icon.svg',
               height: 160,
             ),
             const SizedBox(width: 8),

@@ -77,7 +77,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     children: [
                       const SizedBox(height: 16),
                       SvgPicture.asset(
-                        'assets/images/reflect-inline-light.svg',
+                        'assets/branding/logo-light.svg',
                         height: 144,
                       ),
                       const SizedBox(height: 16),

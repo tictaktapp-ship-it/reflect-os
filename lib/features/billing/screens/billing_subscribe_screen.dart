@@ -89,8 +89,8 @@ class _BillingSubscribeScreenState
           children: [
             SvgPicture.asset(
               isDark
-                  ? 'assets/images/reflect-icon-dark.svg'
-                  : 'assets/images/reflect-icon-light.svg',
+                  ? 'assets/branding/icon.svg'
+                  : 'assets/branding/icon.svg',
               height: 160,
             ),
             const SizedBox(width: 8),

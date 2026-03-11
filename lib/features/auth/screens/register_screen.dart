@@ -165,7 +165,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     children: [
                       const SizedBox(height: 48),
                       SvgPicture.asset(
-                        'assets/images/reflect-inline-light.svg',
+                        'assets/branding/logo-light.svg',
                         height: 144,
                       ),
                       const SizedBox(height: 40),

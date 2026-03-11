@@ -219,8 +219,8 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
           height: 28,
           child: SvgPicture.asset(
             Theme.of(context).brightness == Brightness.dark
-                ? 'assets/images/reflect-icon-dark.svg'
-                : 'assets/images/reflect-icon-light.svg',
+                ? 'assets/branding/icon.svg'
+                : 'assets/branding/icon.svg',
           ),
         ),
         actions: [

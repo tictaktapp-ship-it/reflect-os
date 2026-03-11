@@ -125,7 +125,7 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(child: SvgPicture.asset(isDark ? 'assets/images/reflect-icon-dark.svg' : 'assets/images/reflect-icon-light.svg', height: 128)),
+                Center(child: SvgPicture.asset(isDark ? 'assets/branding/icon.svg' : 'assets/branding/icon.svg', height: 128)),
                 const SizedBox(height: 8),
                 Text(
                   'Sort by',
@@ -171,7 +171,7 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(child: SvgPicture.asset(isDark ? 'assets/images/reflect-icon-dark.svg' : 'assets/images/reflect-icon-light.svg', height: 128)),
+            Center(child: SvgPicture.asset(isDark ? 'assets/branding/icon.svg' : 'assets/branding/icon.svg', height: 128)),
             const SizedBox(height: 8),
             Text(
               'Export Decisions',

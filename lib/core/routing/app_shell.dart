@@ -103,8 +103,8 @@ class _WideShell extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(0, 24, 0, 16),
               child: SvgPicture.asset(
                 isDark
-                    ? 'assets/images/reflect-inline-dark.svg'
-                    : 'assets/images/reflect-inline-light.svg',
+                    ? 'assets/branding/logo-dark.svg'
+                    : 'assets/branding/logo-light.svg',
                 width: 780,
               ),
             ),
@@ -179,8 +179,8 @@ class _NarrowShell extends StatelessWidget {
       appBar: AppBar(
         title: SvgPicture.asset(
           isDark
-              ? 'assets/images/reflect-inline-dark.svg'
-              : 'assets/images/reflect-inline-light.svg',
+              ? 'assets/branding/logo-dark.svg'
+              : 'assets/branding/logo-light.svg',
           height: 132,
         ),
         centerTitle: false,
