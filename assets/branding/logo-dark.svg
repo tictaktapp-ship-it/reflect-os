@@ -1,0 +1,46 @@
+<svg width="800" height="512" viewBox="0 0 800 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="hexClip">
+      <polygon points="256,156 356,206 356,306 256,356 156,306 156,206"/>
+    </clipPath>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="white" stop-opacity="0"/>
+      <stop offset="28%"  stop-color="white" stop-opacity="0.1"/>
+      <stop offset="44%"  stop-color="white" stop-opacity="0.5"/>
+      <stop offset="50%"  stop-color="white" stop-opacity="1"/>
+      <stop offset="56%"  stop-color="white" stop-opacity="0.5"/>
+      <stop offset="72%"  stop-color="white" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="outerGlowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="white" stop-opacity="0"/>
+      <stop offset="20%"  stop-color="white" stop-opacity="0.04"/>
+      <stop offset="40%"  stop-color="white" stop-opacity="0.18"/>
+      <stop offset="50%"  stop-color="white" stop-opacity="0.4"/>
+      <stop offset="60%"  stop-color="white" stop-opacity="0.18"/>
+      <stop offset="80%"  stop-color="white" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark background -->
+  <rect width="800" height="512" fill="#0F1923"/>
+
+  <!-- Hexagon base fill -->
+  <polygon points="256,156 356,206 356,306 256,356 156,306 156,206" fill="#19CBD6"/>
+
+  <!-- Glow layers clipped to hexagon -->
+  <g clip-path="url(#hexClip)">
+    <rect x="156" y="156" width="200" height="200" fill="url(#outerGlowGrad)" opacity="0.8"/>
+    <rect x="186" y="156" width="140" height="200" fill="url(#glowGrad)" opacity="0.75"/>
+    <rect x="221" y="156" width="70" height="200" fill="url(#glowGrad)" opacity="0.85"/>
+    <rect x="245" y="156" width="22" height="200" fill="url(#glowGrad)" opacity="1"/>
+    <rect x="254" y="156" width="4" height="200" fill="white" opacity="0.95"/>
+  </g>
+
+  <!-- REFLECT title — vertically centred as a block with tagline -->
+  <text x="570" y="254" font-family="Arial, sans-serif" font-size="80" font-weight="700" fill="#FFFFFF" letter-spacing="4" text-anchor="middle">REFLECT</text>
+
+  <!-- DECISION INTELLIGENCE OS tagline — letter-spacing tuned to match REFLECT width -->
+  <text x="570" y="314" font-family="Arial, sans-serif" font-size="16" font-weight="500" fill="#19CBD6" letter-spacing="6.95" text-anchor="middle">DECISION INTELLIGENCE OS</text>
+</svg>
