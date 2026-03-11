@@ -29,6 +29,16 @@ final decisionDetailProvider =
   return ref.read(decisionsRepositoryProvider).getDecisionById(id);
 });
 
+/// Fetches and decrypts the projected_outcome_encrypted field for a single
+/// decision. autoDispose ensures fresh data on every screen mount (e.g.
+/// after tool injection navigates back to the detail screen).
+final projectedOutcomeProvider =
+    FutureProvider.autoDispose.family<String?, String>((ref, decisionId) {
+  return ref
+      .read(decisionsRepositoryProvider)
+      .getProjectedOutcome(decisionId);
+});
+
 final searchProvider =
     FutureProvider.family<List<Decision>, String>((ref, query) {
   return ref.read(decisionsRepositoryProvider).searchDecisions(query);

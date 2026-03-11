@@ -453,6 +453,9 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
               ),
             ),
 
+          // ── Projected Outcome ─────────────────────────────────────
+          _ProjectedOutcomeSection(decisionId: decision.id),
+
           // ── Dates ─────────────────────────────────────────────────
           _CollapsibleSection(
             title: 'Dates',
@@ -1494,6 +1497,39 @@ class _TagsSectionState extends ConsumerState<_TagsSection> {
           );
         },
       ),
+    );
+  }
+}
+
+// ── Projected Outcome section ──────────────────────────────────────────────────
+
+class _ProjectedOutcomeSection extends ConsumerWidget {
+  const _ProjectedOutcomeSection({required this.decisionId});
+
+  final String decisionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final outcomeAsync = ref.watch(projectedOutcomeProvider(decisionId));
+
+    return outcomeAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (outcome) {
+        if (outcome == null || outcome.isEmpty) return const SizedBox.shrink();
+        return _CollapsibleSection(
+          title: 'Projected Outcome',
+          trailing: const Tooltip(
+            message: 'Populated by tool injection',
+            child: Icon(Icons.auto_awesome_outlined, size: 14),
+          ),
+          child: _DetailRow(
+            label: 'Projected outcome',
+            value: outcome,
+            valueMaxLines: null,
+          ),
+        );
+      },
     );
   }
 }

@@ -3,6 +3,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const _supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
+/// Public accessor for the project URL — use this where the
+/// SupabaseClient type doesn't expose supabaseUrl directly.
+const supabaseProjectUrl = _supabaseUrl;
+
 Future<void> initSupabase() async {
   assert(_supabaseUrl.isNotEmpty, 'SUPABASE_URL is not defined. Pass --dart-define=SUPABASE_URL=<value>');
   assert(_supabaseAnonKey.isNotEmpty, 'SUPABASE_ANON_KEY is not defined. Pass --dart-define=SUPABASE_ANON_KEY=<value>');

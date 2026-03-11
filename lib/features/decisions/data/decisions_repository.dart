@@ -413,6 +413,32 @@ class DecisionsRepository {
         .isFilter('deleted_at', null);
   }
 
+  // ── Projected Outcome ─────────────────────────────────────────────────────
+
+  /// Reads and decrypts the projected_outcome_encrypted field for a single
+  /// decision. Kept separate from the Decision model so we can fetch it
+  /// on-demand without modifying the generated freezed files.
+  Future<String?> getProjectedOutcome(String decisionId) async {
+    final row = await supabase
+        .from('user_visible_decisions')
+        .select('projected_outcome_encrypted, workspace_id')
+        .eq('id', decisionId)
+        .maybeSingle();
+    if (row == null) return null;
+    final raw = row['projected_outcome_encrypted'] as String?;
+    if (raw == null || raw.isEmpty) return null;
+    final workspaceId = row['workspace_id'] as String;
+    try {
+      final decrypted = await _enc.decryptFields(
+        workspaceId: workspaceId,
+        fields: {'outcome': raw},
+      );
+      return decrypted['outcome'];
+    } catch (_) {
+      return raw; // fallback to plaintext if edge function unavailable
+    }
+  }
+
   // ── Audit ─────────────────────────────────────────────────────────────────
 
   Future<List<AuditEvent>> getAuditEventsForDecision(
