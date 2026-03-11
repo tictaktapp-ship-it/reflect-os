@@ -24,7 +24,11 @@ class RiskRepository {
   /// Refreshes the session first to avoid sending a stale/expired token.
   /// Uses a 30-second timeout to accommodate Anthropic latency.
   Future<void> generateRiskAssessment(String decisionId) async {
-    await Supabase.instance.client.auth.refreshSession();
+    // Do NOT call refreshSession() here — it fires a TOKEN_REFRESHED event on
+    // the Supabase auth stream, which causes routerProvider to recreate the
+    // GoRouter and navigate back to the initial route (dashboard/home).
+    // The Supabase client auto-refreshes tokens in the background; by the
+    // time the user is on this screen the session is always current.
     final token =
         Supabase.instance.client.auth.currentSession?.accessToken;
     if (token == null) {

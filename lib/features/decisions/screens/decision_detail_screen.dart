@@ -5079,6 +5079,8 @@ class _ToolKitSection extends ConsumerWidget {
             ),
             error: (_, _) => const SizedBox.shrink(),
             data: (runs) {
+              // ignore: avoid_print
+              print('Tool runs for $decisionId: ${runs.length}');
               if (runs.isEmpty) {
                 return Text(
                   'No tool runs for this decision yet.',

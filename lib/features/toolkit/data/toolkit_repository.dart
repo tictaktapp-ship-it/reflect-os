@@ -85,6 +85,20 @@ class ToolkitRepository {
     return ToolRun.fromJson(result as Map<String, dynamic>);
   }
 
+  /// Links a tool run to a decision if the run was created without a decision
+  /// context (e.g. opened from the standalone toolkit, not from a decision).
+  /// No-ops if the run already has a decision_id set.
+  Future<void> linkRunToDecision({
+    required String toolRunId,
+    required String decisionId,
+  }) async {
+    await supabase
+        .from('tool_runs')
+        .update({'decision_id': decisionId})
+        .eq('id', toolRunId)
+        .isFilter('decision_id', null);
+  }
+
   /// Approves client-computed outputs and injects them into a decision.
   Future<void> approveAndInjectToolOutput({
     required String toolRunId,
