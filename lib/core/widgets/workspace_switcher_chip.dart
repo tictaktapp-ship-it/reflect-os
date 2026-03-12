@@ -68,28 +68,28 @@ class WorkspaceSwitcherChip extends ConsumerWidget {
     return GestureDetector(
       onTap: () => showWorkspaceSwitcherSheet(context, ref),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          color: AppColors.accentPrimary.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.accentPrimary, width: 1.5),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.business,
-                size: 14,
-                color: Theme.of(context).colorScheme.onSurfaceVariant),
+            const Icon(Icons.business, size: 14, color: AppColors.accentPrimary),
             const SizedBox(width: 6),
             Text(
               workspaceName ?? 'Select workspace',
-              style: Theme.of(context).textTheme.labelMedium,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: AppColors.accentPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(width: 4),
-            Icon(Icons.expand_more,
-                size: 16,
-                color: Theme.of(context).colorScheme.onSurfaceVariant),
+            const Icon(Icons.expand_more, size: 16, color: AppColors.accentPrimary),
           ],
         ),
       ),

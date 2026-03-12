@@ -356,15 +356,15 @@ class _QualityDial extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final q = quality?.clamp(0.0, 10.0) ?? 0.0;
+    final q = quality?.clamp(0.0, 100.0) ?? 0.0;
     final hasData = quality != null;
 
     final arcColor = hasData
         ? AppColors.accentPrimary
         : AppColors.textMuted.withValues(alpha: 0.3);
 
-    final filledFraction = hasData ? q / 10 : 0.0;
-    final emptyFraction = hasData ? (10.0 - q) / 10 : 1.0;
+    final filledFraction = hasData ? q / 100.0 : 0.0;
+    final emptyFraction = hasData ? (100.0 - q) / 100.0 : 1.0;
 
     return Card(
       child: Padding(
@@ -429,7 +429,7 @@ class _QualityDial extends StatelessWidget {
                           children: [
                             Text(
                               hasData
-                                  ? '${(q * 10).round()}%'
+                                  ? '${q.round()}%'
                                   : '—',
                               style: Theme.of(context)
                                   .textTheme
@@ -673,7 +673,7 @@ class _HealthDonut extends StatelessWidget {
                         sections: [
                           PieChartSectionData(
                             value: onTrack!.toDouble(),
-                            color: AppColors.success,
+                            color: const Color(0xFF2EA073),
                             radius: 18,
                             showTitle: onTrack! > 0,
                             title: onTrack! > 0 ? '$onTrack' : '',
@@ -685,7 +685,7 @@ class _HealthDonut extends StatelessWidget {
                           ),
                           PieChartSectionData(
                             value: needsAttention!.toDouble(),
-                            color: AppColors.warning,
+                            color: const Color(0xFFD97D24),
                             radius: 18,
                             showTitle: needsAttention! > 0,
                             title: needsAttention! > 0 ? '$needsAttention' : '',
@@ -697,7 +697,7 @@ class _HealthDonut extends StatelessWidget {
                           ),
                           PieChartSectionData(
                             value: overdue!.toDouble(),
-                            color: AppColors.destructive,
+                            color: const Color(0xFFDC4444),
                             radius: 18,
                             showTitle: overdue! > 0,
                             title: overdue! > 0 ? '$overdue' : '',
@@ -730,12 +730,12 @@ class _HealthDonut extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _LegendItem(color: AppColors.success, label: 'On track'),
+                  _LegendItem(color: const Color(0xFF2EA073), label: 'On track'),
                   const SizedBox(width: 12),
                   _LegendItem(
-                      color: AppColors.warning, label: 'Needs attention'),
+                      color: const Color(0xFFD97D24), label: 'Needs attention'),
                   const SizedBox(width: 12),
-                  _LegendItem(color: AppColors.destructive, label: 'Overdue'),
+                  _LegendItem(color: const Color(0xFFDC4444), label: 'Overdue'),
                 ],
               ),
           ],

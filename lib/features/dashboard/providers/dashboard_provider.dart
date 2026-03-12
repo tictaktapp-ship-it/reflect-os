@@ -51,7 +51,7 @@ final dashboardAnalyticsProvider =
   // Fetch lightweight columns needed for all aggregations.
   final rows = await supabase
       .from('user_visible_decisions')
-      .select('initial_confidence, created_at, health_state')
+      .select('initial_confidence, created_at, health_state, confidence_score, outcome_score')
       .eq('workspace_id', workspaceId);
 
   if (rows.isEmpty) return DashboardAnalytics(computedAt: DateTime.now());
@@ -95,11 +95,26 @@ final dashboardAnalyticsProvider =
   final rolling30dQuality = avgQuality(last30);
   final rolling90dQuality = avgQuality(last90);
 
+  // Confidence calibration delta: mean(confidence_score - outcome_score) * 10
+  // Includes any row where outcome_score is populated, regardless of status.
+  double? calibrationDelta;
+  final calibRows =
+      rows.where((r) => r['outcome_score'] != null).toList();
+  if (calibRows.isNotEmpty) {
+    final deltas = calibRows.map((r) {
+      final conf = (r['confidence_score'] as num?)?.toDouble() ?? 0.0;
+      final out = (r['outcome_score'] as num?)?.toDouble() ?? 0.0;
+      return (conf - out) * 10.0; // scale 1–10 gap to a 0–100 percentage
+    }).toList();
+    calibrationDelta = deltas.reduce((a, b) => a + b) / deltas.length;
+  }
+
   debugPrint('[DashboardAnalytics] rows=${rows.length} '
       'last30=${last30.length} last90=${last90.length} '
       'allTimeAvgQuality=$allTimeQuality '
       'rolling30dAvgQuality=$rolling30dQuality '
-      'rolling90dAvgQuality=$rolling90dQuality');
+      'rolling90dAvgQuality=$rolling90dQuality '
+      'calibrationDelta=$calibrationDelta (from ${calibRows.length} rows with outcome_score)');
 
   return DashboardAnalytics(
     allTimeAvgQuality: allTimeQuality,
@@ -114,6 +129,7 @@ final dashboardAnalyticsProvider =
     rolling90dOnTrackCount: healthCount(last90, 'on_track'),
     rolling90dNeedsAttentionCount: healthCount(last90, 'needs_attention'),
     rolling90dOverdueCount: healthCount(last90, 'overdue'),
+    confidenceCalibrationDelta: calibrationDelta,
     computedAt: now,
   );
 });
