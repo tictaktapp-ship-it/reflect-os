@@ -359,9 +359,8 @@ class _QualityDial extends StatelessWidget {
     final q = quality?.clamp(0.0, 10.0) ?? 0.0;
     final hasData = quality != null;
 
-    // Arc colour: warning → accentHover as q goes 0→10
     final arcColor = hasData
-        ? Color.lerp(AppColors.warning, AppColors.accentHover, q / 10)!
+        ? AppColors.accentPrimary
         : AppColors.textMuted.withValues(alpha: 0.3);
 
     final filledFraction = hasData ? q / 10 : 0.0;

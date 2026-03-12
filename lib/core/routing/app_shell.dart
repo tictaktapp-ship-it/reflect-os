@@ -175,24 +175,9 @@ class _NarrowShell extends StatelessWidget {
       appBar: AppBar(
         title: Padding(
           padding: const EdgeInsets.only(left: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SvgPicture.asset(
-                'assets/branding/icon.svg',
-                height: 32,
-              ),
-              const SizedBox(width: 10),
-              Text(
-                'REFLECT',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ],
+          child: SvgPicture.asset(
+            'assets/branding/logo-light.svg',
+            height: 32,
           ),
         ),
         centerTitle: false,
