@@ -91,7 +91,6 @@ class _WideShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: Row(
         children: [
@@ -100,12 +99,10 @@ class _WideShell extends StatelessWidget {
             onDestinationSelected: onDestinationSelected,
             labelType: NavigationRailLabelType.all,
             leading: Padding(
-              padding: const EdgeInsets.fromLTRB(0, 24, 0, 16),
+              padding: const EdgeInsets.fromLTRB(8, 24, 8, 16),
               child: SvgPicture.asset(
-                isDark
-                    ? 'assets/branding/logo-dark.svg'
-                    : 'assets/branding/logo-light.svg',
-                width: 780,
+                'assets/branding/icon.svg',
+                height: 40,
               ),
             ),
             trailing: Padding(
@@ -174,14 +171,29 @@ class _NarrowShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
-        title: SvgPicture.asset(
-          isDark
-              ? 'assets/branding/logo-dark.svg'
-              : 'assets/branding/logo-light.svg',
-          height: 132,
+        title: Padding(
+          padding: const EdgeInsets.only(left: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SvgPicture.asset(
+                'assets/branding/icon.svg',
+                height: 32,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'REFLECT',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
         ),
         centerTitle: false,
         automaticallyImplyLeading: false,

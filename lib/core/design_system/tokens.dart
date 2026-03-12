@@ -7,8 +7,8 @@ abstract final class AppColors {
   static const Color backgroundElevated = Color(0xFF1E2A3A);
 
   // Accents
-  static const Color accentPrimary = Color(0xFF0C99B4);
-  static const Color accentHover = Color(0xFF1FCCEF);
+  static const Color accentPrimary = Color(0xFF00BCD4);
+  static const Color accentHover = Color(0xFF26C6DA);
 
   // Text
   static const Color textPrimary = Color(0xFFF4F5F7);

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/theme.dart';
+import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
 
@@ -75,12 +76,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(height: 16),
-                      SvgPicture.asset(
-                        'assets/branding/logo-light.svg',
-                        height: 144,
+                      const SizedBox(height: 48),
+                      // Logo: icon + wordmark side by side
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          SvgPicture.asset(
+                            'assets/branding/icon.svg',
+                            height: 48,
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'REFLECT',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  letterSpacing: 2,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'DECISION INTELLIGENCE OS',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 1.5,
+                                  color: AppColors.accentPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 48),
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,

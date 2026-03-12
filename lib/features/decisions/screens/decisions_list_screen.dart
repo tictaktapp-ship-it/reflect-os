@@ -468,16 +468,16 @@ class _StatusBadge extends StatelessWidget {
   final String status;
 
   Color _backgroundFor(String status) => switch (status.toLowerCase()) {
-        'active' => AppColors.accentPrimary.withValues(alpha: 0.2),
-        'draft' => AppColors.textMuted.withValues(alpha: 0.2),
+        'active' => AppColors.accentPrimary.withValues(alpha: 0.15),
+        'draft' => Colors.grey.withValues(alpha: 0.15),
         'closed' => AppColors.success.withValues(alpha: 0.2),
         'archived' => AppColors.textMuted.withValues(alpha: 0.15),
         _ => AppColors.textMuted.withValues(alpha: 0.2),
       };
 
   Color _foregroundFor(String status) => switch (status.toLowerCase()) {
-        'active' => AppColors.accentHover,
-        'draft' => AppColors.textSecondary,
+        'active' => AppColors.accentPrimary,
+        'draft' => Colors.grey.shade600,
         'closed' => AppColors.success,
         'archived' => AppColors.textMuted,
         _ => AppColors.textSecondary,

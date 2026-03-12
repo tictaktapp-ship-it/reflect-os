@@ -85,7 +85,7 @@ final class AppTheme {
     final base = ThemeData.light(useMaterial3: true);
 
     return base.copyWith(
-      scaffoldBackgroundColor: const Color(0xFFF5F5F7),
+      scaffoldBackgroundColor: const Color(0xFFF8F9FA),
       dividerColor: const Color(0xFFE0E0E4),
       colorScheme: base.colorScheme.copyWith(
         primary: AppColors.accentPrimary,
