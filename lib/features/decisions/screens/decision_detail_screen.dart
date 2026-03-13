@@ -434,9 +434,30 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
                 if (decision.categoryName != null)
                   _DetailRow(label: 'Category', value: decision.categoryName!),
                 if (decision.initialConfidence != null)
-                  _DetailRow(
-                    label: 'Initial confidence',
-                    value: '${decision.initialConfidence} / 10',
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Initial confidence',
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelSmall
+                              ?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.6),
+                              ),
+                        ),
+                        const SizedBox(height: 2),
+                        _EffectiveConfidenceBadge(
+                          decisionId: decision.id,
+                          initialConfidence: decision.initialConfidence,
+                        ),
+                      ],
+                    ),
                   ),
               ],
             ),
@@ -5157,6 +5178,53 @@ class _ToolRunRow extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Effective confidence badge ─────────────────────────────────────────────
+
+class _EffectiveConfidenceBadge extends ConsumerWidget {
+  const _EffectiveConfidenceBadge({
+    required this.decisionId,
+    required this.initialConfidence,
+  });
+
+  final String decisionId;
+  final int? initialConfidence;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final adjustmentAsync =
+        ref.watch(coachConfidenceAdjustmentProvider(decisionId));
+    final adjustment = adjustmentAsync.valueOrNull ?? 0;
+    final base = initialConfidence ?? 0;
+    final effective = (base + adjustment).clamp(1, 10);
+
+    if (adjustment == 0 || base == 0) {
+      return Text(
+        '$base / 10',
+        style: Theme.of(context).textTheme.bodyMedium,
+      );
+    }
+    final sign = adjustment > 0 ? '+' : '';
+    return Tooltip(
+      message: 'Adjusted from $base by coach ($sign$adjustment)',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$effective / 10',
+            style: const TextStyle(
+              color: Color(0xFF19CBD6),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.psychology_outlined,
+              size: 14, color: Color(0xFF19CBD6)),
         ],
       ),
     );
