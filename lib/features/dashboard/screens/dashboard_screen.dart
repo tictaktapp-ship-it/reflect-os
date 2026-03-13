@@ -171,23 +171,51 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
               const SizedBox(height: 20),
 
-              // ── Row 1: Quality Dial + Health Donut ────────────────────
+              // ── 2×2 Chart Grid ────────────────────────────────────────
               LayoutBuilder(
                 builder: (context, constraints) {
                   final isWide = constraints.maxWidth >= 500;
                   if (isWide) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    return Column(
                       children: [
-                        Expanded(
-                            child: _QualityDial(quality: avgQuality)),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _HealthDonut(
-                            onTrack: onTrack,
-                            needsAttention: needsAttn,
-                            overdue: overdue,
-                            isAllTime: _selectedRange == _DateRange.allTime,
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(child: _QualityDial(quality: avgQuality)),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _HealthDonut(
+                                  onTrack: onTrack,
+                                  needsAttention: needsAttn,
+                                  overdue: overdue,
+                                  isAllTime: _selectedRange == _DateRange.allTime,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: _StatusBarChart(
+                                  draft: draft,
+                                  active: active,
+                                  closed: closed,
+                                  archived: archived,
+                                  rangeLabel: _rangeLabel,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _ConfidenceDeltaCard(
+                                  delta: analytics?.confidenceCalibrationDelta,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -196,47 +224,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   return Column(
                     children: [
                       _QualityDial(quality: avgQuality),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       _HealthDonut(
                         onTrack: onTrack,
                         needsAttention: needsAttn,
                         overdue: overdue,
                         isAllTime: _selectedRange == _DateRange.allTime,
                       ),
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-
-              // ── Row 2: Status Bar Chart + Confidence Delta ────────────
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= 500;
-                  if (isWide) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: _StatusBarChart(
-                            draft: draft,
-                            active: active,
-                            closed: closed,
-                            archived: archived,
-                            rangeLabel: _rangeLabel,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _ConfidenceDeltaCard(
-                            delta: analytics?.confidenceCalibrationDelta,
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-                  return Column(
-                    children: [
+                      const SizedBox(height: 16),
                       _StatusBarChart(
                         draft: draft,
                         active: active,
@@ -244,7 +239,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         archived: archived,
                         rangeLabel: _rangeLabel,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       _ConfidenceDeltaCard(
                         delta: analytics?.confidenceCalibrationDelta,
                       ),

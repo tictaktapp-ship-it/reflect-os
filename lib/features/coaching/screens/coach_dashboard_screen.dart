@@ -7,6 +7,8 @@ import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
 import 'package:reflect_os/features/coaching/data/models/coach_client_relationship.dart';
+import 'package:reflect_os/features/coaching/data/models/coaching_session.dart';
+import 'package:reflect_os/features/coaching/data/models/coaching_session_note.dart';
 import 'package:reflect_os/features/coaching/providers/coaching_provider.dart';
 
 class CoachDashboardScreen extends ConsumerWidget {
@@ -22,7 +24,6 @@ class CoachDashboardScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ── Screen description ─────────────────────────────────────
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
@@ -36,7 +37,6 @@ class CoachDashboardScreen extends ConsumerWidget {
             ),
           ),
 
-          // ── Visibility note ────────────────────────────────────────
           Card(
             color: Theme.of(context).colorScheme.surface,
             margin: const EdgeInsets.only(bottom: 16),
@@ -65,7 +65,7 @@ class CoachDashboardScreen extends ConsumerWidget {
             ),
           ),
 
-          // ── My Clients ─────────────────────────────────────────────
+          // ── As a Coach ─────────────────────────────────────────────────
           _SectionHeader(
             title: 'My Clients',
             action: IconButton(
@@ -78,14 +78,15 @@ class CoachDashboardScreen extends ConsumerWidget {
             loading: () => const _LoadingCard(),
             error: (e, _) => _ErrorCard(message: 'Failed to load clients: $e'),
             data: (clients) => clients.isEmpty
-                ? const _EmptyCard(message: 'No active clients yet. '
-                    'Invite someone to get started.')
+                ? const _EmptyCard(
+                    message: 'No active clients yet. '
+                        'Invite someone to get started.')
                 : Column(
                     children: clients
                         .map((c) => _ClientCard(
                               relationship: c,
-                              onViewDecisions: () =>
-                                  context.push(Routes.decisionsList),
+                              onTap: () =>
+                                  _showClientDetailSheet(context, ref, c),
                               onRevoke: () =>
                                   _confirmRevoke(context, ref, c),
                             ))
@@ -95,8 +96,15 @@ class CoachDashboardScreen extends ConsumerWidget {
 
           const SizedBox(height: 16),
 
-          // ── My Coaches ─────────────────────────────────────────────
-          const _SectionHeader(title: 'My Coaches'),
+          // ── As a Client ────────────────────────────────────────────────
+          _SectionHeader(
+            title: 'My Coaches',
+            action: IconButton(
+              icon: const Icon(Icons.person_add_outlined, size: 20),
+              tooltip: 'Add coach',
+              onPressed: () => _showAddCoachDialog(context),
+            ),
+          ),
           coachesAsync.when(
             loading: () => const _LoadingCard(),
             error: (e, _) => _ErrorCard(message: 'Failed to load coaches: $e'),
@@ -107,6 +115,8 @@ class CoachDashboardScreen extends ConsumerWidget {
                     children: coaches
                         .map((c) => _CoachCard(
                               relationship: c,
+                              onViewNotes: () =>
+                                  _showCoachNotesSheet(context, ref, c),
                               onRevoke: () =>
                                   _confirmRevoke(context, ref, c),
                             ))
@@ -116,6 +126,70 @@ class CoachDashboardScreen extends ConsumerWidget {
 
           const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+
+  void _showAddCoachDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Add Coach'),
+        content: const Text('Coach invitation coming soon.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showClientDetailSheet(
+    BuildContext context,
+    WidgetRef ref,
+    CoachClientRelationship relationship,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetCtx) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (_, scrollController) => _ClientDetailSheet(
+          relationship: relationship,
+          scrollController: scrollController,
+        ),
+      ),
+    );
+  }
+
+  void _showCoachNotesSheet(
+    BuildContext context,
+    WidgetRef ref,
+    CoachClientRelationship relationship,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetCtx) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        minChildSize: 0.3,
+        expand: false,
+        builder: (_, scrollController) => _CoachNotesSheet(
+          relationship: relationship,
+          scrollController: scrollController,
+        ),
       ),
     );
   }
@@ -145,9 +219,7 @@ class CoachDashboardScreen extends ConsumerWidget {
                   children: [
                     Center(
                       child: SvgPicture.asset(
-                        Theme.of(sheetCtx).brightness == Brightness.dark
-                            ? 'assets/branding/icon.svg'
-                            : 'assets/branding/icon.svg',
+                        'assets/branding/icon.svg',
                         height: 128,
                       ),
                     ),
@@ -160,9 +232,10 @@ class CoachDashboardScreen extends ConsumerWidget {
                     Text(
                       'Enter the email address of the person you want to '
                       'coach. They must already have a Reflect OS account.',
-                      style: Theme.of(sheetCtx).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
+                      style:
+                          Theme.of(sheetCtx).textTheme.bodySmall?.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
                     ),
                     const SizedBox(height: 16),
                     TextField(
@@ -242,8 +315,8 @@ class CoachDashboardScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           TextButton(
-            style:
-                TextButton.styleFrom(foregroundColor: AppColors.destructive),
+            style: TextButton.styleFrom(
+                foregroundColor: AppColors.destructive),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Revoke'),
           ),
@@ -252,9 +325,7 @@ class CoachDashboardScreen extends ConsumerWidget {
     );
     if (confirmed != true) return;
     try {
-      await ref
-          .read(coachingRepositoryProvider)
-          .revokeClient(rel.id);
+      await ref.read(coachingRepositoryProvider).revokeClient(rel.id);
       ref.invalidate(myClientsProvider);
       ref.invalidate(myCoachesProvider);
     } catch (e) {
@@ -267,7 +338,650 @@ class CoachDashboardScreen extends ConsumerWidget {
   }
 }
 
-// ── Section header ──────────────────────────────────────────────────────────────
+// ── Client detail bottom sheet ─────────────────────────────────────────────────
+
+class _ClientDetailSheet extends ConsumerStatefulWidget {
+  const _ClientDetailSheet({
+    required this.relationship,
+    required this.scrollController,
+  });
+
+  final CoachClientRelationship relationship;
+  final ScrollController scrollController;
+
+  @override
+  ConsumerState<_ClientDetailSheet> createState() =>
+      _ClientDetailSheetState();
+}
+
+class _ClientDetailSheetState extends ConsumerState<_ClientDetailSheet>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  String get _shortId {
+    final id = widget.relationship.clientUserId;
+    return id.length > 8 ? id.substring(0, 8) : id;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clientUserId = widget.relationship.clientUserId;
+    final sessionsAsync = ref.watch(coachingSessionsProvider(clientUserId));
+    final notesAsync =
+        ref.watch(coachingSessionNotesProvider(clientUserId));
+
+    return Column(
+      children: [
+        // Handle
+        Center(
+          child: Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 8),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Theme.of(context).dividerColor,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+        // Client header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: AppColors.accentPrimary,
+                child: Text(
+                  _shortId[0].toUpperCase(),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _shortId,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    'Since ${DateFormat('d MMM yyyy').format(widget.relationship.grantedAt.toLocal())}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Session Notes'),
+            Tab(text: 'Sessions'),
+            Tab(text: 'Decision Notes'),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              // Session Notes tab
+              _SessionNotesTab(
+                clientUserId: clientUserId,
+                notesAsync: notesAsync,
+                onAddNote: () => _showAddNoteDialog(context, clientUserId),
+              ),
+              // Sessions tab
+              _SessionsTab(
+                clientUserId: clientUserId,
+                sessionsAsync: sessionsAsync,
+                onSchedule: () =>
+                    _showScheduleSessionDialog(context, clientUserId),
+              ),
+              // Decision Notes tab
+              _DecisionNotesTab(
+                onGoToDecisions: () => context.push(Routes.decisionsList),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showAddNoteDialog(BuildContext context, String clientUserId) {
+    final controller = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Add Session Note'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            hintText: 'Write your note here…',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final body = controller.text.trim();
+              if (body.isEmpty) return;
+              Navigator.of(dialogCtx).pop();
+              try {
+                await ref
+                    .read(coachingRepositoryProvider)
+                    .addSessionNote(clientUserId: clientUserId, body: body);
+                ref.invalidate(coachingSessionNotesProvider(clientUserId));
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to add note: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showScheduleSessionDialog(
+      BuildContext context, String clientUserId) {
+    final titleController = TextEditingController();
+    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
+    int durationMinutes = 60;
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Schedule Session'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: 'Title (optional)'),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                    DateFormat('d MMM yyyy HH:mm').format(selectedDate)),
+                subtitle: const Text('Date & time'),
+                trailing: const Icon(Icons.calendar_today, size: 18),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: ctx,
+                    initialDate: selectedDate,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (picked != null) {
+                    setDialogState(() => selectedDate = DateTime(
+                          picked.year,
+                          picked.month,
+                          picked.day,
+                          selectedDate.hour,
+                          selectedDate.minute,
+                        ));
+                  }
+                },
+              ),
+              DropdownButtonFormField<int>(
+                initialValue: durationMinutes,
+                decoration: const InputDecoration(labelText: 'Duration'),
+                items: const [
+                  DropdownMenuItem(value: 30, child: Text('30 min')),
+                  DropdownMenuItem(value: 45, child: Text('45 min')),
+                  DropdownMenuItem(value: 60, child: Text('60 min')),
+                  DropdownMenuItem(value: 90, child: Text('90 min')),
+                ],
+                onChanged: (v) {
+                  if (v != null) setDialogState(() => durationMinutes = v);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Navigator.of(dialogCtx).pop();
+                try {
+                  await ref.read(coachingRepositoryProvider).createSession(
+                        clientUserId: clientUserId,
+                        scheduledAt: selectedDate,
+                        title: titleController.text.trim().isEmpty
+                            ? null
+                            : titleController.text.trim(),
+                        durationMinutes: durationMinutes,
+                      );
+                  ref.invalidate(
+                      coachingSessionsProvider(clientUserId));
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to schedule: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Schedule'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Session notes tab ──────────────────────────────────────────────────────────
+
+class _SessionNotesTab extends StatelessWidget {
+  const _SessionNotesTab({
+    required this.clientUserId,
+    required this.notesAsync,
+    required this.onAddNote,
+  });
+
+  final String clientUserId;
+  final AsyncValue<List<CoachingSessionNote>> notesAsync;
+  final VoidCallback onAddNote;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              FilledButton.icon(
+                onPressed: onAddNote,
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add Note'),
+                style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accentPrimary),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: notesAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+            data: (notes) => notes.isEmpty
+                ? const Center(child: Text('No session notes yet.'))
+                : ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: notes.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (_, i) {
+                      final note = notes[i];
+                      return Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                note.bodyEncrypted,
+                                style:
+                                    Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                DateFormat('d MMM yyyy')
+                                    .format(note.createdAt.toLocal()),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.4),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Sessions tab ───────────────────────────────────────────────────────────────
+
+class _SessionsTab extends StatelessWidget {
+  const _SessionsTab({
+    required this.clientUserId,
+    required this.sessionsAsync,
+    required this.onSchedule,
+  });
+
+  final String clientUserId;
+  final AsyncValue<List<CoachingSession>> sessionsAsync;
+  final VoidCallback onSchedule;
+
+  Color _statusColor(CoachingSession s) {
+    if (s.isOverdue) return const Color(0xFFDC4444);
+    return switch (s.status) {
+      'completed' => AppColors.success,
+      'cancelled' => AppColors.textMuted,
+      _ => AppColors.accentPrimary,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              FilledButton.icon(
+                onPressed: onSchedule,
+                icon: const Icon(Icons.calendar_today, size: 16),
+                label: const Text('Schedule Session'),
+                style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accentPrimary),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: sessionsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+            data: (sessions) => sessions.isEmpty
+                ? const Center(child: Text('No sessions yet.'))
+                : ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: sessions.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (_, i) {
+                      final s = sessions[i];
+                      final statusColor = _statusColor(s);
+                      final statusLabel =
+                          s.isOverdue ? 'overdue' : s.status;
+                      return Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    if (s.title != null)
+                                      Text(
+                                        s.title!,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
+                                    Text(
+                                      DateFormat('d MMM yyyy HH:mm')
+                                          .format(s.scheduledAt.toLocal()),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall,
+                                    ),
+                                    Text(
+                                      '${s.durationMinutes} min',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.5),
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color:
+                                      statusColor.withValues(alpha: 0.15),
+                                  borderRadius:
+                                      BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  statusLabel,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelSmall
+                                      ?.copyWith(
+                                        color: statusColor,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Decision notes tab ────────────────────────────────────────────────────────
+
+class _DecisionNotesTab extends StatelessWidget {
+  const _DecisionNotesTab({required this.onGoToDecisions});
+
+  final VoidCallback onGoToDecisions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Select a decision to add notes',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onGoToDecisions,
+              icon: const Icon(Icons.task_alt_outlined),
+              label: const Text('Go to Decisions'),
+              style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.accentPrimary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Coach notes sheet (read-only for client) ───────────────────────────────────
+
+class _CoachNotesSheet extends ConsumerWidget {
+  const _CoachNotesSheet({
+    required this.relationship,
+    required this.scrollController,
+  });
+
+  final CoachClientRelationship relationship;
+  final ScrollController scrollController;
+
+  String get _shortId {
+    final id = relationship.coachUserId;
+    return id.length > 8 ? id.substring(0, 8) : id;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notesAsync =
+        ref.watch(coachingSessionNotesProvider(relationship.clientUserId));
+
+    return Column(
+      children: [
+        Center(
+          child: Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 8),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Theme.of(context).dividerColor,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.accentPrimary,
+                child: Text(
+                  _shortId[0].toUpperCase(),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _shortId,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    'Coach · Since ${DateFormat('d MMM yyyy').format(relationship.grantedAt.toLocal())}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: notesAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+            data: (notes) => notes.isEmpty
+                ? const Center(child: Text('No notes from your coach yet.'))
+                : ListView.separated(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: notes.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (_, i) {
+                      final note = notes[i];
+                      return Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                note.bodyEncrypted,
+                                style:
+                                    Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                DateFormat('d MMM yyyy')
+                                    .format(note.createdAt.toLocal()),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.4),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Section header ─────────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title, this.action});
@@ -300,17 +1014,17 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ── Client card ─────────────────────────────────────────────────────────────────
+// ── Client card ────────────────────────────────────────────────────────────────
 
 class _ClientCard extends StatelessWidget {
   const _ClientCard({
     required this.relationship,
-    required this.onViewDecisions,
+    required this.onTap,
     required this.onRevoke,
   });
 
   final CoachClientRelationship relationship;
-  final VoidCallback onViewDecisions;
+  final VoidCallback onTap;
   final VoidCallback onRevoke;
 
   String get _shortId =>
@@ -326,38 +1040,41 @@ class _ClientCard extends StatelessWidget {
     return GestureDetector(
       onLongPress: onRevoke,
       child: Card(
+        clipBehavior: Clip.hardEdge,
         color: Theme.of(context).colorScheme.surface,
         margin: const EdgeInsets.only(bottom: 10),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const Icon(Icons.person_outlined, size: 32),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _shortId,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    Text(
-                      'Since $grantedStr',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                    ),
-                  ],
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.person_outlined, size: 32),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _shortId,
+                        style:
+                            Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                      ),
+                      Text(
+                        'Since $grantedStr',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              TextButton(
-                onPressed: onViewDecisions,
-                child: const Text('View decisions'),
-              ),
-            ],
+                const Icon(Icons.chevron_right, size: 18),
+              ],
+            ),
           ),
         ),
       ),
@@ -365,15 +1082,17 @@ class _ClientCard extends StatelessWidget {
   }
 }
 
-// ── Coach card ──────────────────────────────────────────────────────────────────
+// ── Coach card ─────────────────────────────────────────────────────────────────
 
 class _CoachCard extends StatelessWidget {
   const _CoachCard({
     required this.relationship,
+    required this.onViewNotes,
     required this.onRevoke,
   });
 
   final CoachClientRelationship relationship;
+  final VoidCallback onViewNotes;
   final VoidCallback onRevoke;
 
   String get _shortId =>
@@ -401,9 +1120,10 @@ class _CoachCard extends StatelessWidget {
                 children: [
                   Text(
                     _shortId,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                    style:
+                        Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                   ),
                   Text(
                     'Since $grantedStr',
@@ -413,6 +1133,10 @@ class _CoachCard extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+            TextButton(
+              onPressed: onViewNotes,
+              child: const Text('View Notes'),
             ),
             OutlinedButton(
               style: OutlinedButton.styleFrom(
@@ -429,7 +1153,7 @@ class _CoachCard extends StatelessWidget {
   }
 }
 
-// ── Shared utility cards ────────────────────────────────────────────────────────
+// ── Shared utility cards ───────────────────────────────────────────────────────
 
 class _LoadingCard extends StatelessWidget {
   const _LoadingCard();

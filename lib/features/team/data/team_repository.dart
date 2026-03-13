@@ -36,4 +36,55 @@ class TeamRepository {
       });
     }).toList();
   }
+
+  Future<void> updateMemberRole(String membershipId, String newRole) async {
+    await supabase
+        .from('workspace_memberships')
+        .update({'role': newRole})
+        .eq('id', membershipId);
+  }
+
+  Future<void> removeMember(String membershipId) async {
+    await supabase
+        .from('workspace_memberships')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', membershipId);
+  }
+
+  Future<List<Map<String, dynamic>>> getPendingInvites(
+      String workspaceId) async {
+    final rows = await supabase
+        .from('workspace_invites')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .isFilter('accepted_at', null)
+        .isFilter('revoked_at', null)
+        .gt('expires_at', DateTime.now().toUtc().toIso8601String())
+        .order('created_at', ascending: false);
+    return rows;
+  }
+
+  Future<void> inviteMember({
+    required String workspaceId,
+    required String email,
+    required String role,
+  }) async {
+    final currentUserId = supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('Not authenticated');
+    final expiresAt = DateTime.now().toUtc().add(const Duration(days: 7));
+    await supabase.from('workspace_invites').insert({
+      'workspace_id': workspaceId,
+      'email': email,
+      'role': role,
+      'expires_at': expiresAt.toIso8601String(),
+      'created_by_user_id': currentUserId,
+    });
+  }
+
+  Future<void> revokeInvite(String inviteId) async {
+    await supabase
+        .from('workspace_invites')
+        .update({'revoked_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', inviteId);
+  }
 }

@@ -15,3 +15,10 @@ final teamMembersProvider =
       .read(teamRepositoryProvider)
       .getWorkspaceMemberships(workspaceId);
 });
+
+final pendingInvitesProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final workspaceId = await ref.watch(currentWorkspaceProvider.future);
+  if (workspaceId == null) return [];
+  return ref.read(teamRepositoryProvider).getPendingInvites(workspaceId);
+});

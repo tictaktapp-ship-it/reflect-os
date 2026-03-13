@@ -1,58 +1,109 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
+import 'package:reflect_os/features/workspace/data/models/workspace_model.dart';
 import 'package:reflect_os/features/workspace/providers/workspace_providers.dart';
 
-/// Opens the workspace switcher bottom sheet.
+// Helper to get current workspace model
+final _currentWorkspaceModelProvider = FutureProvider<WorkspaceModel?>((ref) async {
+  final workspaces = ref.watch(userWorkspacesProvider).valueOrNull ?? [];
+  final currentId = ref.watch(currentWorkspaceProvider).valueOrNull;
+  if (currentId == null) return null;
+  try {
+    return workspaces.firstWhere((w) => w.id == currentId);
+  } catch (_) {
+    return null;
+  }
+});
+
+IconData _workspaceTypeIcon(String? type) => switch (type) {
+      'personal' => Icons.person,
+      'team' => Icons.group,
+      'coach' => Icons.psychology,
+      _ => Icons.person,
+    };
+
+/// Opens the workspace switcher dialog (centered).
 /// Extracted as a top-level function so it can be reused across screens.
 void showWorkspaceSwitcherSheet(BuildContext context, WidgetRef ref) {
-  showModalBottomSheet<void>(
+  final workspaces = ref.read(userWorkspacesProvider).valueOrNull ?? [];
+  final currentId = ref.read(currentWorkspaceProvider).valueOrNull;
+
+  showDialog<void>(
     context: context,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (sheetCtx) {
-      final workspaces = ref.read(userWorkspacesProvider).valueOrNull ?? [];
-      final currentId = ref.read(currentWorkspaceProvider).valueOrNull;
-      return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-              child: Text(
-                'Switch Workspace',
-                style: Theme.of(sheetCtx).textTheme.titleMedium,
+    barrierDismissible: true,
+    barrierColor: Colors.black54,
+    builder: (dialogCtx) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          width: 360,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF19CBD6), width: 1.5),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black38,
+                blurRadius: 24,
+                offset: Offset(0, 8),
               ),
-            ),
-            ...workspaces.map(
-              (w) => ListTile(
-                leading: const Icon(Icons.business),
-                title: Text(w.name),
-                trailing: w.id == currentId
-                    ? const Icon(Icons.check, color: AppColors.accentPrimary)
-                    : null,
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 20),
+              Center(
+                child: SvgPicture.asset(
+                  'assets/branding/icon.svg',
+                  height: 48,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  'Switch Workspace',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              ...workspaces.map(
+                (w) => ListTile(
+                  leading: Icon(
+                    _workspaceTypeIcon(w.workspaceType),
+                    color: const Color(0xFF19CBD6),
+                  ),
+                  title: Text(w.name),
+                  trailing: w.id == currentId
+                      ? const Icon(Icons.check, color: Color(0xFF19CBD6))
+                      : null,
+                  onTap: () {
+                    ref.read(selectedWorkspaceIdProvider.notifier).state = w.id;
+                    Navigator.of(dialogCtx).pop();
+                  },
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.add, color: Color(0xFF19CBD6)),
+                title: const Text('New workspace'),
                 onTap: () {
-                  ref.read(selectedWorkspaceIdProvider.notifier).state = w.id;
-                  Navigator.of(sheetCtx).pop();
+                  Navigator.of(dialogCtx).pop();
+                  context.push(Routes.settingsWorkspaces);
                 },
               ),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.add),
-              title: const Text('New workspace'),
-              onTap: () {
-                Navigator.of(sheetCtx).pop();
-                context.push(Routes.settingsWorkspaces);
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
+              const SizedBox(height: 12),
+            ],
+          ),
         ),
       );
     },
@@ -65,6 +116,9 @@ class WorkspaceSwitcherChip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final workspaceName = ref.watch(workspaceNameProvider).valueOrNull;
+    final workspaceModel = ref.watch(_currentWorkspaceModelProvider).valueOrNull;
+    final typeIcon = _workspaceTypeIcon(workspaceModel?.workspaceType);
+
     return GestureDetector(
       onTap: () => showWorkspaceSwitcherSheet(context, ref),
       child: Container(
@@ -77,7 +131,7 @@ class WorkspaceSwitcherChip extends ConsumerWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.business, size: 14, color: AppColors.accentPrimary),
+            Icon(typeIcon, size: 14, color: AppColors.accentPrimary),
             const SizedBox(width: 6),
             Text(
               workspaceName ?? 'Select workspace',
