@@ -200,15 +200,13 @@ class _GlobalHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final dividerColor = Colors.black12;
     return Container(
       height: 48,
       decoration: BoxDecoration(
-        color: AppColors.backgroundSurface,
+        color: Colors.white,
         border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).dividerColor,
-            width: 1,
-          ),
+          bottom: BorderSide(color: dividerColor, width: 1),
         ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -222,12 +220,14 @@ class _GlobalHeader extends ConsumerWidget {
             child: TextField(
               controller: searchController,
               onChanged: onSearchChanged,
+              style: const TextStyle(color: Colors.black87, fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'Search decisions, team…',
-                prefixIcon: const Icon(Icons.search, size: 16),
+                hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
+                prefixIcon: const Icon(Icons.search, size: 16, color: Colors.black54),
                 suffixIcon: searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.close, size: 14),
+                        icon: const Icon(Icons.close, size: 14, color: Colors.black54),
                         onPressed: onDismissSearch,
                         padding: EdgeInsets.zero,
                       )
@@ -237,15 +237,15 @@ class _GlobalHeader extends ConsumerWidget {
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(
-                    color: Theme.of(context).dividerColor,
-                  ),
+                  borderSide: const BorderSide(color: Colors.black12),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(
-                    color: Theme.of(context).dividerColor,
-                  ),
+                  borderSide: const BorderSide(color: Colors.black12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppColors.accentPrimary),
                 ),
               ),
             ),
@@ -302,7 +302,7 @@ class _NavPane extends StatelessWidget {
             );
           }),
           const Spacer(),
-          _NavPaneSettingsItem(),
+          const _NavPaneSettingsItem(),
           const SizedBox(height: 12),
         ],
       ),
@@ -374,14 +374,11 @@ class _NavPaneItem extends StatelessWidget {
   }
 }
 
-class _NavPaneSettingsItem extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(profileProvider).valueOrNull;
-    final email = supabase.auth.currentUser?.email ?? '';
-    final avatarUrl = profile?.avatarUrl;
-    final initials = _initials(profile?.displayName ?? email);
+class _NavPaneSettingsItem extends StatelessWidget {
+  const _NavPaneSettingsItem();
 
+  @override
+  Widget build(BuildContext context) {
     return InkWell(
       onTap: () => context.push(Routes.settings),
       child: Container(
@@ -390,22 +387,7 @@ class _NavPaneSettingsItem extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircleAvatar(
-              radius: 14,
-              backgroundColor: AppColors.accentPrimary,
-              backgroundImage:
-                  avatarUrl != null ? NetworkImage(avatarUrl) : null,
-              child: avatarUrl == null
-                  ? Text(
-                      initials,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    )
-                  : null,
-            ),
+            const Icon(Icons.settings_outlined, size: 22),
             const SizedBox(height: 4),
             Text(
               'Settings',
@@ -418,13 +400,6 @@ class _NavPaneSettingsItem extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  String _initials(String name) {
-    if (name.isEmpty) return '?';
-    final parts = name.trim().split(RegExp(r'[\s@]+'));
-    if (parts.length == 1) return parts[0][0].toUpperCase();
-    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 }
 

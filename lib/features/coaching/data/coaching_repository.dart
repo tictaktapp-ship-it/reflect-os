@@ -33,9 +33,18 @@ class CoachingRepository {
     return rows.map((r) => CoachClientRelationship.fromJson(r)).toList();
   }
 
-  Future<void> inviteClient(String clientEmail) async {
-    throw Exception(
-        'Client invitation requires email lookup — coming soon');
+  Future<void> inviteClient(String clientEmail, String workspaceId) async {
+    final currentUserId = supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('Not authenticated');
+    final expiresAt =
+        DateTime.now().toUtc().add(const Duration(days: 7));
+    await supabase.from('workspace_invites').insert({
+      'workspace_id': workspaceId,
+      'email': clientEmail,
+      'role': 'Editor',
+      'expires_at': expiresAt.toIso8601String(),
+      'created_by_user_id': currentUserId,
+    });
   }
 
   Future<void> revokeClient(String relationshipId) async {
@@ -179,8 +188,17 @@ class CoachingRepository {
     return CoachNote.fromJson(row);
   }
 
-  Future<void> inviteCoach(String coachEmail) async {
-    throw Exception(
-        'Coach invitation requires email lookup — coming soon');
+  Future<void> inviteCoach(String coachEmail, String workspaceId) async {
+    final currentUserId = supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('Not authenticated');
+    final expiresAt =
+        DateTime.now().toUtc().add(const Duration(days: 7));
+    await supabase.from('workspace_invites').insert({
+      'workspace_id': workspaceId,
+      'email': coachEmail,
+      'role': 'Editor',
+      'expires_at': expiresAt.toIso8601String(),
+      'created_by_user_id': currentUserId,
+    });
   }
 }

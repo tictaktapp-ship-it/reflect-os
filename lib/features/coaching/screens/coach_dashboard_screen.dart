@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
 import 'package:reflect_os/features/coaching/data/models/coach_client_relationship.dart';
@@ -102,7 +103,7 @@ class CoachDashboardScreen extends ConsumerWidget {
             action: IconButton(
               icon: const Icon(Icons.person_add_outlined, size: 20),
               tooltip: 'Add coach',
-              onPressed: () => _showAddCoachDialog(context),
+              onPressed: () => _showAddCoachDialog(context, ref),
             ),
           ),
           coachesAsync.when(
@@ -130,18 +131,89 @@ class CoachDashboardScreen extends ConsumerWidget {
     );
   }
 
-  void _showAddCoachDialog(BuildContext context) {
+  void _showAddCoachDialog(BuildContext context, WidgetRef ref) {
+    final emailController = TextEditingController();
+    bool isBusy = false;
+
     showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Add Coach'),
-        content: const Text('Coach invitation coming soon.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
+          title: const Text('Add a Coach'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Enter your coach\'s email address. '
+                'They will receive an invite to connect with you.',
+                style: Theme.of(dialogCtx).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: emailController,
+                autofocus: true,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Coach email',
+                  hintText: 'coach@example.com',
+                ),
+              ),
+            ],
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: isBusy ? null : () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: isBusy
+                  ? null
+                  : () async {
+                      final email = emailController.text.trim();
+                      if (email.isEmpty) return;
+                      setDialogState(() => isBusy = true);
+                      try {
+                        final workspaceId = await ref
+                            .read(currentWorkspaceProvider.future);
+                        if (workspaceId == null) {
+                          throw Exception('No active workspace');
+                        }
+                        await ref
+                            .read(coachingRepositoryProvider)
+                            .inviteCoach(email, workspaceId);
+                        if (ctx.mounted) {
+                          Navigator.of(ctx).pop();
+                          ref.invalidate(myCoachesProvider);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Invite sent to $email')),
+                          );
+                        }
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          Navigator.of(ctx).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('$e')),
+                          );
+                        }
+                      } finally {
+                        setDialogState(() => isBusy = false);
+                      }
+                    },
+              child: isBusy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Send invite'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -256,12 +328,21 @@ class CoachDashboardScreen extends ConsumerWidget {
                               if (email.isEmpty) return;
                               setSheetState(() => isBusy = true);
                               try {
+                                final workspaceId = await ref
+                                    .read(currentWorkspaceProvider.future);
+                                if (workspaceId == null) {
+                                  throw Exception('No active workspace');
+                                }
                                 await ref
                                     .read(coachingRepositoryProvider)
-                                    .inviteClient(email);
+                                    .inviteClient(email, workspaceId);
                                 if (ctx.mounted) {
                                   Navigator.of(ctx).pop();
                                   ref.invalidate(myClientsProvider);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text('Invite sent to $email')),
+                                  );
                                 }
                               } catch (e) {
                                 if (ctx.mounted) {
