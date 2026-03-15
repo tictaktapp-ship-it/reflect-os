@@ -276,9 +276,9 @@ class _GaugeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.backgroundElevated,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: Colors.black12, width: 0.5),
       ),
       child: child,
     );
@@ -326,7 +326,7 @@ class _ToggleChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: active
               ? AppColors.accentPrimary.withValues(alpha: 0.15)
-              : AppColors.backgroundElevated,
+              : Colors.white,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: active ? AppColors.accentPrimary : AppColors.borderSubtle,

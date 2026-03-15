@@ -28,7 +28,7 @@ class InfluenceNodeCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: AppColors.backgroundElevated,
+        color: Colors.white,
         border: Border(
           left: BorderSide(color: _accentColor, width: 3),
         ),
