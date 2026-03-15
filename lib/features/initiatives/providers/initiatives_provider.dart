@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
+import 'package:reflect_os/features/decisions/data/models/decision_stakeholder.dart';
 import 'package:reflect_os/features/initiatives/data/initiatives_repository.dart';
 import 'package:reflect_os/features/initiatives/data/models/initiative.dart';
 
@@ -34,4 +35,20 @@ final initiativesForDecisionProvider =
   return ref
       .read(initiativesRepositoryProvider)
       .getInitiativesForDecision(decisionId);
+});
+
+final linkedDecisionIdsProvider =
+    FutureProvider.family.autoDispose<List<String>, String>(
+        (ref, initiativeId) {
+  return ref
+      .read(initiativesRepositoryProvider)
+      .getLinkedDecisionIds(initiativeId);
+});
+
+final peopleForInitiativeProvider =
+    FutureProvider.family<List<DecisionStakeholder>, String>(
+        (ref, initiativeId) {
+  return ref
+      .read(initiativesRepositoryProvider)
+      .getPeopleForInitiative(initiativeId);
 });

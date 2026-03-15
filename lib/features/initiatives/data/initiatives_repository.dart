@@ -1,5 +1,6 @@
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
+import 'package:reflect_os/features/decisions/data/models/decision_stakeholder.dart';
 import 'package:reflect_os/features/initiatives/data/models/initiative.dart';
 
 class InitiativesRepository {
@@ -83,6 +84,32 @@ class InitiativesRepository {
     });
   }
 
+  /// Returns just the decision IDs currently linked to an initiative (active rows).
+  Future<List<String>> getLinkedDecisionIds(String initiativeId) async {
+    final rows = await supabase
+        .from('user_visible_decision_initiatives')
+        .select('decision_id')
+        .eq('initiative_id', initiativeId)
+        .isFilter('deleted_at', null);
+    return rows.map((r) => r['decision_id'] as String).toList();
+  }
+
+  /// Links multiple decisions to an initiative in one batch.
+  Future<void> linkDecisionsToInitiative({
+    required String initiativeId,
+    required List<String> decisionIds,
+  }) async {
+    if (decisionIds.isEmpty) return;
+    await supabase.from('decision_initiatives').insert(
+          decisionIds
+              .map((id) => {
+                    'decision_id': id,
+                    'initiative_id': initiativeId,
+                  })
+              .toList(),
+        );
+  }
+
   /// Soft-delete: sets deleted_at = now() on the matching active row.
   Future<void> unlinkInitiativeFromDecision(
       String decisionId, String initiativeId) async {
@@ -116,5 +143,42 @@ class InitiativesRepository {
         .order('name');
 
     return rows.map((row) => Initiative.fromJson(row)).toList();
+  }
+
+  // ── People ────────────────────────────────────────────────────────────────
+
+  /// Returns all unique stakeholders across every decision linked to this
+  /// initiative, deduplicated by userId (or name+email for externals).
+  Future<List<DecisionStakeholder>> getPeopleForInitiative(
+      String initiativeId) async {
+    // Step 1: get linked decision IDs.
+    final joinRows = await supabase
+        .from('user_visible_decision_initiatives')
+        .select('decision_id')
+        .eq('initiative_id', initiativeId)
+        .isFilter('deleted_at', null);
+
+    if (joinRows.isEmpty) return [];
+
+    final decisionIds =
+        joinRows.map((r) => r['decision_id'] as String).toList();
+
+    // Step 2: fetch all stakeholders for those decisions in one query.
+    final rows = await supabase
+        .from('decision_stakeholders')
+        .select()
+        .inFilter('decision_id', decisionIds)
+        .isFilter('deleted_at', null);
+
+    // Deduplicate: prefer userId key, fall back to name+email.
+    final seen = <String>{};
+    final result = <DecisionStakeholder>[];
+    for (final row in rows) {
+      final s = DecisionStakeholder.fromJson(row);
+      final key = s.userId ??
+          '${s.stakeholderName?.toLowerCase()}-${s.stakeholderEmail?.toLowerCase()}';
+      if (seen.add(key)) result.add(s);
+    }
+    return result;
   }
 }

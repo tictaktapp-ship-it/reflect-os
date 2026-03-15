@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
+import 'package:reflect_os/features/decisions/data/models/decision_stakeholder.dart';
 import 'package:reflect_os/features/initiatives/data/models/initiative.dart';
 import 'package:reflect_os/features/initiatives/providers/initiatives_provider.dart';
 
@@ -59,23 +59,11 @@ class _InitiativeDetail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final decisionsAsync =
         ref.watch(decisionsForInitiativeProvider(initiative.id));
+    final peopleAsync = ref.watch(peopleForInitiativeProvider(initiative.id));
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            SvgPicture.asset(
-              Theme.of(context).brightness == Brightness.dark
-                  ? 'assets/branding/icon.svg'
-                  : 'assets/branding/icon.svg',
-              height: 160,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(initiative.name, overflow: TextOverflow.ellipsis),
-            ),
-          ],
-        ),
+        title: Text(initiative.name, overflow: TextOverflow.ellipsis),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -142,6 +130,60 @@ class _InitiativeDetail extends ConsumerWidget {
               return decisions
                   .map((d) => _LinkedDecisionTile(decision: d))
                   .toList();
+            },
+          ),
+
+          // ── People ────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.only(top: 24, bottom: 8, left: 4),
+            child: Text(
+              'People',
+              style: Theme.of(context)
+                  .textTheme
+                  .labelMedium
+                  ?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6)),
+            ),
+          ),
+          ...peopleAsync.when(
+            loading: () => [
+              const _DetailCard(children: [
+                Center(child: CircularProgressIndicator()),
+              ]),
+            ],
+            error: (e, _) => [
+              _DetailCard(children: [Text('Failed to load people: $e')]),
+            ],
+            data: (people) {
+              if (people.isEmpty) {
+                return [
+                  _DetailCard(children: [
+                    Text(
+                      'No people associated with linked decisions.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6)),
+                    ),
+                  ]),
+                ];
+              }
+              return [
+                _DetailCard(
+                  children: [
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children:
+                          people.map((p) => _PersonChip(person: p)).toList(),
+                    ),
+                  ],
+                ),
+              ];
             },
           ),
 
@@ -267,6 +309,66 @@ class _LinkedDecisionTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Person chip ────────────────────────────────────────────────────────────────
+
+class _PersonChip extends StatelessWidget {
+  const _PersonChip({required this.person});
+
+  final DecisionStakeholder person;
+
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2) {
+      return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+    }
+    return name.isNotEmpty ? name[0].toUpperCase() : '?';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final name = person.displayName;
+    final role = person.stakeholderRole;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircleAvatar(
+          radius: 22,
+          backgroundColor: AppColors.accentPrimary.withValues(alpha: 0.18),
+          child: Text(
+            _initials(name),
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: AppColors.accentPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        SizedBox(
+          width: 72,
+          child: Text(
+            name,
+            style: Theme.of(context).textTheme.labelSmall,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        Text(
+          role,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.5)),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 }
