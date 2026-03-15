@@ -51,7 +51,7 @@ final dashboardAnalyticsProvider =
   // Fetch lightweight columns needed for all aggregations.
   final rows = await supabase
       .from('user_visible_decisions')
-      .select('initial_confidence, created_at, health_state, confidence_score, outcome_score')
+      .select('id, initial_confidence, created_at, health_state, confidence_score')
       .eq('workspace_id', workspaceId);
 
   if (rows.isEmpty) return DashboardAnalytics(computedAt: DateTime.now());
@@ -95,18 +95,42 @@ final dashboardAnalyticsProvider =
   final rolling30dQuality = avgQuality(last30);
   final rolling90dQuality = avgQuality(last90);
 
-  // Confidence calibration delta: mean(confidence_score - outcome_score) * 10
-  // Includes any row where outcome_score is populated, regardless of status.
+  // Confidence calibration: compare initial_confidence (1–10) with
+  // outcome_quality_score (1–10) from outcome_updates.
+  // Positive delta = overconfident; negative = underconfident.
   double? calibrationDelta;
-  final calibRows =
-      rows.where((r) => r['outcome_score'] != null).toList();
-  if (calibRows.isNotEmpty) {
-    final deltas = calibRows.map((r) {
-      final conf = (r['confidence_score'] as num?)?.toDouble() ?? 0.0;
-      final out = (r['outcome_score'] as num?)?.toDouble() ?? 0.0;
-      return (conf - out) * 10.0; // scale 1–10 gap to a 0–100 percentage
-    }).toList();
-    calibrationDelta = deltas.reduce((a, b) => a + b) / deltas.length;
+  try {
+    final outcomeRows = await supabase
+        .from('outcome_updates')
+        .select('decision_id, outcome_quality_score')
+        .not('outcome_quality_score', 'is', null)
+        .isFilter('deleted_at', null);
+
+    if (outcomeRows.isNotEmpty) {
+      // Build lookup: decisionId → initial_confidence from rows
+      final confByDecision = <String, double>{};
+      for (final r in rows) {
+        final id = r['id'] as String?;
+        final conf = (r['initial_confidence'] as num?)?.toDouble();
+        if (id != null && conf != null) confByDecision[id] = conf;
+      }
+
+      final deltas = <double>[];
+      for (final o in outcomeRows) {
+        final decId = o['decision_id'] as String?;
+        final quality = (o['outcome_quality_score'] as num?)?.toDouble();
+        final conf = decId != null ? confByDecision[decId] : null;
+        if (conf != null && quality != null) {
+          // Both on 1–10 scale; multiply by 10 to get a percentage-point delta
+          deltas.add((conf - quality) * 10.0);
+        }
+      }
+      if (deltas.isNotEmpty) {
+        calibrationDelta = deltas.reduce((a, b) => a + b) / deltas.length;
+      }
+    }
+  } catch (e) {
+    debugPrint('[DashboardAnalytics] calibration query failed: $e');
   }
 
   debugPrint('[DashboardAnalytics] rows=${rows.length} '
@@ -114,7 +138,7 @@ final dashboardAnalyticsProvider =
       'allTimeAvgQuality=$allTimeQuality '
       'rolling30dAvgQuality=$rolling30dQuality '
       'rolling90dAvgQuality=$rolling90dQuality '
-      'calibrationDelta=$calibrationDelta (from ${calibRows.length} rows with outcome_score)');
+      'calibrationDelta=$calibrationDelta');
 
   return DashboardAnalytics(
     allTimeAvgQuality: allTimeQuality,

@@ -349,17 +349,19 @@ class _QualityDial extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // quality is passed as 0–100 (confidence 1–10 scaled ×10).
+    // Display on a 0–10 scale for readability.
     final q = quality?.clamp(0.0, 100.0) ?? 0.0;
-    final hasData = quality != null;
+    final hasData = quality != null && quality! > 0;
 
-    final arcColor = hasData
-        ? AppColors.accentPrimary
-        : AppColors.textMuted.withValues(alpha: 0.3);
+    final arcColor = AppColors.accentPrimary;
+    const bgArcColor = Color(0xFFE2E8F0);
 
     final filledFraction = hasData ? q / 100.0 : 0.0;
-    final emptyFraction = hasData ? (100.0 - q) / 100.0 : 1.0;
+    final emptyFraction = 1.0 - filledFraction;
 
     return Card(
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
         child: Column(
@@ -397,10 +399,10 @@ class _QualityDial extends StatelessWidget {
                               radius: 28,
                               showTitle: false,
                             ),
-                            // Empty arc
+                            // Empty / background arc
                             PieChartSectionData(
                               value: emptyFraction,
-                              color: AppColors.borderSubtle,
+                              color: bgArcColor,
                               radius: 28,
                               showTitle: false,
                             ),
@@ -414,7 +416,7 @@ class _QualityDial extends StatelessWidget {
                           ],
                         ),
                       ),
-                      // Centre label
+                      // Centre label — score on 0–10 scale
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Column(
@@ -422,7 +424,7 @@ class _QualityDial extends StatelessWidget {
                           children: [
                             Text(
                               hasData
-                                  ? '${q.round()}%'
+                                  ? (q / 10).toStringAsFixed(1)
                                   : '—',
                               style: Theme.of(context)
                                   .textTheme
@@ -433,7 +435,7 @@ class _QualityDial extends StatelessWidget {
                                   ),
                             ),
                             Text(
-                              'Quality Score',
+                              hasData ? 'out of 10' : 'No data yet',
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
@@ -450,15 +452,6 @@ class _QualityDial extends StatelessWidget {
                     ],
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Center(
-              child: Text(
-                hasData ? quality!.toStringAsFixed(1) : '—',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: AppColors.accentPrimary,
-                    ),
               ),
             ),
           ],
@@ -507,6 +500,7 @@ class _StatusBarChart extends StatelessWidget {
         );
 
     return Card(
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
         child: Column(
@@ -530,12 +524,15 @@ class _StatusBarChart extends StatelessWidget {
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: false,
-                    getDrawingHorizontalLine: (_) => FlLine(
-                      color: Colors.black.withValues(alpha: 0.07),
-                      strokeWidth: 1,
+                    getDrawingHorizontalLine: (_) => const FlLine(
+                      color: Colors.black12,
+                      strokeWidth: 0.5,
                     ),
                   ),
-                  borderData: FlBorderData(show: false),
+                  borderData: FlBorderData(
+                    show: true,
+                    border: Border.all(color: Colors.black12),
+                  ),
                   titlesData: FlTitlesData(
                     leftTitles: const AxisTitles(),
                     rightTitles: const AxisTitles(),
@@ -596,10 +593,10 @@ class _StatusBarChart extends StatelessWidget {
                     ),
                   ),
                   barGroups: [
-                    bar(0, draft, AppColors.textSecondary),
-                    bar(1, active, AppColors.accentHover),
-                    bar(2, closed, AppColors.success),
-                    bar(3, archived, AppColors.textMuted),
+                    bar(0, draft, const Color(0xFF94A3B8)),
+                    bar(1, active, const Color(0xFF19CBD6)),
+                    bar(2, closed, const Color(0xFF2EA073)),
+                    bar(3, archived, const Color(0xFF334155)),
                   ],
                 ),
               ),
