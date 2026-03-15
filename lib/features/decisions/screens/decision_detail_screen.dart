@@ -368,6 +368,10 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
           ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // ── Summary card ──────────────────────────────────────────
+          _SummaryCard(decision: decision),
+          const SizedBox(height: 12),
+
           // ── State transitions ─────────────────────────────────────
           _StateTransitionBar(decision: decision),
 
@@ -629,6 +633,143 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
           DecisionLensTab(decision: decision),
         ],
       ),
+      ),
+    );
+  }
+}
+
+// ── Summary card ─────────────────────────────────────────────────────────────
+
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({required this.decision});
+  final Decision decision;
+
+  Color _healthColor(String? h) => switch (h) {
+        'on_track' => const Color(0xFF2EA073),
+        'needs_attention' => const Color(0xFFD97D24),
+        'overdue' => const Color(0xFFDC4444),
+        _ => AppColors.textMuted,
+      };
+
+  String _healthLabel(String? h) => switch (h) {
+        'on_track' => 'On Track',
+        'needs_attention' => 'Needs Attention',
+        'overdue' => 'Overdue',
+        _ => h ?? '',
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Theme.of(context).colorScheme.surface,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: [
+            // State
+            _SummaryPill(
+              label: decision.state,
+              bg: _stateColor(decision.state).withValues(alpha: 0.12),
+              fg: _stateColor(decision.state),
+            ),
+            // Health
+            if (decision.healthState != null)
+              _SummaryPill(
+                label: _healthLabel(decision.healthState),
+                bg: _healthColor(decision.healthState).withValues(alpha: 0.12),
+                fg: _healthColor(decision.healthState),
+                icon: Icons.circle,
+                iconSize: 6,
+              ),
+            // Stakes
+            if (decision.stakes != null)
+              _SummaryPill(
+                label: decision.stakes!,
+                bg: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.06),
+                fg: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
+              ),
+            // Category
+            if (decision.categoryName != null)
+              _SummaryPill(
+                label: decision.categoryName!,
+                bg: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.06),
+                fg: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
+                icon: Icons.category_outlined,
+              ),
+            // Confidence
+            if (decision.initialConfidence != null)
+              _SummaryPill(
+                label: '${decision.initialConfidence}/10 confidence',
+                bg: AppColors.accentPrimary.withValues(alpha: 0.08),
+                fg: AppColors.accentPrimary,
+                icon: Icons.signal_cellular_alt_outlined,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _stateColor(String s) => switch (s.toLowerCase()) {
+        'active' => AppColors.accentPrimary,
+        'draft' => AppColors.textSecondary,
+        'closed' => AppColors.success,
+        'archived' => AppColors.textMuted,
+        _ => AppColors.textSecondary,
+      };
+}
+
+class _SummaryPill extends StatelessWidget {
+  const _SummaryPill({
+    required this.label,
+    required this.bg,
+    required this.fg,
+    this.icon,
+    this.iconSize = 12,
+  });
+  final String label;
+  final Color bg;
+  final Color fg;
+  final IconData? icon;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: iconSize, color: fg),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: fg,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
       ),
     );
   }
@@ -2283,6 +2424,10 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
   Widget build(BuildContext context) {
     final stakeholdersAsync =
         ref.watch(stakeholdersProvider(widget.decisionId));
+    final teamMembers = ref.watch(teamMembersProvider).valueOrNull ?? [];
+    final membersByUserId = {
+      for (final m in teamMembers) m.userId: m,
+    };
 
     return _CollapsibleSection(
       title: 'Stakeholders',
@@ -2310,34 +2455,55 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
           style: Theme.of(context)
               .textTheme
               .bodyMedium
-              ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+              ?.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.4)),
         ),
         data: (stakeholders) {
           if (stakeholders.isEmpty) {
             return Text(
               'No stakeholders added.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.4),
+                  ),
             );
           }
           return Wrap(
             spacing: 8,
-            runSpacing: 6,
+            runSpacing: 8,
             children: stakeholders.map((s) {
               final color = _roleColor(s.stakeholderRole);
-              final shortId = s.userId.length >= 8
-                  ? s.userId.substring(0, 8)
-                  : s.userId;
+              final member = membersByUserId[s.userId];
+              final displayName = member?.displayName?.isNotEmpty == true
+                  ? member!.displayName!
+                  : s.userId.substring(
+                      0, s.userId.length >= 8 ? 8 : s.userId.length);
+              final initial = displayName[0].toUpperCase();
+
               return Chip(
-                backgroundColor: color.withValues(alpha: 0.12),
+                backgroundColor: color.withValues(alpha: 0.10),
+                avatar: CircleAvatar(
+                  radius: 12,
+                  backgroundColor: color.withValues(alpha: 0.25),
+                  child: Text(
+                    initial,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
                 label: Text(
-                  '${s.stakeholderRole} · $shortId',
+                  '$displayName · ${s.stakeholderRole}',
                   style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.w600,
-                    fontFamily: 'monospace',
                     fontSize: 12,
                   ),
                 ),
@@ -4952,63 +5118,73 @@ class _ArtifactRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayText =
-        artifact.label ?? artifact.url;
+    final displayText = artifact.label?.isNotEmpty == true
+        ? artifact.label!
+        : artifact.url;
 
-    return GestureDetector(
-      onLongPress: onDelete,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Row(
-          children: [
-            Icon(
-              artifactTypeIcon(artifact.artifactType),
-              size: 18,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(4),
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(
+            color: Theme.of(context)
+                .colorScheme
+                .onSurface
+                .withValues(alpha: 0.08)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => launchUrl(Uri.parse(artifact.url),
+            mode: LaunchMode.externalApplication).ignore(),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+          child: Row(
+            children: [
+              Icon(
+                artifactTypeIcon(artifact.artifactType),
+                size: 20,
+                color: AppColors.accentPrimary,
               ),
-              child: Text(
-                artifact.artifactType,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayText,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                displayText,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
+                    Text(
+                      artifact.artifactType.replaceAll('_', ' '),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.45),
+                          ),
                     ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                  ],
+                ),
               ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.open_in_new, size: 16),
-              tooltip: 'Open',
-              onPressed: () => launchUrl(
-                  Uri.parse(artifact.url),
-                  mode: LaunchMode.externalApplication).ignore(),
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ],
+              IconButton(
+                icon: Icon(
+                  Icons.delete_outline,
+                  size: 16,
+                  color: AppColors.destructive.withValues(alpha: 0.6),
+                ),
+                tooltip: 'Remove',
+                onPressed: onDelete,
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
         ),
       ),
     );

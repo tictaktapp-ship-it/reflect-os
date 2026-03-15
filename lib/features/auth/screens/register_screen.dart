@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/theme.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
+import 'package:reflect_os/features/auth/widgets/auth_logo.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
 
@@ -165,10 +165,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const SizedBox(height: 48),
-                      SvgPicture.asset(
-                        'assets/branding/logo-light.svg',
-                        height: 144,
-                      ),
+                      const AuthLogo(),
                       const SizedBox(height: 40),
                       TextFormField(
                         controller: _nameController,

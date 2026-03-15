@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/theme.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
+import 'package:reflect_os/features/auth/widgets/auth_logo.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -57,10 +57,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 48),
-                    SvgPicture.asset(
-                      'assets/branding/logo-light.svg',
-                      height: 144,
-                    ),
+                    const AuthLogo(),
                     const SizedBox(height: 40),
                     if (_emailSent) ...[
                       const Icon(Icons.mark_email_read_outlined, size: 48),
