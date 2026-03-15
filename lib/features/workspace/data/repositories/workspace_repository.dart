@@ -15,14 +15,42 @@ class WorkspaceRepository {
     return rows.map((row) => WorkspaceModel.fromJson(row)).toList();
   }
 
-  Future<void> createWorkspace(String name, bool shareWithTeam) async {
+  /// Creates the workspace and returns its new id.
+  Future<String> createWorkspace(String name, bool shareWithTeam) async {
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('Not authenticated');
-    await supabase.from('workspaces').insert({
-      'name': name,
-      'workspace_type': shareWithTeam ? 'team' : 'personal',
-      'owner_user_id': userId,
-    });
+    final row = await supabase
+        .from('workspaces')
+        .insert({
+          'name': name,
+          'workspace_type': shareWithTeam ? 'team' : 'personal',
+          'owner_user_id': userId,
+        })
+        .select('id')
+        .single();
+    return row['id'] as String;
+  }
+
+  /// Batch-inserts workspace_invites rows. Each invite expires in 7 days.
+  Future<void> sendInvites({
+    required String workspaceId,
+    required List<({String email, String role})> invites,
+  }) async {
+    if (invites.isEmpty) return;
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not authenticated');
+    final expiresAt = DateTime.now().toUtc().add(const Duration(days: 7));
+    await supabase.from('workspace_invites').insert(
+          invites
+              .map((i) => {
+                    'workspace_id': workspaceId,
+                    'email': i.email,
+                    'role': i.role,
+                    'expires_at': expiresAt.toIso8601String(),
+                    'created_by_user_id': userId,
+                  })
+              .toList(),
+        );
   }
 
   Future<void> renameWorkspace(String id, String name) async {

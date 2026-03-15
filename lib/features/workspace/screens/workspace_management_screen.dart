@@ -23,73 +23,180 @@ class _WorkspaceManagementScreenState
 
   void _showCreateSheet() {
     final nameCtrl = TextEditingController();
+    final inviteEmailCtrl = TextEditingController();
     bool shareWithTeam = false;
+    String inviteRole = 'editor';
+    final invites = <({String email, String role})>[];
     final formKey = GlobalKey<FormState>();
 
     showDialog<void>(
       context: context,
       barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => DialogShell(
-          title: 'New Workspace',
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: nameCtrl,
-                  decoration:
-                      const InputDecoration(labelText: 'Workspace name *'),
-                  textCapitalization: TextCapitalization.words,
-                  autofocus: true,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Name required' : null,
-                ),
-                const SizedBox(height: 8),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Share with team'),
-                  subtitle: const Text('Creates a team workspace'),
-                  value: shareWithTeam,
-                  onChanged: (v) => setSheetState(() => shareWithTeam = v),
-                ),
-              ],
+        builder: (ctx, setSheetState) {
+          void addInvite() {
+            final email = inviteEmailCtrl.text.trim().toLowerCase();
+            if (email.isEmpty || !email.contains('@')) return;
+            if (invites.any((i) => i.email == email)) return;
+            setSheetState(() {
+              invites.add((email: email, role: inviteRole));
+              inviteEmailCtrl.clear();
+            });
+          }
+
+          return DialogShell(
+            title: 'New Workspace',
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── Name ────────────────────────────────────────────
+                  TextFormField(
+                    controller: nameCtrl,
+                    decoration:
+                        const InputDecoration(labelText: 'Workspace name *'),
+                    textCapitalization: TextCapitalization.words,
+                    autofocus: true,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Name required'
+                        : null,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // ── Team toggle ──────────────────────────────────────
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Share with team'),
+                    subtitle: const Text('Creates a team workspace'),
+                    value: shareWithTeam,
+                    onChanged: (v) =>
+                        setSheetState(() => shareWithTeam = v),
+                  ),
+
+                  // ── Invite section (team only) ───────────────────────
+                  if (shareWithTeam) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      'Invite team members',
+                      style: Theme.of(ctx).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Email + role + add row
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: inviteEmailCtrl,
+                            decoration: const InputDecoration(
+                              hintText: 'email@example.com',
+                              isDense: true,
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            onSubmitted: (_) => addInvite(),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        DropdownButton<String>(
+                          value: inviteRole,
+                          isDense: true,
+                          underline: const SizedBox.shrink(),
+                          items: const [
+                            DropdownMenuItem(
+                                value: 'editor', child: Text('Editor')),
+                            DropdownMenuItem(
+                                value: 'viewer', child: Text('Viewer')),
+                          ],
+                          onChanged: (v) =>
+                              setSheetState(() => inviteRole = v!),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add),
+                          tooltip: 'Add',
+                          onPressed: addInvite,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
+                    ),
+
+                    // Invite chips
+                    if (invites.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: invites
+                            .map(
+                              (i) => Chip(
+                                label: Text(
+                                  '${i.email} · ${i.role[0].toUpperCase()}${i.role.substring(1)}',
+                                  style:
+                                      Theme.of(ctx).textTheme.labelSmall,
+                                ),
+                                deleteIcon:
+                                    const Icon(Icons.close, size: 14),
+                                onDeleted: () => setSheetState(
+                                    () => invites.remove(i)),
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ],
+                  ],
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                if (!formKey.currentState!.validate()) return;
-                final name = nameCtrl.text.trim();
-                Navigator.of(ctx).pop();
-                await _createWorkspace(name, shareWithTeam);
-              },
-              child: const Text('Create Workspace'),
-            ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  if (!formKey.currentState!.validate()) return;
+                  final name = nameCtrl.text.trim();
+                  final pendingInvites =
+                      List<({String email, String role})>.from(invites);
+                  Navigator.of(ctx).pop();
+                  await _createWorkspace(
+                      name, shareWithTeam, pendingInvites);
+                },
+                child: const Text('Create Workspace'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Future<void> _createWorkspace(String name, bool shareWithTeam) async {
+  Future<void> _createWorkspace(
+    String name,
+    bool shareWithTeam,
+    List<({String email, String role})> invites,
+  ) async {
     setState(() => _isWorking = true);
     try {
-      await ref
-          .read(workspaceRepositoryProvider)
-          .createWorkspace(name, shareWithTeam);
+      final repo = ref.read(workspaceRepositoryProvider);
+      final workspaceId = await repo.createWorkspace(name, shareWithTeam);
+      if (invites.isNotEmpty) {
+        await repo.sendInvites(workspaceId: workspaceId, invites: invites);
+      }
       ref.invalidate(userWorkspacesProvider);
       if (mounted) {
         setState(() {});
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Workspace "$name" created')),
-        );
+        final msg = invites.isEmpty
+            ? 'Workspace "$name" created.'
+            : 'Workspace "$name" created. Invites sent to ${invites.length} ${invites.length == 1 ? 'person' : 'people'}.';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(msg)));
       }
     } catch (e) {
       if (mounted) {
