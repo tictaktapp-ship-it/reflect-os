@@ -4690,26 +4690,43 @@ class _IcVoteRow extends StatelessWidget {
   }
 }
 
-// ── Engineering Artifacts Section ─────────────────────────────────────────────
+// ── Linked Documents & Artifacts Section ──────────────────────────────────────
 
-const _kArtifactTypes = [
-  'RFC',
-  'ADR',
-  'PR',
-  'Ticket',
-  'Incident',
-  'Runbook',
-  'Other',
+const _kArtifactTypes = <Map<String, String>>[
+  {'label': 'Code change',          'value': 'code_change'},
+  {'label': 'Code commit',          'value': 'code_commit'},
+  {'label': 'Task or issue',        'value': 'task_or_issue'},
+  {'label': 'Build or deployment',  'value': 'build_or_deployment'},
+  {'label': 'Architecture diagram', 'value': 'architecture_diagram'},
+  {'label': 'Technical proposal',   'value': 'technical_proposal'},
+  {'label': 'Incident report',      'value': 'incident_report'},
+  {'label': 'Runbook or playbook',  'value': 'runbook'},
+  {'label': 'Meeting notes',        'value': 'meeting_notes'},
+  {'label': 'Research document',    'value': 'research_document'},
+  {'label': 'Legal document',       'value': 'legal_document'},
+  {'label': 'Financial model',      'value': 'financial_model'},
+  {'label': 'Supplier contract',    'value': 'supplier_contract'},
+  {'label': 'Strategic plan',       'value': 'strategic_plan'},
+  {'label': 'Board paper',          'value': 'board_paper'},
+  {'label': 'Other',                'value': 'other'},
 ];
 
-IconData _iconForArtifactType(String type) => switch (type) {
-      'RFC' => Icons.description_outlined,
-      'ADR' => Icons.architecture_outlined,
-      'PR' => Icons.merge_outlined,
-      'Ticket' => Icons.confirmation_number_outlined,
-      'Incident' => Icons.warning_amber_outlined,
-      'Runbook' => Icons.menu_book_outlined,
-      _ => Icons.link_outlined,
+IconData artifactTypeIcon(String? type) => switch (type) {
+      'code_change' || 'code_commit' => Icons.code,
+      'task_or_issue'       => Icons.task_alt,
+      'build_or_deployment' => Icons.rocket_launch,
+      'architecture_diagram'=> Icons.account_tree,
+      'technical_proposal'  => Icons.description,
+      'incident_report'     => Icons.warning_amber,
+      'runbook'             => Icons.menu_book,
+      'meeting_notes'       => Icons.groups,
+      'research_document'   => Icons.science,
+      'legal_document'      => Icons.gavel,
+      'financial_model'     => Icons.attach_money,
+      'supplier_contract'   => Icons.handshake,
+      'strategic_plan'      => Icons.flag,
+      'board_paper'         => Icons.corporate_fare,
+      _                     => Icons.attach_file,
     };
 
 class _EngineeringArtifactsSection extends ConsumerStatefulWidget {
@@ -4729,7 +4746,7 @@ class _EngineeringArtifactsSectionState
       context: context,
       builder: (ctx) => DialogShell(
         title: 'Remove Artifact',
-        child: const Text('Remove this engineering artifact link?'),
+        child: const Text('Remove this linked document or artifact?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -4760,7 +4777,7 @@ class _EngineeringArtifactsSectionState
   }
 
   void _showAddSheet(String workspaceId) {
-    String selectedType = 'RFC';
+    String selectedType = 'code_change';
     final urlCtrl = TextEditingController();
     final labelCtrl = TextEditingController();
 
@@ -4769,23 +4786,23 @@ class _EngineeringArtifactsSectionState
       barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSS) => DialogShell(
-          title: 'Add Engineering Artifact',
+          title: 'Add Linked Document or Artifact',
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               DropdownButtonFormField<String>(
                 decoration:
-                    const InputDecoration(labelText: 'Artifact type'),
-                initialValue: selectedType,
+                    const InputDecoration(labelText: 'Document type'),
+                value: selectedType,
                 items: _kArtifactTypes
                     .map((t) => DropdownMenuItem(
-                          value: t,
+                          value: t['value']!,
                           child: Row(
                             children: [
-                              Icon(_iconForArtifactType(t), size: 18),
+                              Icon(artifactTypeIcon(t['value']), size: 18),
                               const SizedBox(width: 8),
-                              Text(t),
+                              Text(t['label']!),
                             ],
                           ),
                         ))
@@ -4865,7 +4882,7 @@ class _EngineeringArtifactsSectionState
       loading: () => const SizedBox.shrink(),
       error: (err, st) => const SizedBox.shrink(),
       data: (artifacts) => _CollapsibleSection(
-        title: 'Engineering Artifacts',
+        title: 'Linked Documents & Artifacts',
         trailing: IconButton(
           icon: const Icon(Icons.add_link, size: 18),
           tooltip: 'Add artifact',
@@ -4876,7 +4893,7 @@ class _EngineeringArtifactsSectionState
         ),
         child: artifacts.isEmpty
             ? Text(
-                'No engineering artifacts linked.',
+                'No linked documents or artifacts.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                     ),
@@ -4914,7 +4931,7 @@ class _ArtifactRow extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              _iconForArtifactType(artifact.artifactType),
+              artifactTypeIcon(artifact.artifactType),
               size: 18,
               color: Theme.of(context)
                   .colorScheme
