@@ -246,96 +246,151 @@ class _WorkspaceManagementScreenState
           if (workspaces.isEmpty) {
             return const Center(child: Text('No workspaces found.'));
           }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-            itemCount: workspaces.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, i) {
-              final w = workspaces[i];
-              final isActive = w.id == currentId;
-              final isOwner = w.role == 'owner';
-              return Card(
-                color: Theme.of(context).colorScheme.surface,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                itemCount: workspaces.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (context, i) {
+                  final w = workspaces[i];
+                  final isActive = w.id == currentId;
+                  final isOwner = w.role == 'owner';
+                  final typeIcon = w.workspaceType == 'team'
+                      ? Icons.group_outlined
+                      : Icons.person_outline;
+
+                  return Card(
+                    clipBehavior: Clip.hardEdge,
+                    color: Theme.of(context).colorScheme.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: isActive
+                          ? const BorderSide(
+                              color: Color(0xFF19CBD6), width: 2)
+                          : BorderSide(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.08)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Text(
-                              w.name,
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color:
+                                      AppColors.accentPrimary.withValues(alpha: 0.10),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(typeIcon,
+                                    size: 20,
+                                    color: AppColors.accentPrimary),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  w.name,
+                                  style:
+                                      Theme.of(context).textTheme.titleSmall,
+                                ),
+                              ),
+                              if (isActive)
+                                _Badge(
+                                  label: 'Active',
+                                  color: AppColors.accentPrimary,
+                                ),
+                            ],
                           ),
-                          if (isActive)
-                            _Badge(
-                              label: 'Active',
-                              color: AppColors.accentPrimary,
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          _Badge(
-                            label: isOwner ? 'Owner' : 'Member',
-                            color: isOwner
-                                ? AppColors.accentPrimary
-                                : Theme.of(context)
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              _Badge(
+                                label: isOwner ? 'Owner' : 'Member',
+                                color: isOwner
+                                    ? AppColors.accentPrimary
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.4),
+                              ),
+                              const SizedBox(width: 6),
+                              _Badge(
+                                label: w.workspaceType == 'team'
+                                    ? 'Team'
+                                    : 'Personal',
+                                color: Theme.of(context)
                                     .colorScheme
                                     .onSurface
-                                    .withValues(alpha: 0.4),
-                          ),
-                          const SizedBox(width: 6),
-                          _Badge(
-                            label: w.workspaceType == 'team'
-                                ? 'Team'
-                                : 'Personal',
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.35),
-                          ),
-                        ],
-                      ),
-                      if (isOwner) ...[
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            ActionChip(
-                              avatar: const Icon(Icons.edit_outlined, size: 16),
-                              label: const Text('Rename'),
-                              onPressed: _isWorking
-                                  ? null
-                                  : () => _showRenameDialog(w),
-                              visualDensity: VisualDensity.compact,
-                            ),
-                            ActionChip(
-                              avatar: Icon(
-                                Icons.delete_outlined,
-                                size: 16,
-                                color: AppColors.destructive,
+                                    .withValues(alpha: 0.35),
                               ),
-                              label: Text(
-                                'Delete',
-                                style: TextStyle(
-                                    color: AppColors.destructive),
-                              ),
-                              onPressed:
-                                  _isWorking ? null : () => _confirmDelete(w),
-                              visualDensity: VisualDensity.compact,
+                              const Spacer(),
+                              if (!isActive)
+                                TextButton(
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 4),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  onPressed: _isWorking
+                                      ? null
+                                      : () => ref
+                                          .read(
+                                              selectedWorkspaceIdProvider
+                                                  .notifier)
+                                          .state = w.id,
+                                  child: const Text('Switch'),
+                                ),
+                            ],
+                          ),
+                          if (isOwner) ...[
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                ActionChip(
+                                  avatar: const Icon(Icons.edit_outlined,
+                                      size: 16),
+                                  label: const Text('Rename'),
+                                  onPressed: _isWorking
+                                      ? null
+                                      : () => _showRenameDialog(w),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                ActionChip(
+                                  avatar: Icon(
+                                    Icons.delete_outlined,
+                                    size: 16,
+                                    color: AppColors.destructive,
+                                  ),
+                                  label: Text(
+                                    'Delete',
+                                    style: TextStyle(
+                                        color: AppColors.destructive),
+                                  ),
+                                  onPressed: _isWorking
+                                      ? null
+                                      : () => _confirmDelete(w),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ],
                             ),
                           ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            },
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           );
         },
       ),

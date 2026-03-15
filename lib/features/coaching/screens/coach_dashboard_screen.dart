@@ -172,14 +172,6 @@ class _CoachDashboardScreenState extends ConsumerState<CoachDashboardScreen> {
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: OutlinedButton.icon(
-            onPressed: () => _showInviteSheet(context, ref),
-            icon: const Icon(Icons.person_add_outlined, size: 16),
-            label: const Text('Invite a client'),
-          ),
-        ),
       ],
     );
   }
