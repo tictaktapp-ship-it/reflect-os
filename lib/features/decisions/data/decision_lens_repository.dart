@@ -30,7 +30,7 @@ class DecisionLensRepository {
         (s) => InfluenceNode(
           label: s.stakeholderRole,
           type: 'stakeholder',
-          subtitle: s.userId.length >= 8 ? s.userId.substring(0, 8) : s.userId,
+          subtitle: s.displayName,
         ),
       ),
       if (riskAssessment != null)

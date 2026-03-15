@@ -295,20 +295,7 @@ class _SettingsGroup extends StatelessWidget {
     final theme = Theme.of(context);
     return ExpansionTile(
       key: PageStorageKey(title),
-      title: subtitle != null
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: theme.textTheme.titleSmall),
-                Text(
-                  subtitle!,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            )
-          : Text(title, style: theme.textTheme.titleSmall),
+      title: Text(title, style: theme.textTheme.titleSmall),
       initiallyExpanded: initiallyExpanded,
       tilePadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       childrenPadding: EdgeInsets.zero,

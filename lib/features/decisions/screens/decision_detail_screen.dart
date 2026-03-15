@@ -2356,13 +2356,13 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
         _ => AppColors.textMuted,
       };
 
-  Future<void> _add(String userId, String role) async {
+  Future<void> _addMember(String userId, String role) async {
     setState(() => _isLoading = true);
     String? err;
     try {
       await ref
           .read(decisionsRepositoryProvider)
-          .addStakeholder(widget.decisionId, userId, role);
+          .addStakeholder(widget.decisionId, role, userId: userId);
       ref.invalidate(stakeholdersProvider(widget.decisionId));
     } catch (e) {
       err = 'Failed to add stakeholder: $e';
@@ -2377,12 +2377,39 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
     }
   }
 
-  Future<void> _remove(String userId) async {
+  Future<void> _addExternal(
+      String role, String name, String? email) async {
+    setState(() => _isLoading = true);
+    String? err;
+    try {
+      await ref
+          .read(decisionsRepositoryProvider)
+          .addStakeholder(
+            widget.decisionId,
+            role,
+            stakeholderName: name.trim().isEmpty ? null : name.trim(),
+            stakeholderEmail: email?.trim().isEmpty == true ? null : email?.trim(),
+          );
+      ref.invalidate(stakeholdersProvider(widget.decisionId));
+    } catch (e) {
+      err = 'Failed to add stakeholder: $e';
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        if (err != null) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(err)));
+        }
+      }
+    }
+  }
+
+  Future<void> _remove(String stakeholderId) async {
     setState(() => _isLoading = true);
     try {
       await ref
           .read(decisionsRepositoryProvider)
-          .removeStakeholder(widget.decisionId, userId);
+          .removeStakeholder(widget.decisionId, stakeholderId);
       ref.invalidate(stakeholdersProvider(widget.decisionId));
     } catch (e) {
       if (mounted) {
@@ -2396,9 +2423,9 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
 
   void _showAddSheet(List<DecisionStakeholder> current) {
     final teamMembers = ref.read(teamMembersProvider).valueOrNull ?? [];
-    final addedIds = current.map((s) => s.userId).toSet();
+    final addedUserIds = current.map((s) => s.userId).whereType<String>().toSet();
     final available =
-        teamMembers.where((m) => !addedIds.contains(m.userId)).toList();
+        teamMembers.where((m) => !addedUserIds.contains(m.userId)).toList();
     final currentUserId = supabase.auth.currentUser?.id;
 
     showModalBottomSheet(
@@ -2414,7 +2441,11 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
         currentUserId: currentUserId,
         onAdd: (userId, role) {
           Navigator.of(context).pop();
-          _add(userId, role);
+          _addMember(userId, role);
+        },
+        onAddExternal: (role, name, email) {
+          Navigator.of(context).pop();
+          _addExternal(role, name, email);
         },
       ),
     );
@@ -2478,12 +2509,13 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
             runSpacing: 8,
             children: stakeholders.map((s) {
               final color = _roleColor(s.stakeholderRole);
-              final member = membersByUserId[s.userId];
-              final displayName = member?.displayName?.isNotEmpty == true
+              final member = s.userId != null ? membersByUserId[s.userId] : null;
+              final resolvedName = member?.displayName?.isNotEmpty == true
                   ? member!.displayName!
-                  : s.userId.substring(
-                      0, s.userId.length >= 8 ? 8 : s.userId.length);
-              final initial = displayName[0].toUpperCase();
+                  : s.displayName;
+              final initial = resolvedName.isNotEmpty
+                  ? resolvedName[0].toUpperCase()
+                  : '?';
 
               return Chip(
                 backgroundColor: color.withValues(alpha: 0.10),
@@ -2500,7 +2532,7 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
                   ),
                 ),
                 label: Text(
-                  '$displayName · ${s.stakeholderRole}',
+                  '$resolvedName · ${s.stakeholderRole}',
                   style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.w600,
@@ -2508,7 +2540,7 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
                   ),
                 ),
                 deleteIcon: Icon(Icons.close, size: 14, color: color),
-                onDeleted: _isLoading ? null : () => _remove(s.userId),
+                onDeleted: _isLoading ? null : () => _remove(s.id),
               );
             }).toList(),
           );
@@ -2524,12 +2556,14 @@ class _AddStakeholderSheet extends StatefulWidget {
     required this.roles,
     required this.currentUserId,
     required this.onAdd,
+    required this.onAddExternal,
   });
 
   final List<WorkspaceMembership> available;
   final List<String> roles;
   final String? currentUserId;
   final void Function(String userId, String role) onAdd;
+  final void Function(String role, String name, String? email) onAddExternal;
 
   @override
   State<_AddStakeholderSheet> createState() => _AddStakeholderSheetState();
@@ -2540,6 +2574,19 @@ class _AddStakeholderSheetState extends State<_AddStakeholderSheet> {
     for (final m in widget.available) m.userId: 'Informed',
   };
 
+  bool _showExternal = false;
+  String _externalRole = 'Informed';
+  final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -2547,73 +2594,146 @@ class _AddStakeholderSheetState extends State<_AddStakeholderSheet> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: SvgPicture.asset(Theme.of(context).brightness == Brightness.dark ? 'assets/branding/icon.svg' : 'assets/branding/icon.svg', height: 128)),
-              const SizedBox(height: 8),
-              Text(
-                'Add Stakeholder',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ],
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+          child: Text(
+            'Add Stakeholder',
+            style: Theme.of(context).textTheme.titleMedium,
           ),
         ),
-        if (widget.available.isEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Text(
-              'All workspace members are already stakeholders.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+        // Toggle: workspace member vs external
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(value: false, label: Text('Workspace member')),
+              ButtonSegment(value: true, label: Text('External')),
+            ],
+            selected: {_showExternal},
+            onSelectionChanged: (s) =>
+                setState(() => _showExternal = s.first),
+            style: ButtonStyle(
+              visualDensity: VisualDensity.compact,
             ),
-          )
-        else
-          ...widget.available.map((m) {
-            final shortId = m.userId.length >= 8
-                ? m.userId.substring(0, 8)
-                : m.userId;
-            final isYou = m.userId == widget.currentUserId;
-            return Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Row(
+          ),
+        ),
+        const Divider(height: 16),
+        if (_showExternal) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Text(
-                      isYou ? '$shortId (you)' : shortId,
-                      style: const TextStyle(fontFamily: 'monospace'),
-                    ),
+                  TextFormField(
+                    controller: _nameCtrl,
+                    decoration: const InputDecoration(labelText: 'Name *'),
+                    textCapitalization: TextCapitalization.words,
+                    autofocus: true,
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Name required' : null,
                   ),
-                  DropdownButton<String>(
-                    value: _selectedRoles[m.userId],
-                    underline: const SizedBox.shrink(),
-                    items: widget.roles
-                        .map((r) => DropdownMenuItem(
-                              value: r,
-                              child: Text(r),
-                            ))
-                        .toList(),
-                    onChanged: (v) {
-                      if (v != null) {
-                        setState(() => _selectedRoles[m.userId] = v);
-                      }
-                    },
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _emailCtrl,
+                    decoration:
+                        const InputDecoration(labelText: 'Email (optional)'),
+                    keyboardType: TextInputType.emailAddress,
                   ),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    icon: const Icon(Icons.add),
-                    tooltip: 'Add',
-                    onPressed: () =>
-                        widget.onAdd(m.userId, _selectedRoles[m.userId]!),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Text('Role:'),
+                      const SizedBox(width: 12),
+                      DropdownButton<String>(
+                        value: _externalRole,
+                        underline: const SizedBox.shrink(),
+                        items: widget.roles
+                            .map((r) => DropdownMenuItem(
+                                  value: r,
+                                  child: Text(r),
+                                ))
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) setState(() => _externalRole = v);
+                        },
+                      ),
+                      const Spacer(),
+                      FilledButton(
+                        onPressed: () {
+                          if (!_formKey.currentState!.validate()) return;
+                          final email = _emailCtrl.text.trim();
+                          widget.onAddExternal(
+                            _externalRole,
+                            _nameCtrl.text.trim(),
+                            email.isEmpty ? null : email,
+                          );
+                        },
+                        child: const Text('Add'),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            );
-          }),
+            ),
+          ),
+        ] else ...[
+          if (widget.available.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Text(
+                'All workspace members are already stakeholders.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.4),
+                    ),
+              ),
+            )
+          else
+            ...widget.available.map((m) {
+              final name = m.displayName?.isNotEmpty == true
+                  ? m.displayName!
+                  : (m.userId.length >= 8
+                      ? m.userId.substring(0, 8)
+                      : m.userId);
+              final isYou = m.userId == widget.currentUserId;
+              return Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(isYou ? '$name (you)' : name),
+                    ),
+                    DropdownButton<String>(
+                      value: _selectedRoles[m.userId],
+                      underline: const SizedBox.shrink(),
+                      items: widget.roles
+                          .map((r) => DropdownMenuItem(
+                                value: r,
+                                child: Text(r),
+                              ))
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) {
+                          setState(() => _selectedRoles[m.userId] = v);
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      tooltip: 'Add',
+                      onPressed: () =>
+                          widget.onAdd(m.userId, _selectedRoles[m.userId]!),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
         const SizedBox(height: 8),
       ],
     );
