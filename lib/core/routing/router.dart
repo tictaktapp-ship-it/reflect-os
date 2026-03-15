@@ -34,6 +34,8 @@ import 'package:reflect_os/features/settings/screens/data_privacy_screen.dart';
 import 'package:reflect_os/features/settings/screens/vertical_settings_screen.dart';
 import 'package:reflect_os/features/settings/screens/workspace_branding_screen.dart';
 import 'package:reflect_os/features/sharing/screens/public_decision_view.dart';
+import 'package:reflect_os/features/risk/data/models/risk_assessment.dart';
+import 'package:reflect_os/features/risk/screens/risk_assessment_screen.dart';
 import 'package:reflect_os/features/sharing/screens/share_links_screen.dart';
 import 'package:reflect_os/features/templates/data/models/decision_template.dart';
 import 'package:reflect_os/features/templates/screens/templates_screen.dart';
@@ -258,6 +260,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.investmentAssets,
         builder: (context, state) => const AssetsScreen(),
+      ),
+
+      // Risk assessment — push above shell
+      GoRoute(
+        path: Routes.decisionRiskAssessment,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          final extra = state.extra as RiskAssessment?;
+          return RiskAssessmentScreen(decisionId: id, existingAssessment: extra);
+        },
       ),
 
       // Share links management — authenticated, push above shell

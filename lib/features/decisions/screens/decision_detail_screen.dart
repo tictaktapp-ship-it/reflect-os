@@ -640,18 +640,18 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
 
 // ── Summary card ─────────────────────────────────────────────────────────────
 
-class _SummaryCard extends StatelessWidget {
+class _SummaryCard extends ConsumerWidget {
   const _SummaryCard({required this.decision});
   final Decision decision;
 
-  Color _healthColor(String? h) => switch (h) {
+  static Color _healthColor(String? h) => switch (h) {
         'on_track' => const Color(0xFF2EA073),
         'needs_attention' => const Color(0xFFD97D24),
         'overdue' => const Color(0xFFDC4444),
         _ => AppColors.textMuted,
       };
 
-  String _healthLabel(String? h) => switch (h) {
+  static String _healthLabel(String? h) => switch (h) {
         'on_track' => 'On Track',
         'needs_attention' => 'Needs Attention',
         'overdue' => 'Overdue',
@@ -659,7 +659,13 @@ class _SummaryCard extends StatelessWidget {
       };
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Override health state based on approved risk level.
+    final effectiveHealth = ref
+        .watch(effectiveHealthStateProvider(
+            (decisionId: decision.id, dbHealthState: decision.healthState)))
+        .valueOrNull ?? decision.healthState;
+
     return Card(
       color: Theme.of(context).colorScheme.surface,
       child: Padding(
@@ -674,12 +680,12 @@ class _SummaryCard extends StatelessWidget {
               bg: _stateColor(decision.state).withValues(alpha: 0.12),
               fg: _stateColor(decision.state),
             ),
-            // Health
-            if (decision.healthState != null)
+            // Health (risk-adjusted)
+            if (effectiveHealth != null)
               _SummaryPill(
-                label: _healthLabel(decision.healthState),
-                bg: _healthColor(decision.healthState).withValues(alpha: 0.12),
-                fg: _healthColor(decision.healthState),
+                label: _healthLabel(effectiveHealth),
+                bg: _healthColor(effectiveHealth).withValues(alpha: 0.12),
+                fg: _healthColor(effectiveHealth),
                 icon: Icons.circle,
                 iconSize: 6,
               ),
@@ -3573,342 +3579,155 @@ class _RelationshipTile extends StatelessWidget {
   }
 }
 
-// ── Risk Assessment section ────────────────────────────────────────────────────
+// ── Risk Assessment compact summary card ──────────────────────────────────────
 
-enum _RiskFeedback { up, down }
-
-class _RiskAssessmentSection extends ConsumerStatefulWidget {
+class _RiskAssessmentSection extends ConsumerWidget {
   const _RiskAssessmentSection({required this.decisionId});
-
   final String decisionId;
 
-  @override
-  ConsumerState<_RiskAssessmentSection> createState() =>
-      _RiskAssessmentSectionState();
-}
-
-class _RiskAssessmentSectionState
-    extends ConsumerState<_RiskAssessmentSection> {
-  bool _isGenerating = false;
-  _RiskFeedback? _userFeedback;
-
   static Color _riskColor(String? level) => switch (level?.toLowerCase()) {
-        'low' => AppColors.success,
-        'medium' => const Color(0xFFFFC107),
-        'high' => const Color(0xFFFF9800),
-        'critical' => AppColors.destructive,
+        'low' => const Color(0xFF2EA073),
+        'medium' => const Color(0xFFD97D24),
+        'high' => const Color(0xFFDC4444),
+        'critical' => const Color(0xFF7C3AED),
         _ => AppColors.textSecondary,
       };
 
-  Future<void> _generate() async {
-    setState(() => _isGenerating = true);
-    try {
-      await ref
-          .read(riskRepositoryProvider)
-          .generateRiskAssessment(widget.decisionId);
-      ref.invalidate(riskAssessmentProvider(widget.decisionId));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to generate risk assessment: $e'),
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isGenerating = false);
-    }
-  }
-
   @override
-  Widget build(BuildContext context) {
-    final assessmentAsync =
-        ref.watch(riskAssessmentProvider(widget.decisionId));
+  Widget build(BuildContext context, WidgetRef ref) {
+    final assessmentAsync = ref.watch(approvedRiskAssessmentProvider(decisionId));
+    final adjustmentAsync = ref.watch(riskConfidenceAdjustmentProvider(decisionId));
 
     return _CollapsibleSection(
       title: 'Risk Assessment',
-      trailing: _isGenerating
-          ? null
-          : IconButton(
-              icon: const Icon(Icons.auto_awesome_outlined, size: 20),
-              tooltip: 'Generate risk assessment',
-              onPressed: _generate,
-            ),
-      child: _isGenerating
-          ? const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Row(
+      child: assessmentAsync.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: LinearProgressIndicator(),
+        ),
+        error: (_, __) => const SizedBox.shrink(),
+        data: (assessment) {
+          if (assessment == null) {
+            // No approved assessment yet
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                  Text(
+                    'No risk assessment yet.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.5),
+                        ),
                   ),
-                  SizedBox(width: 12),
-                  Text('Analysing decision…'),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.shield_outlined, size: 16),
+                    label: const Text('Add risk assessment'),
+                    onPressed: () => context.push(
+                      '/decisions/$decisionId/risk-assessment',
+                    ),
+                  ),
                 ],
               ),
-            )
-          : assessmentAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: LinearProgressIndicator(),
-              ),
-              error: (e, _) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  'Failed to load assessment.',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: AppColors.destructive),
-                ),
-              ),
-              data: (assessment) => assessment == null
-                  ? _EmptyState(onGenerate: _generate)
-                  : _AssessmentBody(
-                      assessment: assessment,
-                      userFeedback: _userFeedback,
-                      onFeedback: (f) => setState(() => _userFeedback = f),
-                      onRegenerate: _generate,
-                    ),
+            );
+          }
+
+          // Approved assessment — compact summary
+          final level = assessment.overallRiskLevel ?? 'medium';
+          final color = _riskColor(level);
+          final riskCount = assessment.risks.length;
+          final adjustment = adjustmentAsync.valueOrNull ?? 0;
+
+          return InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () => context.push(
+              '/decisions/$decisionId/risk-assessment',
+              extra: assessment,
             ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onGenerate});
-  final VoidCallback onGenerate;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'No risk assessment yet.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.auto_awesome_outlined, size: 16),
-            label: const Text('Generate'),
-            onPressed: onGenerate,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AssessmentBody extends StatelessWidget {
-  const _AssessmentBody({
-    required this.assessment,
-    required this.userFeedback,
-    required this.onFeedback,
-    required this.onRegenerate,
-  });
-
-  final RiskAssessment assessment;
-  final _RiskFeedback? userFeedback;
-  final ValueChanged<_RiskFeedback> onFeedback;
-  final VoidCallback onRegenerate;
-
-  @override
-  Widget build(BuildContext context) {
-    final level = assessment.overallRiskLevel;
-    final color = _RiskAssessmentSectionState._riskColor(level);
-    final confidence = assessment.confidence;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Overall risk badge + confidence
-        Row(
-          children: [
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            child: Container(
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
+                color: color.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: color.withValues(alpha: 0.25)),
               ),
-              child: Text(
-                level ?? '—',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.w600,
+              child: Row(
+                children: [
+                  Icon(Icons.shield_outlined, size: 18, color: color),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                level.toUpperCase(),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: color,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 10,
+                                    ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '$riskCount risk${riskCount == 1 ? '' : 's'} identified',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.65),
+                                  ),
+                            ),
+                          ],
+                        ),
+                        if (adjustment != 0) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            'Risk impact: $adjustment on confidence',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: AppColors.destructive,
+                                  fontSize: 10,
+                                ),
+                          ),
+                        ],
+                      ],
                     ),
-              ),
-            ),
-            if (confidence != null) ...[
-              const SizedBox(width: 8),
-              Text(
-                '${(confidence * 100).round()}% confidence',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-              ),
-            ],
-          ],
-        ),
-
-        // Summary
-        if (assessment.summary != null) ...[
-          const SizedBox(height: 10),
-          Text(
-            assessment.summary!,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-
-        // Individual risks
-        if (assessment.risks.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          ...assessment.risks.map((risk) => _RiskCard(risk: risk)),
-        ],
-
-        // Feedback + regenerate row
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Text(
-              'Helpful?',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.textSecondary,
                   ),
-            ),
-            const SizedBox(width: 4),
-            IconButton(
-              icon: Icon(
-                Icons.thumb_up_outlined,
-                size: 18,
-                color: userFeedback == _RiskFeedback.up
-                    ? AppColors.success
-                    : null,
-              ),
-              onPressed: () => onFeedback(_RiskFeedback.up),
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.thumb_down_outlined,
-                size: 18,
-                color: userFeedback == _RiskFeedback.down
-                    ? AppColors.destructive
-                    : null,
-              ),
-              onPressed: () => onFeedback(_RiskFeedback.down),
-            ),
-            const Spacer(),
-            TextButton.icon(
-              icon: const Icon(Icons.refresh, size: 14),
-              label: const Text('Regenerate'),
-              onPressed: onRegenerate,
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.textSecondary,
-                textStyle: Theme.of(context).textTheme.labelSmall,
-              ),
-            ),
-          ],
-        ),
-
-        // AI disclaimer
-        Text(
-          'Generated by AI · Always verify independently',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.textMuted,
-              ),
-        ),
-      ],
-    );
-  }
-}
-
-class _RiskCard extends StatelessWidget {
-  const _RiskCard({required this.risk});
-  final Map<String, dynamic> risk;
-
-  @override
-  Widget build(BuildContext context) {
-    final category = risk['category'] as String?;
-    final severity = risk['severity'] as String?;
-    final description = risk['description'] as String?;
-    final mitigation = risk['mitigation'] as String?;
-    final severityColor = _RiskAssessmentSectionState._riskColor(severity);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              if (category != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
+                  Icon(
+                    Icons.chevron_right,
+                    size: 16,
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
-                        .withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
+                        .withValues(alpha: 0.4),
                   ),
-                  child: Text(
-                    category,
-                    style:
-                        Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                  ),
-                ),
-              if (category != null && severity != null)
-                const SizedBox(width: 6),
-              if (severity != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: severityColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    severity,
-                    style:
-                        Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: severityColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                  ),
-                ),
-            ],
-          ),
-          if (description != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              description,
-              style: Theme.of(context).textTheme.bodySmall,
+                ],
+              ),
             ),
-          ],
-          if (mitigation != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              'Mitigation: $mitigation',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-            ),
-          ],
-        ],
+          );
+        },
       ),
     );
   }
@@ -5440,21 +5259,28 @@ class _EffectiveConfidenceBadge extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final adjustmentAsync =
-        ref.watch(coachConfidenceAdjustmentProvider(decisionId));
-    final adjustment = adjustmentAsync.valueOrNull ?? 0;
+    final coachAdj = ref.watch(coachConfidenceAdjustmentProvider(decisionId))
+            .valueOrNull ?? 0;
+    final riskAdj = ref.watch(riskConfidenceAdjustmentProvider(decisionId))
+            .valueOrNull ?? 0;
+    final totalAdj = coachAdj + riskAdj;
     final base = initialConfidence ?? 0;
-    final effective = (base + adjustment).clamp(1, 10);
+    final effective = (base + totalAdj).clamp(1, 10);
 
-    if (adjustment == 0 || base == 0) {
+    if (totalAdj == 0 || base == 0) {
       return Text(
         '$base / 10',
         style: Theme.of(context).textTheme.bodyMedium,
       );
     }
-    final sign = adjustment > 0 ? '+' : '';
+
+    final parts = <String>[];
+    if (coachAdj != 0) parts.add('coach: ${coachAdj > 0 ? '+' : ''}$coachAdj');
+    if (riskAdj != 0) parts.add('risk: ${riskAdj > 0 ? '+' : ''}$riskAdj');
+    final tooltip = 'Adjusted from $base (${parts.join(', ')})';
+
     return Tooltip(
-      message: 'Adjusted from $base by coach ($sign$adjustment)',
+      message: tooltip,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

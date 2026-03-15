@@ -7,6 +7,8 @@ import 'package:reflect_os/features/risk/data/models/risk_assessment.dart';
 class RiskRepository {
   const RiskRepository();
 
+  // ── Read ──────────────────────────────────────────────────────────────────
+
   Future<RiskAssessment?> getLatestRiskAssessment(String decisionId) async {
     final rows = await supabase
         .from('risk_assessments')
@@ -19,16 +21,24 @@ class RiskRepository {
     return RiskAssessment.fromJson(rows.first);
   }
 
-  /// Invokes the assess-risk Edge Function via a direct HTTP POST so the
-  /// Authorization header is always present (required by verify_jwt: true).
-  /// Refreshes the session first to avoid sending a stale/expired token.
-  /// Uses a 30-second timeout to accommodate Anthropic latency.
-  Future<void> generateRiskAssessment(String decisionId) async {
-    // Do NOT call refreshSession() here — it fires a TOKEN_REFRESHED event on
-    // the Supabase auth stream, which causes routerProvider to recreate the
-    // GoRouter and navigate back to the initial route (dashboard/home).
-    // The Supabase client auto-refreshes tokens in the background; by the
-    // time the user is on this screen the session is always current.
+  Future<RiskAssessment?> getApprovedRiskAssessment(String decisionId) async {
+    final rows = await supabase
+        .from('risk_assessments')
+        .select()
+        .eq('decision_id', decisionId)
+        .not('approved_at', 'is', null)
+        .isFilter('deleted_at', null)
+        .order('approved_at', ascending: false)
+        .limit(1);
+    if (rows.isEmpty) return null;
+    return RiskAssessment.fromJson(rows.first);
+  }
+
+  // ── AI generation ─────────────────────────────────────────────────────────
+
+  /// Invokes the assess-risk Edge Function (Gemini). Returns the saved
+  /// RiskAssessment (status = 'pending_approval').
+  Future<RiskAssessment> generateRiskAssessment(String decisionId) async {
     final token =
         Supabase.instance.client.auth.currentSession?.accessToken;
     if (token == null) {
@@ -44,11 +54,70 @@ class RiskRepository {
           },
           body: jsonEncode({'decision_id': decisionId}),
         )
-        .timeout(const Duration(seconds: 30));
+        .timeout(const Duration(seconds: 45));
 
     if (response.statusCode >= 400) {
       throw Exception(
           'assess-risk failed (${response.statusCode}): ${response.body}');
     }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return RiskAssessment.fromJson(data);
+  }
+
+  // ── Manual entry ──────────────────────────────────────────────────────────
+
+  Future<RiskAssessment> saveManualRiskAssessment({
+    required String decisionId,
+    required List<Map<String, dynamic>> risks,
+    required String overallRiskLevel,
+  }) async {
+    final row = await supabase
+        .from('risk_assessments')
+        .insert({
+          'decision_id': decisionId,
+          'methodology': 'custom',
+          'manual_risks_jsonb': {'risks': risks},
+          'overall_risk_level': overallRiskLevel,
+          'output_jsonb': <String, dynamic>{},
+          'provider': 'manual',
+          'model': 'manual',
+          'status': 'pending_approval',
+        })
+        .select()
+        .single();
+    return RiskAssessment.fromJson(row);
+  }
+
+  // ── Approval ──────────────────────────────────────────────────────────────
+
+  Future<void> approveRiskAssessment({
+    required String assessmentId,
+    required String userId,
+    required int confidenceImpact,
+    required String overallRiskLevel,
+  }) async {
+    await supabase.from('risk_assessments').update({
+      'approved_at': DateTime.now().toUtc().toIso8601String(),
+      'approved_by_user_id': userId,
+      'confidence_impact': confidenceImpact,
+      'overall_risk_level': overallRiskLevel,
+      'status': 'approved',
+    }).eq('id', assessmentId);
+  }
+
+  // ── Confidence impact ─────────────────────────────────────────────────────
+
+  /// Sum of confidence_impact from all approved risk assessments.
+  Future<int> getRiskConfidenceAdjustment(String decisionId) async {
+    final rows = await supabase
+        .from('risk_assessments')
+        .select('confidence_impact')
+        .eq('decision_id', decisionId)
+        .not('approved_at', 'is', null)
+        .isFilter('deleted_at', null);
+    return rows.fold<int>(
+      0,
+      (sum, r) => sum + ((r['confidence_impact'] as num?)?.toInt() ?? 0),
+    );
   }
 }

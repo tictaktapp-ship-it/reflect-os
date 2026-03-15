@@ -10,6 +10,12 @@ class RiskAssessment {
     required this.status,
     required this.outputJsonb,
     required this.createdAt,
+    this.methodology,
+    this.manualRisksJsonb,
+    this.overallRiskLevelColumn,
+    this.confidenceImpact = 0,
+    this.approvedAt,
+    this.approvedByUserId,
   });
 
   final String id;
@@ -18,27 +24,53 @@ class RiskAssessment {
   final String model;
   final String status;
 
-  /// The raw output JSON blob from the assess-risk Edge Function.
+  /// Raw output blob from the assess-risk Edge Function (AI path).
   final Map<String, dynamic> outputJsonb;
 
   final DateTime createdAt;
 
-  // ── Typed accessors into outputJsonb ──────────────────────────────────────
+  // ── Structured columns (added in migration) ───────────────────────────────
 
-  String? get overallRiskLevel => outputJsonb['overall_risk_level'] as String?;
+  /// 'ai' | 'custom'
+  final String? methodology;
 
+  /// Risks entered manually (custom path).
+  final Map<String, dynamic>? manualRisksJsonb;
+
+  /// Top-level DB column; preferred over outputJsonb fallback.
+  final String? overallRiskLevelColumn;
+
+  /// Confidence adjustment applied at approval: −3…0.
+  final int confidenceImpact;
+
+  final DateTime? approvedAt;
+  final String? approvedByUserId;
+
+  // ── Computed accessors ────────────────────────────────────────────────────
+
+  bool get isApproved => approvedAt != null;
+
+  bool get isManual => methodology == 'custom';
+
+  /// Prefers top-level column, falls back to outputJsonb for legacy rows.
+  String? get overallRiskLevel =>
+      overallRiskLevelColumn ?? outputJsonb['overall_risk_level'] as String?;
+
+  /// Risks list: manual path → manualRisksJsonb, AI path → outputJsonb.
+  List<Map<String, dynamic>> get risks {
+    final source = isManual ? manualRisksJsonb : outputJsonb;
+    final r = source?['risks'];
+    if (r is! List) return [];
+    return r.whereType<Map<String, dynamic>>().toList();
+  }
+
+  /// Legacy AI confidence field (0.0–1.0).
   double? get confidence {
     final v = outputJsonb['confidence'];
     if (v == null) return null;
     if (v is double) return v;
     if (v is int) return v.toDouble();
     return null;
-  }
-
-  List<Map<String, dynamic>> get risks {
-    final r = outputJsonb['risks'];
-    if (r is! List) return [];
-    return r.whereType<Map<String, dynamic>>().toList();
   }
 
   String? get summary => outputJsonb['summary'] as String?;
@@ -50,9 +82,16 @@ class RiskAssessment {
       provider: json['provider'] as String? ?? '',
       model: json['model'] as String? ?? '',
       status: json['status'] as String? ?? '',
-      outputJsonb:
-          (json['output_jsonb'] as Map<String, dynamic>?) ?? {},
+      outputJsonb: (json['output_jsonb'] as Map<String, dynamic>?) ?? {},
       createdAt: DateTime.parse(json['created_at'] as String),
+      methodology: json['methodology'] as String?,
+      manualRisksJsonb: json['manual_risks_jsonb'] as Map<String, dynamic>?,
+      overallRiskLevelColumn: json['overall_risk_level'] as String?,
+      confidenceImpact: (json['confidence_impact'] as num?)?.toInt() ?? 0,
+      approvedAt: json['approved_at'] != null
+          ? DateTime.parse(json['approved_at'] as String)
+          : null,
+      approvedByUserId: json['approved_by_user_id'] as String?,
     );
   }
 }

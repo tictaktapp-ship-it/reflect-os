@@ -72,6 +72,9 @@ abstract final class Routes {
   // Investment / Portfolio
   static const String investmentAssets = '/investment/assets';
 
+  // Risk assessment
+  static const String decisionRiskAssessment = '/decisions/:id/risk-assessment';
+
   // Share links management (authenticated)
   static const String decisionsShareLinks = '/decisions/:id/share-links';
 
