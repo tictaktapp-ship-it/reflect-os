@@ -484,20 +484,26 @@ class DecisionsRepository {
   }
 
   Future<void> addStakeholder(
-      String decisionId, String userId, String role) async {
+    String decisionId,
+    String role, {
+    String? userId,
+    String? stakeholderName,
+    String? stakeholderEmail,
+  }) async {
     await supabase.from('decision_stakeholders').insert({
       'decision_id': decisionId,
-      'user_id': userId,
       'stakeholder_role': role,
+      if (userId != null) 'user_id': userId,
+      if (stakeholderName != null) 'stakeholder_name': stakeholderName,
+      if (stakeholderEmail != null) 'stakeholder_email': stakeholderEmail,
     });
   }
 
-  Future<void> removeStakeholder(String decisionId, String userId) async {
+  Future<void> removeStakeholder(String decisionId, String stakeholderId) async {
     await supabase
         .from('decision_stakeholders')
         .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
-        .eq('decision_id', decisionId)
-        .eq('user_id', userId)
+        .eq('id', stakeholderId)
         .isFilter('deleted_at', null);
   }
 
