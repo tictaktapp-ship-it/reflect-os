@@ -205,6 +205,13 @@ class DecisionsRepository {
       body: {'workspace_id': workspaceId, 'decision_id': decisionId},
     ).ignore();
 
+    // Write audit event (fire-and-forget).
+    _writeAuditEvent(
+      decisionId: decisionId,
+      workspaceId: workspaceId,
+      eventType: 'decision_created',
+    ).ignore();
+
     return decisionId;
   }
 
@@ -299,6 +306,41 @@ class DecisionsRepository {
     return ids.where(byId.containsKey).map((id) => byId[id]!).toList();
   }
 
+  // ── Audit helpers ─────────────────────────────────────────────────────────
+
+  /// Writes a single audit event. Fire-and-forget — errors are suppressed.
+  Future<void> _writeAuditEvent({
+    required String decisionId,
+    required String workspaceId,
+    required String eventType,
+    Map<String, dynamic> metadata = const {},
+  }) async {
+    try {
+      final userId = supabase.auth.currentUser?.id;
+      await supabase.from('audit_events').insert({
+        'workspace_id': workspaceId,
+        'actor_user_id': userId,
+        'event_type': eventType,
+        'subject_entity_type': 'decision',
+        'subject_entity_id': decisionId,
+        'metadata_jsonb': metadata,
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('[Audit] failed to write $eventType: $e');
+    }
+  }
+
+  /// Looks up the workspace_id for a decision. Returns null if not found.
+  Future<String?> _getWorkspaceIdForDecision(String decisionId) async {
+    final row = await supabase
+        .from('decisions')
+        .select('workspace_id')
+        .eq('id', decisionId)
+        .maybeSingle();
+    return row?['workspace_id'] as String?;
+  }
+
   // ── Lifecycle RPCs ────────────────────────────────────────────────────────
 
   Future<void> shareDecisionToTeam(
@@ -320,18 +362,54 @@ class DecisionsRepository {
 
   Future<void> activateDecision(String id) async {
     await supabase.rpc('activate_decision', params: {'p_decision_id': id});
+    _getWorkspaceIdForDecision(id).then((wsId) {
+      if (wsId != null) {
+        _writeAuditEvent(
+          decisionId: id,
+          workspaceId: wsId,
+          eventType: 'decision_activated',
+        ).ignore();
+      }
+    }).ignore();
   }
 
   Future<void> closeDecision(String id) async {
     await supabase.rpc('close_decision', params: {'p_decision_id': id});
+    _getWorkspaceIdForDecision(id).then((wsId) {
+      if (wsId != null) {
+        _writeAuditEvent(
+          decisionId: id,
+          workspaceId: wsId,
+          eventType: 'decision_closed',
+        ).ignore();
+      }
+    }).ignore();
   }
 
   Future<void> reopenDecision(String id) async {
     await supabase.rpc('reopen_decision', params: {'p_decision_id': id});
+    _getWorkspaceIdForDecision(id).then((wsId) {
+      if (wsId != null) {
+        _writeAuditEvent(
+          decisionId: id,
+          workspaceId: wsId,
+          eventType: 'decision_reopened',
+        ).ignore();
+      }
+    }).ignore();
   }
 
   Future<void> archiveDecision(String id) async {
     await supabase.rpc('archive_decision', params: {'p_decision_id': id});
+    _getWorkspaceIdForDecision(id).then((wsId) {
+      if (wsId != null) {
+        _writeAuditEvent(
+          decisionId: id,
+          workspaceId: wsId,
+          eventType: 'decision_archived',
+        ).ignore();
+      }
+    }).ignore();
   }
 
   Future<void> unarchiveDecision(String id, String newState) async {
@@ -339,6 +417,16 @@ class DecisionsRepository {
       'p_decision_id': id,
       'p_new_state': newState,
     });
+    _getWorkspaceIdForDecision(id).then((wsId) {
+      if (wsId != null) {
+        _writeAuditEvent(
+          decisionId: id,
+          workspaceId: wsId,
+          eventType: 'decision_unarchived',
+          metadata: {'new_state': newState},
+        ).ignore();
+      }
+    }).ignore();
   }
 
   // ── Checkpoints ───────────────────────────────────────────────────────────
