@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/templates/data/models/decision_template.dart';
@@ -415,7 +416,8 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
   Widget build(BuildContext context) {
     final templatesAsync = ref.watch(templatesProvider);
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppHeader(
+        title: 'Templates',
         actions: [
           if (_isWorking)
             const Padding(

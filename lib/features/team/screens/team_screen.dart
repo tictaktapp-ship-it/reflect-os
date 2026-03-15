@@ -1,13 +1,13 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:reflect_os/widgets/app_header.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/core/utils/csv_downloader.dart';
-import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
 import 'package:reflect_os/features/team/data/models/workspace_membership.dart';
 import 'package:reflect_os/features/team/providers/team_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -403,8 +403,7 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
     final isOwner = currentUserMembership?.role.toLowerCase() == 'owner';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const WorkspaceSwitcherChip(),
+      appBar: AppHeader(
         actions: [
           IconButton(
             icon: const Icon(Icons.download_outlined),

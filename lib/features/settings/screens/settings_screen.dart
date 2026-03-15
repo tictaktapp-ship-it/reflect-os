@@ -10,10 +10,8 @@ import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/auth_state_provider.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/providers/package_info_provider.dart';
-import 'package:reflect_os/core/providers/theme_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
-import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
 import 'package:reflect_os/features/legal/providers/legal_consent_provider.dart';
 import 'package:reflect_os/features/legal/screens/legal_acceptance_screen.dart';
@@ -22,6 +20,7 @@ import 'package:reflect_os/features/settings/providers/profile_provider.dart';
 import 'package:reflect_os/features/settings/widgets/encryption_mode_tile.dart';
 import 'package:reflect_os/features/workspace/data/models/workspace_model.dart';
 import 'package:reflect_os/features/workspace/providers/workspace_providers.dart';
+import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -29,265 +28,114 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final email = supabase.auth.currentUser?.email ?? '—';
     final isSigningOut = ref.watch(authActionProvider).isLoading;
-    final themeMode = ref.watch(themeModeProvider);
-    final currentWorkspaceName = ref.watch(workspaceNameProvider).valueOrNull;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: const AppHeader(title: 'Settings'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ── GROUP 1 — My Account ──────────────────────────────────
+          // ── SECURITY & ENCRYPTION ─────────────────────────────────
           _SettingsGroup(
-            title: 'My Account',
+            title: 'Security & Encryption',
             initiallyExpanded: true,
             children: [
-              const _ProfileCard(),
-              _SectionCard(
-                children: [
-                  _SettingsRow(label: 'Account', value: email),
-                ],
-              ),
-            ],
-          ),
-
-          // ── GROUP 2 — Workspace ───────────────────────────────────
-          _SettingsGroup(
-            title: 'Workspace',
-            subtitle: currentWorkspaceName,
-            children: [
-              const _WorkspaceContextBanner(),
-              const _WorkspaceManagementSection(),
-              _SectionCard(
-                children: [
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.tune_outlined),
-                    title: const Text('Workspace Vertical'),
-                    subtitle: const Text(
-                        'Customise tags, categories, and checkpoints'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(Routes.settingsVertical),
-                  ),
-                  const Divider(height: 1, indent: 40, endIndent: 0),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.palette_outlined),
-                    title: const Text('Workspace Branding'),
-                    subtitle:
-                        const Text('Logo, colours, and company details'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(Routes.settingsBranding),
-                  ),
-                  const Divider(height: 1, indent: 40, endIndent: 0),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.people_outline),
-                    title: const Text('Demographic Packs'),
-                    subtitle:
-                        const Text('Tailor decisions to your audience'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(Routes.packs),
-                  ),
-                  const Divider(height: 1, indent: 40, endIndent: 0),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.article_outlined),
-                    title: const Text('Templates'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(Routes.settingsTemplates),
-                  ),
-                  const Divider(height: 1, indent: 40, endIndent: 0),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.upload_file_outlined),
-                    title: const Text('Bulk Import'),
-                    subtitle:
-                        const Text('Import decisions from a CSV file'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(Routes.import),
-                  ),
-                  const Divider(height: 1, indent: 40, endIndent: 0),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.calendar_today_outlined),
-                    title: const Text('Calendar'),
-                    subtitle: const Text(
-                        'Connect Google Calendar or Outlook'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(Routes.settingsCalendar),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          // ── GROUP 3 — Preferences ─────────────────────────────────
-          _SettingsGroup(
-            title: 'Preferences',
-            children: [
-              _SectionCard(
-                children: [
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.notifications_outlined),
-                    title: const Text('Notifications'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(Routes.settingsPrivacy),
-                  ),
-                  const Divider(height: 1, indent: 40, endIndent: 0),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.brightness_6_outlined),
-                    title: const Text('Appearance'),
-                    subtitle: Text(
-                      themeMode == ThemeMode.light ? 'Light' : 'Dark',
-                    ),
-                    trailing: Switch(
-                      value: themeMode == ThemeMode.light,
-                      onChanged: (_) =>
-                          ref.read(themeModeProvider.notifier).toggle(),
-                    ),
-                  ),
-                ],
-              ),
               _EncryptionSection(ref: ref),
             ],
           ),
 
-          // ── GROUP 4 — Data & Admin ────────────────────────────────
+          // ── DATA & PRIVACY ────────────────────────────────────────
           _SettingsGroup(
-            title: 'Data & Admin',
+            title: 'Data & Privacy',
             children: [
-              _SectionCard(
-                children: [
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.credit_card_outlined),
-                    title: const Text('Billing'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(Routes.settingsBilling),
-                  ),
-                  const Divider(height: 1, indent: 40, endIndent: 0),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.history_outlined),
-                    title: const Text('Audit Log'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(Routes.settingsAuditLog),
-                  ),
-                  const Divider(height: 1, indent: 40, endIndent: 0),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.privacy_tip_outlined),
-                    title: const Text('Data & Privacy'),
-                    subtitle: const Text(
-                        'GDPR requests, data export, delete account'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () =>
-                        context.push(Routes.settingsDataPrivacy),
-                  ),
-                  const Divider(height: 1, indent: 40, endIndent: 0),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.business_outlined),
-                    title: const Text('Portfolio'),
-                    subtitle: const Text('Manage investment assets'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(Routes.investmentAssets),
-                  ),
-                ],
+              _SettingsTile(
+                icon: Icons.credit_card_outlined,
+                title: 'Billing',
+                onTap: () => context.push(Routes.settingsBilling),
+              ),
+              _SettingsTile(
+                icon: Icons.history_outlined,
+                title: 'Audit Log',
+                onTap: () => context.push(Routes.settingsAuditLog),
+              ),
+              _SettingsTile(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Data & Privacy',
+                subtitle: 'GDPR requests, data export, delete account',
+                onTap: () => context.push(Routes.settingsDataPrivacy),
+              ),
+              _SettingsTile(
+                icon: Icons.business_outlined,
+                title: 'Portfolio',
+                subtitle: 'Manage investment assets',
+                onTap: () => context.push(Routes.investmentAssets),
               ),
             ],
           ),
 
-          // ── GROUP 5 — Legal & Privacy ─────────────────────────────
+          // ── LEGAL ─────────────────────────────────────────────────
           const _LegalPrivacySection(),
 
-          // ── GROUP 6 — About & Feedback ───────────────────────────
+          // ── ABOUT & FEEDBACK ──────────────────────────────────────
           _SettingsGroup(
             title: 'About & Feedback',
             children: [
-              _SectionCard(
-                children: [
-                  // Sub-section 1 — About
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.info_outline),
-                    title: const Text('About Reflect OS'),
-                    onTap: () => _showAboutSheet(context),
-                  ),
-                  const Divider(height: 1, indent: 40, endIndent: 0),
-                  // Sub-section 2 — Feedback & Contact
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.rate_review_outlined),
-                    title: const Text('Send feedback'),
-                    subtitle: const Text('Tell us what you think'),
-                    onTap: () => _launchUrl(
-                        'mailto:contact@reflect-os.com?subject=Feedback'),
-                  ),
-                  const Divider(height: 1, indent: 40, endIndent: 0),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.lightbulb_outline),
-                    title: const Text('Request a feature'),
-                    subtitle: const Text('Suggest something new'),
-                    onTap: () => _launchUrl(
-                        'mailto:contact@reflect-os.com?subject=Feature%20Request'),
-                  ),
-                  const Divider(height: 1, indent: 40, endIndent: 0),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.mail_outline),
-                    title: const Text('Contact us'),
-                    subtitle: const Text('contact@reflect-os.com'),
-                    onTap: () =>
-                        _launchUrl('mailto:contact@reflect-os.com'),
-                  ),
-                  const Divider(height: 1, indent: 40, endIndent: 0),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.language),
-                    title: const Text('Website'),
-                    subtitle: const Text('reflect-os.com'),
-                    onTap: () => _launchUrl('https://reflect-os.com'),
-                  ),
-                ],
+              _SettingsTile(
+                icon: Icons.info_outline,
+                title: 'About Reflect OS',
+                onTap: () => _showAboutSheet(context),
+              ),
+              _SettingsTile(
+                icon: Icons.rate_review_outlined,
+                title: 'Send feedback',
+                subtitle: 'Tell us what you think',
+                onTap: () => _launchUrl(
+                    'mailto:contact@reflect-os.com?subject=Feedback'),
+              ),
+              _SettingsTile(
+                icon: Icons.lightbulb_outline,
+                title: 'Request a feature',
+                subtitle: 'Suggest something new',
+                onTap: () => _launchUrl(
+                    'mailto:contact@reflect-os.com?subject=Feature%20Request'),
+              ),
+              _SettingsTile(
+                icon: Icons.mail_outline,
+                title: 'Contact us',
+                subtitle: 'contact@reflect-os.com',
+                onTap: () => _launchUrl('mailto:contact@reflect-os.com'),
+              ),
+              _SettingsTile(
+                icon: Icons.language,
+                title: 'Website',
+                subtitle: 'reflect-os.com',
+                onTap: () => _launchUrl('https://reflect-os.com'),
               ),
             ],
           ),
 
           // ── Sign out ──────────────────────────────────────────────
-          _SectionCard(
-            children: [
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.destructive,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: isSigningOut
-                      ? null
-                      : () => ref
-                          .read(authActionProvider.notifier)
-                          .signOut(),
-                  child: isSigningOut
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Sign Out'),
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Center(
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red.shade300,
                 ),
+                onPressed: isSigningOut
+                    ? null
+                    : () => ref
+                        .read(authActionProvider.notifier)
+                        .signOut(),
+                child: isSigningOut
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Sign out'),
               ),
-            ],
+            ),
           ),
 
           // ── App version ───────────────────────────────────────────
@@ -769,91 +617,6 @@ class _SettingsRow extends StatelessWidget {
   }
 }
 
-// ── Workspace Context Banner ──────────────────────────────────────────────────
-
-class _WorkspaceContextBanner extends ConsumerWidget {
-  const _WorkspaceContextBanner();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final currentWorkspaceName = ref.watch(workspaceNameProvider).valueOrNull;
-    final theme = Theme.of(context);
-    return Card(
-      color: theme.colorScheme.primaryContainer,
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Icon(Icons.business,
-                color: theme.colorScheme.onPrimaryContainer),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Configuring workspace',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                  Text(
-                    currentWorkspaceName ?? 'Loading...',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            TextButton(
-              onPressed: () => showWorkspaceSwitcherSheet(context, ref),
-              child: Text(
-                'Switch',
-                style: TextStyle(
-                  color: theme.colorScheme.onPrimaryContainer,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Workspace Management ──────────────────────────────────────────────────────
-
-class _WorkspaceManagementSection extends StatelessWidget {
-  const _WorkspaceManagementSection();
-
-  @override
-  Widget build(BuildContext context) {
-    return _SectionCard(
-      children: [
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.manage_accounts_outlined),
-          title: const Text('Manage workspaces'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => context.push(Routes.settingsWorkspaces),
-        ),
-        const Divider(height: 1, indent: 40, endIndent: 0),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.auto_fix_high),
-          title: const Text('Set up workspace'),
-          subtitle: const Text('Configure verticals, templates and branding'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => context.push(Routes.workspaceWizard),
-        ),
-      ],
-    );
-  }
-}
-
 // ── Legal & Privacy section ───────────────────────────────────────────────────
 
 class _LegalPrivacySection extends ConsumerWidget {
@@ -1059,6 +822,45 @@ class _EncryptionSection extends StatelessWidget {
           onTap: () => context.push(Routes.encryptionStatus),
         ),
       ],
+    );
+  }
+}
+
+// ── Settings tile ─────────────────────────────────────────────────────────────
+
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.onTap,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onTap;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      color: Colors.white,
+      child: ListTile(
+        leading: Icon(icon, color: const Color(0xFF19CBD6)),
+        title: Text(title),
+        subtitle: subtitle != null ? Text(subtitle!) : null,
+        trailing:
+            trailing ?? const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+        onTap: onTap,
+      ),
     );
   }
 }

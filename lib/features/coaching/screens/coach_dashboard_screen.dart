@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
-import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
 import 'package:reflect_os/features/coaching/data/models/coach_client_relationship.dart';
 import 'package:reflect_os/features/coaching/data/models/coach_note.dart';
 import 'package:reflect_os/features/coaching/data/models/coaching_action_item.dart';
@@ -73,7 +73,7 @@ class _CoachDashboardScreenState extends ConsumerState<CoachDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const WorkspaceSwitcherChip()),
+      appBar: const AppHeader(),
       body: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth >= 900) {

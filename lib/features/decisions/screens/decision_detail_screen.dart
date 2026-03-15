@@ -37,6 +37,7 @@ import 'package:reflect_os/features/engineering/data/models/engineering_artifact
 import 'package:reflect_os/features/engineering/providers/engineering_provider.dart';
 import 'package:reflect_os/features/debrief/data/models/decision_debrief.dart';
 import 'package:reflect_os/features/debrief/providers/debrief_provider.dart';
+import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
 import 'package:reflect_os/features/toolkit/data/models/tool_run.dart';
 import 'package:reflect_os/features/toolkit/providers/toolkit_providers.dart';
@@ -260,24 +261,9 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            SvgPicture.asset(
-              Theme.of(context).brightness == Brightness.dark
-                  ? 'assets/branding/icon.svg'
-                  : 'assets/branding/icon.svg',
-              height: 20,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                decision.title,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
+      appBar: AppHeader(
+        title: decision.title,
+        automaticallyImplyLeading: true,
         actions: [
           if (_isGenerating)
             const Padding(

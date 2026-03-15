@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/sharing/data/models/share_link.dart';
 import 'package:reflect_os/features/sharing/providers/sharing_provider.dart';
@@ -192,19 +192,9 @@ class _ShareLinksScreenState extends ConsumerState<ShareLinksScreen> {
     final linksAsync = ref.watch(shareLinksProvider(widget.decisionId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            SvgPicture.asset(
-              Theme.of(context).brightness == Brightness.dark
-                  ? 'assets/branding/icon.svg'
-                  : 'assets/branding/icon.svg',
-              height: 160,
-            ),
-            const SizedBox(width: 8),
-            const Text('Share Links'),
-          ],
-        ),
+      appBar: AppHeader(
+        title: 'Share Links',
+        automaticallyImplyLeading: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),

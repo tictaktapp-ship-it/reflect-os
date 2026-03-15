@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/features/workspace/data/models/workspace_model.dart';
@@ -211,8 +212,8 @@ class _WorkspaceManagementScreenState
     final currentId = ref.watch(currentWorkspaceProvider).valueOrNull;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Workspaces'),
+      appBar: AppHeader(
+        title: 'Workspaces',
         actions: [
           if (_isWorking)
             const Padding(

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
+import 'package:reflect_os/widgets/app_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +10,6 @@ import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/dashboard/providers/dashboard_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
-import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
 
 final _dateFmt = DateFormat('d MMM');
 final _refreshedFmt = DateFormat('d MMM yyyy HH:mm');
@@ -84,9 +84,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     };
 
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const WorkspaceSwitcherChip(),
+      appBar: AppHeader(
         actions: [
           if (_isRefreshing)
             const Padding(

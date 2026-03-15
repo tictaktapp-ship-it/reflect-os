@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/utils/csv_downloader.dart';
-import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
+import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/features/initiatives/data/models/initiative.dart';
 import 'package:reflect_os/features/initiatives/providers/initiatives_provider.dart';
 
@@ -58,8 +58,7 @@ class InitiativesListScreen extends ConsumerWidget {
     final initiatives = initiativesAsync.valueOrNull ?? [];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const WorkspaceSwitcherChip(),
+      appBar: AppHeader(
         actions: [
           IconButton(
             icon: const Icon(Icons.download_outlined),

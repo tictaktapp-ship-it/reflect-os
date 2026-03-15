@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
+import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
 import 'package:reflect_os/features/investment/data/models/asset.dart';
 import 'package:reflect_os/features/investment/providers/investment_provider.dart';
@@ -13,7 +14,7 @@ class AssetsScreen extends ConsumerWidget {
     final assetsAsync = ref.watch(workspaceAssetsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Portfolio')),
+      appBar: const AppHeader(title: 'Portfolio'),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddAssetSheet(context, ref),
         tooltip: 'Add asset',
