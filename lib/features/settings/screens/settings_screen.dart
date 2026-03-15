@@ -829,18 +829,18 @@ class _SettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
       ),
       color: Colors.white,
       child: ListTile(
-        leading: Icon(icon, color: const Color(0xFF19CBD6)),
+        leading: Icon(icon, color: AppColors.accentPrimary),
         title: Text(title),
         subtitle: subtitle != null ? Text(subtitle!) : null,
-        trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+        trailing: const Icon(Icons.chevron_right, color: Colors.black38),
         onTap: onTap,
       ),
     );
