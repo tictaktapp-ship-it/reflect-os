@@ -531,7 +531,7 @@ class _StatusBarChart extends StatelessWidget {
                     show: true,
                     drawVerticalLine: false,
                     getDrawingHorizontalLine: (_) => FlLine(
-                      color: Colors.white.withValues(alpha: 0.07),
+                      color: Colors.black.withValues(alpha: 0.07),
                       strokeWidth: 1,
                     ),
                   ),

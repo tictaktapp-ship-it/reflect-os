@@ -284,11 +284,9 @@ class _SettingsGroup extends StatelessWidget {
     required this.title,
     required this.children,
     this.initiallyExpanded = false,
-    this.subtitle,
   });
 
   final String title;
-  final String? subtitle;
   final List<Widget> children;
   final bool initiallyExpanded;
 
@@ -834,14 +832,12 @@ class _SettingsTile extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.onTap,
-    this.trailing,
   });
 
   final IconData icon;
   final String title;
   final String? subtitle;
   final VoidCallback? onTap;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -857,8 +853,7 @@ class _SettingsTile extends StatelessWidget {
         leading: Icon(icon, color: const Color(0xFF19CBD6)),
         title: Text(title),
         subtitle: subtitle != null ? Text(subtitle!) : null,
-        trailing:
-            trailing ?? const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+        trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
         onTap: onTap,
       ),
     );

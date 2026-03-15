@@ -273,41 +273,49 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.picture_as_pdf_outlined),
-              tooltip: 'Generate Brief',
-              onPressed: _onGenerateBriefTapped,
             ),
-          if (decision.state != 'Draft')
-            IconButton(
-              icon: const Icon(Icons.share_outlined),
-              tooltip: 'Share to Team',
-              onPressed: _showShareSheet,
-            ),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Edit',
-            onPressed: () => context.push(
-              '/decisions/edit/${decision.id}',
-              extra: decision,
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: 'Delete',
-            onPressed: onDeleteTapped,
-          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             tooltip: 'More options',
-            onSelected: (value) {
-              if (value == 'share_links') {
+            onSelected: (value) async {
+              if (value == 'edit') {
+                context.push('/decisions/edit/${decision.id}', extra: decision);
+              } else if (value == 'brief') {
+                await _onGenerateBriefTapped();
+              } else if (value == 'share') {
+                await _showShareSheet();
+              } else if (value == 'share_links') {
                 context.push('/decisions/${decision.id}/share-links');
+              } else if (value == 'delete') {
+                await onDeleteTapped();
               }
             },
             itemBuilder: (ctx) => [
+              const PopupMenuItem(
+                value: 'edit',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.edit_outlined),
+                  title: Text('Edit'),
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'brief',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.picture_as_pdf_outlined),
+                  title: Text('Generate Brief'),
+                ),
+              ),
+              if (decision.state != 'Draft')
+                const PopupMenuItem(
+                  value: 'share',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.share_outlined),
+                    title: Text('Share to Team'),
+                  ),
+                ),
               const PopupMenuItem(
                 value: 'share_links',
                 child: ListTile(
@@ -316,11 +324,34 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
                   title: Text('Manage Share Links'),
                 ),
               ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'delete',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.delete_outline,
+                      color: AppColors.destructive),
+                  title: Text('Delete',
+                      style: TextStyle(color: AppColors.destructive)),
+                ),
+              ),
             ],
           ),
         ],
-        bottom: const TabBar(
-          tabs: [
+        bottom: TabBar(
+          indicatorColor: AppColors.accentPrimary,
+          indicatorWeight: 3,
+          labelColor: AppColors.accentPrimary,
+          unselectedLabelColor: const Color(0xFF64748B),
+          labelStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+          tabs: const [
             Tab(text: 'Details'),
             Tab(text: 'Lens'),
           ],
