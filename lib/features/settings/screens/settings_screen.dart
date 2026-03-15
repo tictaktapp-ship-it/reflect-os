@@ -22,6 +22,7 @@ import 'package:reflect_os/features/settings/providers/profile_provider.dart';
 import 'package:reflect_os/features/settings/widgets/encryption_mode_tile.dart';
 import 'package:reflect_os/features/workspace/data/models/workspace_model.dart';
 import 'package:reflect_os/features/workspace/providers/workspace_providers.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -335,115 +336,95 @@ void _showAboutSheet(BuildContext context) {
         ),
       );
 
-  showModalBottomSheet<void>(
+  showDialog<void>(
     context: context,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (ctx) => DraggableScrollableSheet(
-      initialChildSize: 0.85,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (_, scrollCtrl) => SingleChildScrollView(
-        controller: scrollCtrl,
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // App name + tagline
-            Text(
-              'Reflect OS',
-              style: Theme.of(ctx).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Reflect OS is an intelligent decision-logging and reflection '
-              'platform for individuals and high-stakes teams. It captures '
-              'consequential decisions at the moment they are made, then '
-              'brings users back at scheduled checkpoints to record what '
-              'actually happened. Over time, those entries become a '
-              'structured, searchable decision history that Reflect OS '
-              'analyses to surface patterns, calibration signals, and '
-              'evidence-based coaching insights. The result is fewer repeat '
-              'mistakes, stronger judgment under pressure, and a compounding '
-              '"decision intelligence" asset that gets more valuable with '
-              'every decision logged.',
-              style: Theme.of(ctx).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-
-            // What it does
-            Text(
-              'What it does',
-              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Reflect OS helps you log, track, and review your decisions with '
-              'structured templates, stakeholder collaboration, outcome scoring, '
-              'and a built-in toolkit of decision-making frameworks. Every '
-              'decision you make becomes a learning asset.',
-              style: Theme.of(ctx).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-
-            // Key features
-            Text(
-              'Key features',
-              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            bullet('Decision logging with structured templates'),
-            bullet('Stakeholder management and approvals'),
-            bullet('Outcome tracking and quality scoring'),
-            bullet(
-                'Decision toolkit with frameworks (RACI, pre-mortem, SWOT and more)'),
-            bullet('Weekly decision digest and coaching tools'),
-            bullet('Workspace management for teams'),
-            const SizedBox(height: 16),
-
-            // Compliance & standards
-            Text(
-              'Compliance & standards',
-              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Reflect OS is designed with privacy and compliance in mind:',
-              style: Theme.of(ctx).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 8),
-            bullet(
-                'Designed for GDPR compliance — full data export and account deletion available in-app'),
-            bullet(
-                'All data encrypted at rest and in transit (via Supabase/TLS)'),
-            bullet('Row-level security enforced on all user data'),
-            bullet('Soft deletion with 30-day recovery window'),
-            bullet('No advertising, no third-party data selling'),
-            bullet('Hosted in the EU (Supabase eu-west-1)'),
-            const SizedBox(height: 24),
-
-            // Close button
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Close'),
-              ),
-            ),
-          ],
-        ),
+    barrierDismissible: true,
+    builder: (ctx) => DialogShell(
+      title: 'About Reflect OS',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Reflect OS',
+            style: Theme.of(ctx).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Reflect OS is an intelligent decision-logging and reflection '
+            'platform for individuals and high-stakes teams. It captures '
+            'consequential decisions at the moment they are made, then '
+            'brings users back at scheduled checkpoints to record what '
+            'actually happened. Over time, those entries become a '
+            'structured, searchable decision history that Reflect OS '
+            'analyses to surface patterns, calibration signals, and '
+            'evidence-based coaching insights. The result is fewer repeat '
+            'mistakes, stronger judgment under pressure, and a compounding '
+            '"decision intelligence" asset that gets more valuable with '
+            'every decision logged.',
+            style: Theme.of(ctx).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'What it does',
+            style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Reflect OS helps you log, track, and review your decisions with '
+            'structured templates, stakeholder collaboration, outcome scoring, '
+            'and a built-in toolkit of decision-making frameworks. Every '
+            'decision you make becomes a learning asset.',
+            style: Theme.of(ctx).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Key features',
+            style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 8),
+          bullet('Decision logging with structured templates'),
+          bullet('Stakeholder management and approvals'),
+          bullet('Outcome tracking and quality scoring'),
+          bullet(
+              'Decision toolkit with frameworks (RACI, pre-mortem, SWOT and more)'),
+          bullet('Weekly decision digest and coaching tools'),
+          bullet('Workspace management for teams'),
+          const SizedBox(height: 16),
+          Text(
+            'Compliance & standards',
+            style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Reflect OS is designed with privacy and compliance in mind:',
+            style: Theme.of(ctx).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 8),
+          bullet(
+              'Designed for GDPR compliance — full data export and account deletion available in-app'),
+          bullet(
+              'All data encrypted at rest and in transit (via Supabase/TLS)'),
+          bullet('Row-level security enforced on all user data'),
+          bullet('Soft deletion with 30-day recovery window'),
+          bullet('No advertising, no third-party data selling'),
+          bullet('Hosted in the EU (Supabase eu-west-1)'),
+        ],
       ),
+      actions: [
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Close'),
+        ),
+      ],
     ),
   );
 }
@@ -537,9 +518,9 @@ class _ProfileCardState extends ConsumerState<_ProfileCard> {
     final controller = TextEditingController(text: current);
     final result = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Display name'),
-        content: TextField(
+      builder: (ctx) => DialogShell(
+        title: 'Display name',
+        child: TextField(
           controller: controller,
           autofocus: true,
           textCapitalization: TextCapitalization.words,
@@ -908,51 +889,42 @@ class _LegalPrivacySection extends ConsumerWidget {
 
     void showCookieSheet() {
       bool current = consent?.cookieConsent ?? false;
-      showModalBottomSheet<void>(
+      showDialog<void>(
         context: context,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
+        barrierDismissible: true,
         builder: (ctx) => StatefulBuilder(
-          builder: (ctx, setSheet) => SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Cookie Preferences',
-                      style: Theme.of(ctx).textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Functional cookies help remember your theme preference and '
-                    'selected workspace. They are never used for advertising.',
-                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(ctx)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                  ),
-                  const SizedBox(height: 16),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Functional cookies'),
-                    subtitle: const Text('Theme and workspace memory'),
-                    value: current,
-                    onChanged: (v) => setSheet(() => current = v),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Done'),
-                    ),
-                  ),
-                ],
-              ),
+          builder: (ctx, setSheet) => DialogShell(
+            title: 'Cookie Preferences',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Functional cookies help remember your theme preference and '
+                  'selected workspace. They are never used for advertising.',
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(ctx)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                      ),
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Functional cookies'),
+                  subtitle: const Text('Theme and workspace memory'),
+                  value: current,
+                  onChanged: (v) => setSheet(() => current = v),
+                ),
+              ],
             ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Done'),
+              ),
+            ],
           ),
         ),
       );

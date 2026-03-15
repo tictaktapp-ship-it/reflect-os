@@ -7,6 +7,7 @@ import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -56,9 +57,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void _showAccountExistsDialog(String email) {
     showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Account already exists'),
-        content: const Text(
+      builder: (_) => DialogShell(
+        title: 'Account already exists',
+        child: const Text(
           'An account with this email already exists. '
           'Would you like to sign in instead?',
         ),
@@ -126,9 +127,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (result.valueOrNull?.session == null) {
       showDialog<void>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Check your email'),
-          content: const Text(
+        builder: (context) => DialogShell(
+          title: 'Check your email',
+          child: const Text(
             'We sent a confirmation link to your email address. '
             'Please verify your email to continue.',
           ),

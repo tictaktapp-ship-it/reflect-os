@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 import 'package:reflect_os/features/investment/data/models/asset.dart';
 import 'package:reflect_os/features/investment/providers/investment_provider.dart';
 
@@ -52,85 +53,71 @@ class AssetsScreen extends ConsumerWidget {
     final stageCtrl = TextEditingController();
     final geoCtrl = TextEditingController();
 
-    showModalBottomSheet(
+    showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          20,
-          16,
-          MediaQuery.of(ctx).viewInsets.bottom + 32,
+      barrierDismissible: true,
+      builder: (ctx) => DialogShell(
+        title: 'Add Asset',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(labelText: 'Name *'),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: sectorCtrl,
+              decoration: const InputDecoration(labelText: 'Sector'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: stageCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Stage (e.g. Series A, Growth)',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: geoCtrl,
+              decoration: const InputDecoration(labelText: 'Geography'),
+            ),
+          ],
         ),
-        child: StatefulBuilder(
-          builder: (ctx, setSS) => Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Add Asset',
-                style: Theme.of(ctx).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Name *'),
-                textCapitalization: TextCapitalization.words,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: sectorCtrl,
-                decoration: const InputDecoration(labelText: 'Sector'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: stageCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Stage (e.g. Series A, Growth)',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: geoCtrl,
-                decoration: const InputDecoration(labelText: 'Geography'),
-              ),
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed: () async {
-                  final name = nameCtrl.text.trim();
-                  if (name.isEmpty) return;
-                  final workspaceId =
-                      await ref.read(currentWorkspaceProvider.future);
-                  if (workspaceId == null) return;
-                  await ref.read(investmentRepositoryProvider).createAsset(
-                        workspaceId: workspaceId,
-                        name: name,
-                        sector: sectorCtrl.text.trim().isEmpty
-                            ? null
-                            : sectorCtrl.text.trim(),
-                        stage: stageCtrl.text.trim().isEmpty
-                            ? null
-                            : stageCtrl.text.trim(),
-                        geography: geoCtrl.text.trim().isEmpty
-                            ? null
-                            : geoCtrl.text.trim(),
-                      );
-                  ref.invalidate(workspaceAssetsProvider);
-                  if (!ctx.mounted) return;
-                  Navigator.of(ctx).pop();
-                },
-                child: const Text('Add Asset'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel'),
-              ),
-            ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
           ),
-        ),
+          FilledButton(
+            onPressed: () async {
+              final name = nameCtrl.text.trim();
+              if (name.isEmpty) return;
+              final workspaceId =
+                  await ref.read(currentWorkspaceProvider.future);
+              if (workspaceId == null) return;
+              await ref.read(investmentRepositoryProvider).createAsset(
+                    workspaceId: workspaceId,
+                    name: name,
+                    sector: sectorCtrl.text.trim().isEmpty
+                        ? null
+                        : sectorCtrl.text.trim(),
+                    stage: stageCtrl.text.trim().isEmpty
+                        ? null
+                        : stageCtrl.text.trim(),
+                    geography: geoCtrl.text.trim().isEmpty
+                        ? null
+                        : geoCtrl.text.trim(),
+                  );
+              ref.invalidate(workspaceAssetsProvider);
+              if (!ctx.mounted) return;
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Add Asset'),
+          ),
+        ],
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/sharing/data/models/share_link.dart';
 import 'package:reflect_os/features/sharing/providers/sharing_provider.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 
 class ShareLinksScreen extends ConsumerStatefulWidget {
   const ShareLinksScreen({required this.decisionId, super.key});
@@ -37,9 +38,9 @@ class _ShareLinksScreenState extends ConsumerState<ShareLinksScreen> {
   Future<void> _revokeLink(ShareLink link) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Revoke Share Link'),
-        content: const Text(
+      builder: (_) => DialogShell(
+        title: 'Revoke Share Link',
+        child: const Text(
           'This link will immediately stop working. This cannot be undone.',
         ),
         actions: [
@@ -73,46 +74,39 @@ class _ShareLinksScreenState extends ConsumerState<ShareLinksScreen> {
   }
 
   Future<void> _showCreateSheet() async {
-    final choice = await showModalBottomSheet<String>(
+    final choice = await showDialog<String>(
       context: context,
-      isScrollControlled: true,
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Create Share Link',
-                style: Theme.of(ctx).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Choose how long the link should be active:',
-                style: Theme.of(ctx).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.calendar_today_outlined),
-                title: const Text('7 days'),
-                onTap: () => Navigator.of(ctx).pop('7'),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.calendar_month_outlined),
-                title: const Text('30 days'),
-                onTap: () => Navigator.of(ctx).pop('30'),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.all_inclusive),
-                title: const Text('No expiry'),
-                onTap: () => Navigator.of(ctx).pop('none'),
-              ),
-            ],
-          ),
+      barrierDismissible: true,
+      builder: (ctx) => DialogShell(
+        title: 'Create Share Link',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Choose how long the link should be active:',
+              style: Theme.of(ctx).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.calendar_today_outlined),
+              title: const Text('7 days'),
+              onTap: () => Navigator.of(ctx).pop('7'),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.calendar_month_outlined),
+              title: const Text('30 days'),
+              onTap: () => Navigator.of(ctx).pop('30'),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.all_inclusive),
+              title: const Text('No expiry'),
+              onTap: () => Navigator.of(ctx).pop('none'),
+            ),
+          ],
         ),
       ),
     );
@@ -148,9 +142,9 @@ class _ShareLinksScreenState extends ConsumerState<ShareLinksScreen> {
     final url = _buildShareUrl(token);
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Share Link Created'),
-        content: Column(
+      builder: (ctx) => DialogShell(
+        title: 'Share Link Created',
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

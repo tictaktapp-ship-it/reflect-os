@@ -8,6 +8,7 @@ import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/category.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 
 enum _ConflictChoice { keepMine, discard }
 
@@ -146,9 +147,9 @@ class _EditDecisionScreenState extends ConsumerState<EditDecisionScreen> {
           if (!mounted) return;
           final choice = await showDialog<_ConflictChoice>(
             context: context,
-            builder: (_) => AlertDialog(
-              title: const Text('Conflict detected'),
-              content: const Text(
+            builder: (_) => DialogShell(
+              title: 'Conflict detected',
+              child: const Text(
                 'This decision was updated elsewhere since you opened it.\n\nWhat would you like to do?',
               ),
               actions: [

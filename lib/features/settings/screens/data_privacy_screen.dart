@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 import 'package:reflect_os/core/utils/csv_downloader.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:reflect_os/features/settings/data/models/gdpr_request.dart';
@@ -94,37 +95,15 @@ class _DataPrivacyScreenState extends ConsumerState<DataPrivacyScreen> {
   void _showDeletionSheet() {
     final reasonCtrl = TextEditingController();
 
-    showModalBottomSheet(
+    showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          20,
-          16,
-          MediaQuery.of(ctx).viewInsets.bottom + 32,
-        ),
+      barrierDismissible: true,
+      builder: (ctx) => DialogShell(
+        title: 'Delete Account',
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Center(
-              child: Icon(Icons.warning_rounded,
-                  size: 40, color: AppColors.destructive),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'This cannot be undone',
-              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                    color: AppColors.destructive,
-                    fontWeight: FontWeight.w700,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
             Text(
               'Your personal decisions will be deleted after a 30-day grace period. '
               'Team decisions will be anonymised immediately.',
@@ -146,47 +125,48 @@ class _DataPrivacyScreenState extends ConsumerState<DataPrivacyScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 20),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.destructive,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                Navigator.of(ctx).pop();
-                setState(() => _isSubmitting = true);
-                try {
-                  await ref
-                      .read(settingsRepositoryProvider)
-                      .createDeletionRequest(reasonCtrl.text.trim());
-                  ref.invalidate(gdprRequestsProvider);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                            'Deletion request submitted. You have 30 days to cancel.'),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text('Failed to submit request: $e')),
-                    );
-                  }
-                } finally {
-                  if (mounted) setState(() => _isSubmitting = false);
-                }
-              },
-              child: const Text('Request Deletion'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.destructive,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              setState(() => _isSubmitting = true);
+              try {
+                await ref
+                    .read(settingsRepositoryProvider)
+                    .createDeletionRequest(reasonCtrl.text.trim());
+                ref.invalidate(gdprRequestsProvider);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          'Deletion request submitted. You have 30 days to cancel.'),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text('Failed to submit request: $e')),
+                  );
+                }
+              } finally {
+                if (mounted) setState(() => _isSubmitting = false);
+              }
+            },
+            child: const Text('Request Deletion'),
+          ),
+        ],
       ),
     );
   }
@@ -196,10 +176,9 @@ class _DataPrivacyScreenState extends ConsumerState<DataPrivacyScreen> {
   Future<void> _cancelRequest(String requestId) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cancel Request'),
-        content:
-            const Text('Are you sure you want to cancel this GDPR request?'),
+      builder: (ctx) => DialogShell(
+        title: 'Cancel Request',
+        child: const Text('Are you sure you want to cancel this GDPR request?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),

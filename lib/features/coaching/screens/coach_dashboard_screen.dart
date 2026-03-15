@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
@@ -14,6 +13,7 @@ import 'package:reflect_os/features/coaching/providers/coaching_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 
 
 class CoachDashboardScreen extends ConsumerStatefulWidget {
@@ -309,6 +309,7 @@ class _CoachDashboardScreenState extends ConsumerState<CoachDashboardScreen> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (sheetCtx) => DraggableScrollableSheet(
         initialChildSize: 0.85,
@@ -330,6 +331,7 @@ class _CoachDashboardScreenState extends ConsumerState<CoachDashboardScreen> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (sheetCtx) => DraggableScrollableSheet(
         initialChildSize: 0.85,
@@ -351,9 +353,9 @@ class _CoachDashboardScreenState extends ConsumerState<CoachDashboardScreen> {
     showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (dialogCtx, setDialogState) => AlertDialog(
-          title: const Text('Add a Coach'),
-          content: Column(
+        builder: (dialogCtx, setDialogState) => DialogShell(
+          title: 'Add a Coach',
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -434,111 +436,90 @@ class _CoachDashboardScreenState extends ConsumerState<CoachDashboardScreen> {
     final emailController = TextEditingController();
     bool isBusy = false;
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
         builder: (sheetCtx, setSheetState) {
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: SvgPicture.asset(
-                        'assets/branding/icon.svg',
-                        height: 80,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Invite Client',
-                      style: Theme.of(sheetCtx).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Enter the email address of the person you want to '
-                      'coach. They must already have a Reflect OS account.',
-                      style:
-                          Theme.of(sheetCtx).textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: emailController,
-                      autofocus: true,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Client email',
-                        hintText: 'name@example.com',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: isBusy
-                          ? null
-                          : () async {
-                              final email = emailController.text.trim();
-                              if (email.isEmpty) return;
-                              setSheetState(() => isBusy = true);
-                              try {
-                                final workspaceId = await ref
-                                    .read(currentWorkspaceProvider.future);
-                                if (workspaceId == null) {
-                                  throw Exception('No active workspace');
-                                }
-                                await ref
-                                    .read(coachingRepositoryProvider)
-                                    .inviteClient(email, workspaceId);
-                                if (ctx.mounted) {
-                                  Navigator.of(ctx).pop();
-                                  ref.invalidate(myClientsAllProvider);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content:
-                                            Text('Invite sent to $email')),
-                                  );
-                                }
-                              } catch (e) {
-                                if (ctx.mounted) {
-                                  Navigator.of(ctx).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('$e')),
-                                  );
-                                }
-                              } finally {
-                                setSheetState(() => isBusy = false);
-                              }
-                            },
-                      child: isBusy
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Invite'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                  ],
+          return DialogShell(
+            title: 'Invite Client',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Enter the email address of the person you want to '
+                  'coach. They must already have a Reflect OS account.',
+                  style:
+                      Theme.of(sheetCtx).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: emailController,
+                  autofocus: true,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'Client email',
+                    hintText: 'name@example.com',
+                  ),
+                ),
+              ],
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: isBusy
+                    ? null
+                    : () async {
+                        final email = emailController.text.trim();
+                        if (email.isEmpty) return;
+                        setSheetState(() => isBusy = true);
+                        try {
+                          final workspaceId = await ref
+                              .read(currentWorkspaceProvider.future);
+                          if (workspaceId == null) {
+                            throw Exception('No active workspace');
+                          }
+                          await ref
+                              .read(coachingRepositoryProvider)
+                              .inviteClient(email, workspaceId);
+                          if (ctx.mounted) {
+                            Navigator.of(ctx).pop();
+                            ref.invalidate(myClientsAllProvider);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content:
+                                      Text('Invite sent to $email')),
+                            );
+                          }
+                        } catch (e) {
+                          if (ctx.mounted) {
+                            Navigator.of(ctx).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('$e')),
+                            );
+                          }
+                        } finally {
+                          setSheetState(() => isBusy = false);
+                        }
+                      },
+                child: isBusy
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Invite'),
+              ),
+            ],
           );
         },
       ),
@@ -1183,164 +1164,157 @@ class _SessionsTabState extends ConsumerState<_SessionsTab> {
     int durationMinutes = 60;
     bool isBusy = false;
 
-    await showModalBottomSheet<void>(
+    await showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
-        builder: (sheetCtx, setSheet) => Padding(
-          padding: EdgeInsets.only(
-              bottom: MediaQuery.of(sheetCtx).viewInsets.bottom),
-          child: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+        builder: (sheetCtx, setSheet) => DialogShell(
+          title: 'Schedule Session',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(
+                    labelText: 'Title (optional)'),
+              ),
+              const SizedBox(height: 12),
+              Row(
                 children: [
-                  Text('Schedule Session',
-                      style:
-                          Theme.of(sheetCtx).textTheme.titleLarge),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: titleCtrl,
-                    decoration: const InputDecoration(
-                        labelText: 'Title (optional)'),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.calendar_today, size: 16),
-                          label: Text(
-                              DateFormat('d MMM yyyy').format(selectedDate)),
-                          onPressed: () async {
-                            final picked = await showDatePicker(
-                              context: sheetCtx,
-                              initialDate: selectedDate,
-                              firstDate: DateTime.now(),
-                              lastDate: DateTime.now()
-                                  .add(const Duration(days: 365)),
-                            );
-                            if (picked != null) {
-                              setSheet(() => selectedDate = picked);
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.access_time, size: 16),
-                          label: Text(selectedTime.format(sheetCtx)),
-                          onPressed: () async {
-                            final picked = await showTimePicker(
-                              context: sheetCtx,
-                              initialTime: selectedTime,
-                            );
-                            if (picked != null) {
-                              setSheet(() => selectedTime = picked);
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  InputDecorator(
-                    decoration:
-                        const InputDecoration(labelText: 'Duration'),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<int>(
-                        value: durationMinutes,
-                        isDense: true,
-                        items: const [
-                          DropdownMenuItem(value: 30, child: Text('30 min')),
-                          DropdownMenuItem(value: 45, child: Text('45 min')),
-                          DropdownMenuItem(value: 60, child: Text('60 min')),
-                          DropdownMenuItem(value: 90, child: Text('90 min')),
-                          DropdownMenuItem(
-                              value: 120, child: Text('120 min')),
-                        ],
-                        onChanged: (v) {
-                          if (v != null) setSheet(() => durationMinutes = v);
-                        },
-                      ),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_today, size: 16),
+                      label: Text(
+                          DateFormat('d MMM yyyy').format(selectedDate)),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: sheetCtx,
+                          initialDate: selectedDate,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now()
+                              .add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setSheet(() => selectedDate = picked);
+                        }
+                      },
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: resourceLabelCtrl,
-                    decoration: const InputDecoration(
-                        labelText: 'Resource label (optional)'),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: resourceUrlCtrl,
-                    decoration: const InputDecoration(
-                        labelText: 'Resource URL (optional)'),
-                    keyboardType: TextInputType.url,
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: isBusy
-                        ? null
-                        : () async {
-                            setSheet(() => isBusy = true);
-                            try {
-                              final scheduledAt = DateTime(
-                                selectedDate.year,
-                                selectedDate.month,
-                                selectedDate.day,
-                                selectedTime.hour,
-                                selectedTime.minute,
-                              );
-                              final workspaceId = await ref.read(
-                                  currentWorkspaceProvider.future);
-                              await ref
-                                  .read(coachingRepositoryProvider)
-                                  .createSessionFull(
-                                    clientUserId:
-                                        widget.relationship.clientUserId,
-                                    scheduledAt: scheduledAt,
-                                    title: titleCtrl.text.isNotEmpty
-                                        ? titleCtrl.text
-                                        : null,
-                                    durationMinutes: durationMinutes,
-                                    workspaceId: workspaceId,
-                                    resourceUrl: resourceUrlCtrl.text,
-                                    resourceLabel: resourceLabelCtrl.text,
-                                  );
-                              ref.invalidate(coachingSessionsProvider(
-                                  widget.relationship.clientUserId));
-                              if (ctx.mounted) {
-                                Navigator.of(ctx).pop();
-                              }
-                            } catch (e) {
-                              if (ctx.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('$e')),
-                                );
-                              }
-                            } finally {
-                              setSheet(() => isBusy = false);
-                            }
-                          },
-                    child: isBusy
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text('Schedule'),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.access_time, size: 16),
+                      label: Text(selectedTime.format(sheetCtx)),
+                      onPressed: () async {
+                        final picked = await showTimePicker(
+                          context: sheetCtx,
+                          initialTime: selectedTime,
+                        );
+                        if (picked != null) {
+                          setSheet(() => selectedTime = picked);
+                        }
+                      },
+                    ),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 12),
+              InputDecorator(
+                decoration:
+                    const InputDecoration(labelText: 'Duration'),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    value: durationMinutes,
+                    isDense: true,
+                    items: const [
+                      DropdownMenuItem(value: 30, child: Text('30 min')),
+                      DropdownMenuItem(value: 45, child: Text('45 min')),
+                      DropdownMenuItem(value: 60, child: Text('60 min')),
+                      DropdownMenuItem(value: 90, child: Text('90 min')),
+                      DropdownMenuItem(
+                          value: 120, child: Text('120 min')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setSheet(() => durationMinutes = v);
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: resourceLabelCtrl,
+                decoration: const InputDecoration(
+                    labelText: 'Resource label (optional)'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: resourceUrlCtrl,
+                decoration: const InputDecoration(
+                    labelText: 'Resource URL (optional)'),
+                keyboardType: TextInputType.url,
+              ),
+            ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: isBusy
+                  ? null
+                  : () async {
+                      setSheet(() => isBusy = true);
+                      try {
+                        final scheduledAt = DateTime(
+                          selectedDate.year,
+                          selectedDate.month,
+                          selectedDate.day,
+                          selectedTime.hour,
+                          selectedTime.minute,
+                        );
+                        final workspaceId = await ref.read(
+                            currentWorkspaceProvider.future);
+                        await ref
+                            .read(coachingRepositoryProvider)
+                            .createSessionFull(
+                              clientUserId:
+                                  widget.relationship.clientUserId,
+                              scheduledAt: scheduledAt,
+                              title: titleCtrl.text.isNotEmpty
+                                  ? titleCtrl.text
+                                  : null,
+                              durationMinutes: durationMinutes,
+                              workspaceId: workspaceId,
+                              resourceUrl: resourceUrlCtrl.text,
+                              resourceLabel: resourceLabelCtrl.text,
+                            );
+                        ref.invalidate(coachingSessionsProvider(
+                            widget.relationship.clientUserId));
+                        if (ctx.mounted) {
+                          Navigator.of(ctx).pop();
+                        }
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('$e')),
+                          );
+                        }
+                      } finally {
+                        setSheet(() => isBusy = false);
+                      }
+                    },
+              child: isBusy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Schedule'),
+            ),
+          ],
         ),
       ),
     );
@@ -1350,73 +1324,60 @@ class _SessionsTabState extends ConsumerState<_SessionsTab> {
     final bodyCtrl = TextEditingController();
     bool isBusy = false;
 
-    showModalBottomSheet<void>(
+    showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
-        builder: (sheetCtx, setSheet) => Padding(
-          padding: EdgeInsets.only(
-              bottom: MediaQuery.of(sheetCtx).viewInsets.bottom),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('Add Session Note',
-                      style: Theme.of(sheetCtx).textTheme.titleMedium),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: bodyCtrl,
-                    maxLines: 5,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                        hintText: 'Session notes...'),
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: isBusy
-                        ? null
-                        : () async {
-                            if (bodyCtrl.text.trim().isEmpty) return;
-                            setSheet(() => isBusy = true);
-                            try {
-                              final workspaceId = await ref.read(
-                                  currentWorkspaceProvider.future);
-                              await ref
-                                  .read(coachingRepositoryProvider)
-                                  .addSessionNoteForSession(
-                                    clientUserId:
-                                        widget.relationship.clientUserId,
-                                    body: bodyCtrl.text.trim(),
-                                    workspaceId: workspaceId,
-                                    coachingSessionId: session.id,
-                                  );
-                              ref.invalidate(coachingSessionNotesProvider(
-                                  widget.relationship.clientUserId));
-                              if (ctx.mounted) {
-                                Navigator.of(ctx).pop();
-                              }
-                            } catch (e) {
-                              if (ctx.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('$e')),
-                                );
-                              }
-                            } finally {
-                              setSheet(() => isBusy = false);
-                            }
-                          },
-                    child: const Text('Save'),
-                  ),
-                ],
-              ),
-            ),
+        builder: (sheetCtx, setSheet) => DialogShell(
+          title: 'Add Session Note',
+          child: TextField(
+            controller: bodyCtrl,
+            maxLines: 5,
+            autofocus: true,
+            decoration: const InputDecoration(
+                hintText: 'Session notes...'),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: isBusy
+                  ? null
+                  : () async {
+                      if (bodyCtrl.text.trim().isEmpty) return;
+                      setSheet(() => isBusy = true);
+                      try {
+                        final workspaceId = await ref.read(
+                            currentWorkspaceProvider.future);
+                        await ref
+                            .read(coachingRepositoryProvider)
+                            .addSessionNoteForSession(
+                              clientUserId:
+                                  widget.relationship.clientUserId,
+                              body: bodyCtrl.text.trim(),
+                              workspaceId: workspaceId,
+                              coachingSessionId: session.id,
+                            );
+                        ref.invalidate(coachingSessionNotesProvider(
+                            widget.relationship.clientUserId));
+                        if (ctx.mounted) {
+                          Navigator.of(ctx).pop();
+                        }
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('$e')),
+                          );
+                        }
+                      } finally {
+                        setSheet(() => isBusy = false);
+                      }
+                    },
+              child: const Text('Save'),
+            ),
+          ],
         ),
       ),
     );
@@ -1759,6 +1720,7 @@ class _DecisionNoteCard extends ConsumerWidget {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (ctx) => DraggableScrollableSheet(
         initialChildSize: 0.75,
@@ -2020,9 +1982,9 @@ class _ActionItemsTabState extends ConsumerState<_ActionItemsTab> {
     showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (dialogCtx, setDialog) => AlertDialog(
-          title: const Text('Add Action Item'),
-          content: Column(
+        builder: (dialogCtx, setDialog) => DialogShell(
+          title: 'Add Action Item',
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

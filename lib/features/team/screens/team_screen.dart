@@ -11,6 +11,7 @@ import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
 import 'package:reflect_os/features/team/data/models/workspace_membership.dart';
 import 'package:reflect_os/features/team/providers/team_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 
 class TeamScreen extends ConsumerStatefulWidget {
   const TeamScreen({super.key});
@@ -108,10 +109,9 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
       context: context,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
-
-          return AlertDialog(
-            title: const Text('Invite Member'),
-            content: Column(
+          return DialogShell(
+            title: 'Invite Team Member',
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
@@ -205,190 +205,185 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
     final joined =
         DateFormat('d MMM yyyy').format(member.createdAt.toLocal());
 
-    showModalBottomSheet<void>(
+    showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      barrierDismissible: true,
       builder: (sheetCtx) => StatefulBuilder(
         builder: (ctx, setSheetState) {
-          return SafeArea(
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 24,
-                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundImage: member.avatarUrl != null
-                            ? NetworkImage(member.avatarUrl!)
-                            : null,
-                        backgroundColor: AppColors.accentPrimary,
-                        child: member.avatarUrl == null
-                            ? Text(
-                                nameToShow[0].toUpperCase(),
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600),
-                              )
-                            : null,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  nameToShow,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w600),
+          return DialogShell(
+            title: 'Team Member',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundImage: member.avatarUrl != null
+                          ? NetworkImage(member.avatarUrl!)
+                          : null,
+                      backgroundColor: AppColors.accentPrimary,
+                      child: member.avatarUrl == null
+                          ? Text(
+                              nameToShow[0].toUpperCase(),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                nameToShow,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              if (isCurrentUser) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accentPrimary
+                                        .withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'you',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelSmall
+                                        ?.copyWith(
+                                          color: AppColors.accentPrimary,
+                                        ),
+                                  ),
                                 ),
-                                if (isCurrentUser) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.accentPrimary
-                                          .withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      'you',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall
-                                          ?.copyWith(
-                                            color: AppColors.accentPrimary,
-                                          ),
-                                    ),
-                                  ),
-                                ],
                               ],
+                            ],
+                          ),
+                          Text(
+                            'Joined $joined',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                if (canEdit) ...[
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedRole,
+                    decoration: const InputDecoration(labelText: 'Role'),
+                    items: const [
+                      DropdownMenuItem(value: 'Owner', child: Text('Owner')),
+                      DropdownMenuItem(
+                          value: 'Editor', child: Text('Editor')),
+                      DropdownMenuItem(
+                          value: 'Viewer', child: Text('Viewer')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setSheetState(() => selectedRole = v);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.destructive,
+                      side: BorderSide(color: AppColors.destructive),
+                    ),
+                    onPressed: () async {
+                      Navigator.of(sheetCtx).pop();
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (_) => DialogShell(
+                          title: 'Remove Member',
+                          child: Text(
+                              'Remove $nameToShow from this workspace?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.of(context).pop(false),
+                              child: const Text('Cancel'),
                             ),
-                            Text(
-                              'Joined $joined',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.6),
-                                  ),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.destructive),
+                              onPressed: () =>
+                                  Navigator.of(context).pop(true),
+                              child: const Text('Remove'),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                      );
+                      if (confirmed != true) return;
+                      try {
+                        await ref
+                            .read(teamRepositoryProvider)
+                            .removeMember(member.id);
+                        ref.invalidate(teamMembersProvider);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Failed to remove: $e')),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text('Remove from workspace'),
                   ),
-                  const SizedBox(height: 20),
-                  if (canEdit) ...[
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedRole,
-                      decoration: const InputDecoration(labelText: 'Role'),
-                      items: const [
-                        DropdownMenuItem(value: 'Owner', child: Text('Owner')),
-                        DropdownMenuItem(
-                            value: 'Editor', child: Text('Editor')),
-                        DropdownMenuItem(
-                            value: 'Viewer', child: Text('Viewer')),
-                      ],
-                      onChanged: (v) {
-                        if (v != null) setSheetState(() => selectedRole = v);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: selectedRole == member.role
-                          ? null
-                          : () async {
-                              try {
-                                await ref
-                                    .read(teamRepositoryProvider)
-                                    .updateMemberRole(
-                                        member.id, selectedRole);
-                                if (ctx.mounted) {
-                                  Navigator.of(sheetCtx).pop();
-                                  ref.invalidate(teamMembersProvider);
-                                }
-                              } catch (e) {
-                                if (ctx.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content:
-                                            Text('Failed to update role: $e')),
-                                  );
-                                }
-                              }
-                            },
-                      child: const Text('Save changes'),
-                    ),
-                    const SizedBox(height: 8),
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.destructive,
-                        side: BorderSide(color: AppColors.destructive),
-                      ),
-                      onPressed: () async {
-                        Navigator.of(sheetCtx).pop();
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            title: const Text('Remove Member'),
-                            content: Text(
-                                'Remove $nameToShow from this workspace?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.of(context).pop(false),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                style: TextButton.styleFrom(
-                                    foregroundColor: AppColors.destructive),
-                                onPressed: () =>
-                                    Navigator.of(context).pop(true),
-                                child: const Text('Remove'),
-                              ),
-                            ],
-                          ),
-                        );
-                        if (confirmed != true) return;
+                ],
+              ],
+            ),
+            actions: canEdit ? [
+              TextButton(
+                onPressed: () => Navigator.of(sheetCtx).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: selectedRole == member.role
+                    ? null
+                    : () async {
                         try {
                           await ref
                               .read(teamRepositoryProvider)
-                              .removeMember(member.id);
-                          ref.invalidate(teamMembersProvider);
+                              .updateMemberRole(
+                                  member.id, selectedRole);
+                          if (ctx.mounted) {
+                            Navigator.of(sheetCtx).pop();
+                            ref.invalidate(teamMembersProvider);
+                          }
                         } catch (e) {
-                          if (context.mounted) {
+                          if (ctx.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                  content: Text('Failed to remove: $e')),
+                                  content:
+                                      Text('Failed to update role: $e')),
                             );
                           }
                         }
                       },
-                      child: const Text('Remove from workspace'),
-                    ),
-                  ],
-                ],
+                child: const Text('Save changes'),
               ),
-            ),
+            ] : null,
           );
         },
       ),

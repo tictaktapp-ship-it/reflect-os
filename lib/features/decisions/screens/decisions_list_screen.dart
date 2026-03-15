@@ -10,6 +10,7 @@ import 'package:reflect_os/core/utils/csv_downloader.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 
 enum _SortOrder { newestFirst, oldestFirst, titleAsc, titleDesc }
 
@@ -111,11 +112,11 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
   // ── Sheets ───────────────────────────────────────────────────────────────────
 
   void _showSortSheet() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (_) => Column(
         mainAxisSize: MainAxisSize.min,
@@ -125,7 +126,7 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(child: SvgPicture.asset(isDark ? 'assets/branding/icon.svg' : 'assets/branding/icon.svg', height: 128)),
+                Center(child: SvgPicture.asset('assets/branding/icon.svg', height: 40)),
                 const SizedBox(height: 8),
                 Text(
                   'Sort by',
@@ -159,25 +160,15 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
   }
 
   void _showExportSheet(List<Decision> all, List<Decision> filtered) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+      barrierDismissible: true,
+      builder: (_) => DialogShell(
+        title: 'Export Decisions',
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(child: SvgPicture.asset(isDark ? 'assets/branding/icon.svg' : 'assets/branding/icon.svg', height: 128)),
-            const SizedBox(height: 8),
-            Text(
-              'Export Decisions',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 6),
             Text(
               'Export your decisions as a CSV file',
               style: Theme.of(context)
@@ -218,103 +209,79 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
   }
 
   void _showFilterSheet() {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetCtx) => StatefulBuilder(
+      barrierDismissible: true,
+      builder: (dialogCtx) => StatefulBuilder(
         builder: (ctx, setSheetState) {
-          // Updates both the parent list and the sheet chips simultaneously.
+          // Updates both the parent list and the dialog chips simultaneously.
           void updateFilter(VoidCallback fn) {
             setState(fn);
             setSheetState(fn);
           }
 
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Drag handle
-                  Center(
-                    child: Container(
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(2),
+          return DialogShell(
+            title: 'Filter',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Spacer(),
+                    if (_filtersActive)
+                      TextButton(
+                        onPressed: () => updateFilter(() {
+                          _selectedState = null;
+                          _selectedStakes = null;
+                        }),
+                        child: const Text('Clear all'),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Text(
-                        'Filter',
-                        style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                  ],
+                ),
+                Text(
+                  'STATUS',
+                  style: Theme.of(ctx).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5),
+                        letterSpacing: 0.8,
                       ),
-                      const Spacer(),
-                      if (_filtersActive)
-                        TextButton(
-                          onPressed: () => updateFilter(() {
-                            _selectedState = null;
-                            _selectedStakes = null;
-                          }),
-                          child: const Text('Clear all'),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'STATUS',
-                    style: Theme.of(ctx).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5),
-                          letterSpacing: 0.8,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: <String?>[null, 'Draft', 'Active', 'Closed', 'Archived']
-                        .map((s) => FilterChip(
-                              label: Text(s ?? 'All'),
-                              selected: _selectedState == s,
-                              onSelected: (_) =>
-                                  updateFilter(() => _selectedState = s),
-                            ))
-                        .toList(),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'PRIORITY',
-                    style: Theme.of(ctx).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5),
-                          letterSpacing: 0.8,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: <String?>[null, 'Low', 'Medium', 'High', 'Critical']
-                        .map((s) => FilterChip(
-                              label: Text(s ?? 'All'),
-                              selected: _selectedStakes == s,
-                              onSelected: (_) =>
-                                  updateFilter(() => _selectedStakes = s),
-                            ))
-                        .toList(),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <String?>[null, 'Draft', 'Active', 'Closed', 'Archived']
+                      .map((s) => FilterChip(
+                            label: Text(s ?? 'All'),
+                            selected: _selectedState == s,
+                            onSelected: (_) =>
+                                updateFilter(() => _selectedState = s),
+                          ))
+                      .toList(),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'PRIORITY',
+                  style: Theme.of(ctx).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5),
+                        letterSpacing: 0.8,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <String?>[null, 'Low', 'Medium', 'High', 'Critical']
+                      .map((s) => FilterChip(
+                            label: Text(s ?? 'All'),
+                            selected: _selectedStakes == s,
+                            onSelected: (_) =>
+                                updateFilter(() => _selectedStakes = s),
+                          ))
+                      .toList(),
+                ),
+                const SizedBox(height: 8),
+              ],
             ),
           );
         },

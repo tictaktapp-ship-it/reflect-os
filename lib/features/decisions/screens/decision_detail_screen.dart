@@ -37,6 +37,7 @@ import 'package:reflect_os/features/engineering/data/models/engineering_artifact
 import 'package:reflect_os/features/engineering/providers/engineering_provider.dart';
 import 'package:reflect_os/features/debrief/data/models/decision_debrief.dart';
 import 'package:reflect_os/features/debrief/providers/debrief_provider.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 import 'package:reflect_os/features/toolkit/data/models/tool_run.dart';
 import 'package:reflect_os/features/toolkit/providers/toolkit_providers.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -157,57 +158,42 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
     }
     if (!mounted) return;
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: SvgPicture.asset(
-                  Theme.of(ctx).brightness == Brightness.dark
-                      ? 'assets/branding/icon.svg'
-                      : 'assets/branding/icon.svg',
-                  height: 128,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Share to Team Workspace',
-                style: Theme.of(ctx).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Creates a one-time copy in the selected workspace. '
-                'Changes will not sync between copies.',
-                style: Theme.of(ctx).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 24),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.group_outlined),
-                title: Text(workspaceName),
-                subtitle: const Text('Target workspace'),
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  _doShare(workspaceId, workspaceName);
-                },
-                child: const Text('Share'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel'),
-              ),
-            ],
-          ),
+      barrierDismissible: true,
+      builder: (ctx) => DialogShell(
+        title: 'Share to Team Workspace',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Creates a one-time copy in the selected workspace. '
+              'Changes will not sync between copies.',
+              style: Theme.of(ctx).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 24),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.group_outlined),
+              title: Text(workspaceName),
+              subtitle: const Text('Target workspace'),
+            ),
+          ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _doShare(workspaceId, workspaceName);
+            },
+            child: const Text('Share'),
+          ),
+        ],
       ),
     );
   }
@@ -243,9 +229,9 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
     Future<void> onDeleteTapped() async {
       final confirmed = await showDialog<bool>(
         context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Delete Decision'),
-          content: const Text(
+        builder: (_) => DialogShell(
+          title: 'Delete Decision',
+          child: const Text(
             'This will permanently remove this decision. This cannot be undone.',
           ),
           actions: [
@@ -925,27 +911,14 @@ class _StateTransitionBarState extends ConsumerState<_StateTransitionBar> {
   }
 
   Future<void> _showUnarchiveSheet() async {
-    final newState = await showModalBottomSheet<String>(
+    final newState = await showDialog<String>(
       context: context,
-      builder: (context) => SafeArea(
+      barrierDismissible: true,
+      builder: (context) => DialogShell(
+        title: 'Restore to which state?',
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(child: SvgPicture.asset(Theme.of(context).brightness == Brightness.dark ? 'assets/branding/icon.svg' : 'assets/branding/icon.svg', height: 128)),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Restore to which state?',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ],
-              ),
-            ),
             ListTile(
               leading: const Icon(Icons.play_circle_outline),
               title: const Text('Active'),
@@ -956,7 +929,6 @@ class _StateTransitionBarState extends ConsumerState<_StateTransitionBar> {
               title: const Text('Closed'),
               onTap: () => Navigator.of(context).pop('Closed'),
             ),
-            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -1218,37 +1190,39 @@ class _InitiativesSectionState extends ConsumerState<_InitiativesSection> {
 
     await showModalBottomSheet<void>(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(child: SvgPicture.asset(Theme.of(context).brightness == Brightness.dark ? 'assets/branding/icon.svg' : 'assets/branding/icon.svg', height: 128)),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Link an Initiative',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ],
-              ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
+      ),
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: SvgPicture.asset('assets/branding/icon.svg', height: 40)),
+                const SizedBox(height: 8),
+                Text(
+                  'Link an Initiative',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
             ),
-            ...available.map(
-              (initiative) => ListTile(
-                title: Text(initiative.name),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _link(initiative.id);
-                },
-              ),
+          ),
+          ...available.map(
+            (initiative) => ListTile(
+              title: Text(initiative.name),
+              onTap: () {
+                Navigator.of(context).pop();
+                _link(initiative.id);
+              },
             ),
-            const SizedBox(height: 8),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+        ],
       ),
     );
   }
@@ -1374,6 +1348,7 @@ class _TagsSectionState extends ConsumerState<_TagsSection> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (sheetContext) {
         return StatefulBuilder(
@@ -1418,7 +1393,7 @@ class _TagsSectionState extends ConsumerState<_TagsSection> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Center(child: SvgPicture.asset(Theme.of(ctx).brightness == Brightness.dark ? 'assets/branding/icon.svg' : 'assets/branding/icon.svg', height: 128)),
+                        Center(child: SvgPicture.asset('assets/branding/icon.svg', height: 40)),
                         const SizedBox(height: 8),
                         Text(
                           'Add Tag',
@@ -1595,27 +1570,16 @@ class _CheckpointsSectionState extends ConsumerState<_CheckpointsSection> {
     DateTime? pickedDate;
     String selectedType = '30_day';
 
-    await showModalBottomSheet(
+    await showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSS) => Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
+        builder: (ctx, setSS) => DialogShell(
+          title: 'Add Checkpoint',
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Add Checkpoint',
-                  style: Theme.of(ctx).textTheme.titleMedium),
-              const SizedBox(height: 16),
               InputDecorator(
                 decoration: const InputDecoration(
                   labelText: 'Checkpoint type',
@@ -1656,40 +1620,41 @@ class _CheckpointsSectionState extends ConsumerState<_CheckpointsSection> {
                   if (d != null) setSS(() => pickedDate = d);
                 },
               ),
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed: pickedDate == null
-                    ? null
-                    : () async {
-                        Navigator.of(ctx).pop();
-                        try {
-                          await ref
-                              .read(decisionsRepositoryProvider)
-                              .createCheckpoint(
-                                decisionId: widget.decisionId,
-                                checkpointType: selectedType,
-                                dueAt: pickedDate!,
-                              );
-                          ref.invalidate(
-                              checkpointsProvider(widget.decisionId));
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text(
-                                      'Failed to add checkpoint: $e')),
-                            );
-                          }
-                        }
-                      },
-                child: const Text('Add Checkpoint'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel'),
-              ),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: pickedDate == null
+                  ? null
+                  : () async {
+                      Navigator.of(ctx).pop();
+                      try {
+                        await ref
+                            .read(decisionsRepositoryProvider)
+                            .createCheckpoint(
+                              decisionId: widget.decisionId,
+                              checkpointType: selectedType,
+                              dueAt: pickedDate!,
+                            );
+                        ref.invalidate(
+                            checkpointsProvider(widget.decisionId));
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    'Failed to add checkpoint: $e')),
+                          );
+                        }
+                      }
+                    },
+              child: const Text('Add Checkpoint'),
+            ),
+          ],
         ),
       ),
     );
@@ -2283,6 +2248,7 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (_) => _AddStakeholderSheet(
         available: available,
@@ -2488,9 +2454,9 @@ class _EvidenceSectionState extends ConsumerState<_EvidenceSection> {
   Future<void> _confirmDelete(BuildContext context, String id) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Remove Evidence'),
-        content: const Text('Remove this evidence item? This cannot be undone.'),
+      builder: (_) => DialogShell(
+        title: 'Remove Evidence',
+        child: const Text('Remove this evidence item? This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -2519,12 +2485,9 @@ class _EvidenceSectionState extends ConsumerState<_EvidenceSection> {
     final labelCtrl = TextEditingController();
     final urlCtrl = TextEditingController();
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      barrierDismissible: true,
       builder: (sheetContext) {
         bool saving = false;
         return StatefulBuilder(
@@ -2551,22 +2514,12 @@ class _EvidenceSectionState extends ConsumerState<_EvidenceSection> {
               }
             }
 
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                20,
-                16,
-                MediaQuery.of(ctx).viewInsets.bottom + 32,
-              ),
+            return DialogShell(
+              title: 'Add Link',
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Center(child: SvgPicture.asset(Theme.of(ctx).brightness == Brightness.dark ? 'assets/branding/icon.svg' : 'assets/branding/icon.svg', height: 128)),
-                  const SizedBox(height: 8),
-                  Text('Add Link',
-                      style: Theme.of(ctx).textTheme.titleMedium),
-                  const SizedBox(height: 16),
                   TextField(
                     controller: labelCtrl,
                     decoration:
@@ -2581,25 +2534,25 @@ class _EvidenceSectionState extends ConsumerState<_EvidenceSection> {
                     autofocus: true,
                     onSubmitted: (_) => save(),
                   ),
-                  const SizedBox(height: 20),
-                  FilledButton(
-                    onPressed: saving ? null : save,
-                    child: saving
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text('Add'),
-                  ),
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
                 ],
               ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: saving ? null : save,
+                  child: saving
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Add'),
+                ),
+              ],
             );
           },
         );
@@ -2721,9 +2674,9 @@ class _RelatedDecisionsSectionState
       BuildContext context, DecisionRelationship rel) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Remove Relationship'),
-        content: const Text('Remove this relationship?'),
+      builder: (_) => DialogShell(
+        title: 'Remove Relationship',
+        child: const Text('Remove this relationship?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -2759,6 +2712,7 @@ class _RelatedDecisionsSectionState
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (_) {
         String query = '';
@@ -2814,7 +2768,7 @@ class _RelatedDecisionsSectionState
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Center(child: SvgPicture.asset(Theme.of(ctx).brightness == Brightness.dark ? 'assets/branding/icon.svg' : 'assets/branding/icon.svg', height: 128)),
+                  Center(child: SvgPicture.asset('assets/branding/icon.svg', height: 40)),
                   const SizedBox(height: 8),
                   Text('Add Related Decision',
                       style: Theme.of(ctx).textTheme.titleMedium),
@@ -3036,9 +2990,9 @@ class _ApprovalsSectionState extends ConsumerState<_ApprovalsSection> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
         return Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -3050,10 +3004,8 @@ class _ApprovalsSectionState extends ConsumerState<_ApprovalsSection> {
                 children: [
                   Center(
                     child: SvgPicture.asset(
-                      isDark
-                          ? 'assets/branding/icon.svg'
-                          : 'assets/branding/icon.svg',
-                      height: 128,
+                      'assets/branding/icon.svg',
+                      height: 40,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -4084,9 +4036,9 @@ class _CoachNotesSectionState extends ConsumerState<_CoachNotesSection> {
   Future<void> _deleteNote(String noteId) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Delete Note'),
-        content: const Text('Delete this coach note? This cannot be undone.'),
+      builder: (_) => DialogShell(
+        title: 'Delete Note',
+        child: const Text('Delete this coach note? This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -4123,123 +4075,100 @@ class _CoachNotesSectionState extends ConsumerState<_CoachNotesSection> {
         clientUserIds.length == 1 ? clientUserIds.first : null;
     bool isSaving = false;
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
         builder: (sheetCtx, setSheetState) {
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: SvgPicture.asset(
-                        Theme.of(sheetCtx).brightness == Brightness.dark
-                            ? 'assets/branding/icon.svg'
-                            : 'assets/branding/icon.svg',
-                        height: 128,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Add Coach Note',
-                      style: Theme.of(sheetCtx).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 12),
-                    if (clientUserIds.length > 1) ...[
-                      DropdownButtonFormField<String>(
-                        decoration:
-                            const InputDecoration(labelText: 'Client'),
-                        initialValue: selectedClientId,
-                        items: clientUserIds
-                            .map((id) => DropdownMenuItem(
-                                  value: id,
-                                  child: Text(
-                                    id.length > 8
-                                        ? id.substring(0, 8)
-                                        : id,
-                                  ),
-                                ))
-                            .toList(),
-                        onChanged: (v) =>
-                            setSheetState(() => selectedClientId = v),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    TextField(
-                      controller: noteController,
-                      autofocus: true,
-                      maxLines: 5,
-                      minLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Note',
-                        hintText:
-                            'Observations, recommendations, patterns…',
-                        alignLabelWithHint: true,
-                      ),
-                      textCapitalization: TextCapitalization.sentences,
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: (isSaving || selectedClientId == null)
-                          ? null
-                          : () async {
-                              final text = noteController.text.trim();
-                              if (text.isEmpty) return;
-                              setSheetState(() => isSaving = true);
-                              try {
-                                await ref
-                                    .read(coachingRepositoryProvider)
-                                    .addNote(
-                                      widget.decisionId,
-                                      selectedClientId!,
-                                      text,
-                                    );
-                                ref.invalidate(coachNotesForDecisionProvider(
-                                    widget.decisionId));
-                                if (ctx.mounted) Navigator.of(ctx).pop();
-                              } catch (e) {
-                                if (ctx.mounted) {
-                                  ScaffoldMessenger.of(ctx).showSnackBar(
-                                    SnackBar(
-                                        content:
-                                            Text('Failed to add note: $e')),
-                                  );
-                                  Navigator.of(ctx).pop();
-                                }
-                              } finally {
-                                setSheetState(() => isSaving = false);
-                              }
-                            },
-                      child: isSaving
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
+          return DialogShell(
+            title: 'Add Coach Note',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (clientUserIds.length > 1) ...[
+                  DropdownButtonFormField<String>(
+                    decoration:
+                        const InputDecoration(labelText: 'Client'),
+                    initialValue: selectedClientId,
+                    items: clientUserIds
+                        .map((id) => DropdownMenuItem(
+                              value: id,
+                              child: Text(
+                                id.length > 8
+                                    ? id.substring(0, 8)
+                                    : id,
                               ),
-                            )
-                          : const Text('Save note'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                  ],
+                            ))
+                        .toList(),
+                    onChanged: (v) =>
+                        setSheetState(() => selectedClientId = v),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                TextField(
+                  controller: noteController,
+                  autofocus: true,
+                  maxLines: 5,
+                  minLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Note',
+                    hintText:
+                        'Observations, recommendations, patterns…',
+                    alignLabelWithHint: true,
+                  ),
+                  textCapitalization: TextCapitalization.sentences,
                 ),
-              ),
+              ],
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: (isSaving || selectedClientId == null)
+                    ? null
+                    : () async {
+                        final text = noteController.text.trim();
+                        if (text.isEmpty) return;
+                        setSheetState(() => isSaving = true);
+                        try {
+                          await ref
+                              .read(coachingRepositoryProvider)
+                              .addNote(
+                                widget.decisionId,
+                                selectedClientId!,
+                                text,
+                              );
+                          ref.invalidate(coachNotesForDecisionProvider(
+                              widget.decisionId));
+                          if (ctx.mounted) Navigator.of(ctx).pop();
+                        } catch (e) {
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(
+                                  content:
+                                      Text('Failed to add note: $e')),
+                            );
+                            Navigator.of(ctx).pop();
+                          }
+                        } finally {
+                          setSheetState(() => isSaving = false);
+                        }
+                      },
+                child: isSaving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Save note'),
+              ),
+            ],
           );
         },
       ),
@@ -4410,6 +4339,7 @@ class _LinkedAssetsSectionState extends ConsumerState<_LinkedAssetsSection> {
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (ctx) => Column(
         mainAxisSize: MainAxisSize.min,
@@ -4417,9 +4347,16 @@ class _LinkedAssetsSectionState extends ConsumerState<_LinkedAssetsSection> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'Link Asset',
-              style: Theme.of(ctx).textTheme.titleMedium,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: SvgPicture.asset('assets/branding/icon.svg', height: 40)),
+                const SizedBox(height: 8),
+                Text(
+                  'Link Asset',
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                ),
+              ],
             ),
           ),
           ...available.map(
@@ -4519,29 +4456,16 @@ class _IcVoteSectionState extends ConsumerState<_IcVoteSection> {
     String selectedVote = existing?.vote ?? 'approve';
     final notesCtrl = TextEditingController(text: existing?.dissentNotes ?? '');
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSS) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            20,
-            16,
-            MediaQuery.of(ctx).viewInsets.bottom + 32,
-          ),
+        builder: (ctx, setSS) => DialogShell(
+          title: existing == null ? 'Cast IC Vote' : 'Update IC Vote',
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                existing == null ? 'Cast IC Vote' : 'Update IC Vote',
-                style: Theme.of(ctx).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 16),
               SegmentedButton<String>(
                 segments: const [
                   ButtonSegment(value: 'approve', label: Text('Approve')),
@@ -4563,41 +4487,42 @@ class _IcVoteSectionState extends ConsumerState<_IcVoteSection> {
                   ),
                 ),
               ],
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed: () async {
-                  Navigator.of(ctx).pop();
-                  setState(() => _isSaving = true);
-                  try {
-                    await ref
-                        .read(investmentRepositoryProvider)
-                        .castVote(
-                          decisionId: widget.decisionId,
-                          vote: selectedVote,
-                          dissentNotes: notesCtrl.text.trim().isEmpty
-                              ? null
-                              : notesCtrl.text.trim(),
-                        );
-                    ref.invalidate(
-                        icVotesForDecisionProvider(widget.decisionId));
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to save vote: $e')),
-                      );
-                    }
-                  } finally {
-                    if (mounted) setState(() => _isSaving = false);
-                  }
-                },
-                child: const Text('Save Vote'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel'),
-              ),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                setState(() => _isSaving = true);
+                try {
+                  await ref
+                      .read(investmentRepositoryProvider)
+                      .castVote(
+                        decisionId: widget.decisionId,
+                        vote: selectedVote,
+                        dissentNotes: notesCtrl.text.trim().isEmpty
+                            ? null
+                            : notesCtrl.text.trim(),
+                      );
+                  ref.invalidate(
+                      icVotesForDecisionProvider(widget.decisionId));
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to save vote: $e')),
+                    );
+                  }
+                } finally {
+                  if (mounted) setState(() => _isSaving = false);
+                }
+              },
+              child: const Text('Save Vote'),
+            ),
+          ],
         ),
       ),
     );
@@ -4816,9 +4741,9 @@ class _EngineeringArtifactsSectionState
   Future<void> _delete(String artifactId) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Remove Artifact'),
-        content: const Text('Remove this engineering artifact link?'),
+      builder: (ctx) => DialogShell(
+        title: 'Remove Artifact',
+        child: const Text('Remove this engineering artifact link?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -4853,29 +4778,16 @@ class _EngineeringArtifactsSectionState
     final urlCtrl = TextEditingController();
     final labelCtrl = TextEditingController();
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSS) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            20,
-            16,
-            MediaQuery.of(ctx).viewInsets.bottom + 32,
-          ),
+        builder: (ctx, setSS) => DialogShell(
+          title: 'Add Engineering Artifact',
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Add Engineering Artifact',
-                style: Theme.of(ctx).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 decoration:
                     const InputDecoration(labelText: 'Artifact type'),
@@ -4914,43 +4826,44 @@ class _EngineeringArtifactsSectionState
                   hintText: 'e.g. RFC-042: Auth redesign',
                 ),
               ),
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed: () async {
-                  final url = urlCtrl.text.trim();
-                  if (url.isEmpty) return;
-                  Navigator.of(ctx).pop();
-                  try {
-                    await ref
-                        .read(engineeringRepositoryProvider)
-                        .addArtifact(
-                          decisionId: widget.decisionId,
-                          workspaceId: workspaceId,
-                          artifactType: selectedType,
-                          url: url,
-                          label: labelCtrl.text.trim().isEmpty
-                              ? null
-                              : labelCtrl.text.trim(),
-                        );
-                    ref.invalidate(
-                        engineeringArtifactsProvider(widget.decisionId));
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text('Failed to add artifact: $e')),
-                      );
-                    }
-                  }
-                },
-                child: const Text('Add Artifact'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel'),
-              ),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final url = urlCtrl.text.trim();
+                if (url.isEmpty) return;
+                Navigator.of(ctx).pop();
+                try {
+                  await ref
+                      .read(engineeringRepositoryProvider)
+                      .addArtifact(
+                        decisionId: widget.decisionId,
+                        workspaceId: workspaceId,
+                        artifactType: selectedType,
+                        url: url,
+                        label: labelCtrl.text.trim().isEmpty
+                            ? null
+                            : labelCtrl.text.trim(),
+                      );
+                  ref.invalidate(
+                      engineeringArtifactsProvider(widget.decisionId));
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text('Failed to add artifact: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Add Artifact'),
+            ),
+          ],
         ),
       ),
     );

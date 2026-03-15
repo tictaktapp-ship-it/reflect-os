@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/features/workspace/data/models/workspace_model.dart';
 import 'package:reflect_os/features/workspace/providers/workspace_providers.dart';
@@ -24,31 +25,18 @@ class _WorkspaceManagementScreenState
     bool shareWithTeam = false;
     final formKey = GlobalKey<FormState>();
 
-    showModalBottomSheet<void>(
+    showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            20,
-            16,
-            MediaQuery.of(ctx).viewInsets.bottom + 32,
-          ),
+        builder: (ctx, setSheetState) => DialogShell(
+          title: 'New Workspace',
           child: Form(
             key: formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'New Workspace',
-                  style: Theme.of(ctx).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 16),
                 TextFormField(
                   controller: nameCtrl,
                   decoration:
@@ -66,23 +54,24 @@ class _WorkspaceManagementScreenState
                   value: shareWithTeam,
                   onChanged: (v) => setSheetState(() => shareWithTeam = v),
                 ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-                    final name = nameCtrl.text.trim();
-                    Navigator.of(ctx).pop();
-                    await _createWorkspace(name, shareWithTeam);
-                  },
-                  child: const Text('Create Workspace'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('Cancel'),
-                ),
               ],
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                if (!formKey.currentState!.validate()) return;
+                final name = nameCtrl.text.trim();
+                Navigator.of(ctx).pop();
+                await _createWorkspace(name, shareWithTeam);
+              },
+              child: const Text('Create Workspace'),
+            ),
+          ],
         ),
       ),
     );
@@ -118,9 +107,9 @@ class _WorkspaceManagementScreenState
     final controller = TextEditingController(text: workspace.name);
     final result = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Rename Workspace'),
-        content: TextField(
+      builder: (ctx) => DialogShell(
+        title: 'Rename Workspace',
+        child: TextField(
           controller: controller,
           autofocus: true,
           textCapitalization: TextCapitalization.words,
@@ -175,9 +164,9 @@ class _WorkspaceManagementScreenState
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Workspace'),
-        content: Text(
+      builder: (ctx) => DialogShell(
+        title: 'Delete Workspace',
+        child: Text(
           'Delete "${workspace.name}"? This cannot be undone.',
         ),
         actions: [

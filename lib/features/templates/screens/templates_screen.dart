@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
@@ -9,6 +8,7 @@ import 'package:reflect_os/features/templates/data/models/decision_template.dart
 import 'package:reflect_os/features/templates/providers/templates_provider.dart';
 import 'package:reflect_os/features/toolkit/data/models/tool_definition.dart';
 import 'package:reflect_os/features/toolkit/providers/toolkit_providers.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 
 class TemplatesScreen extends ConsumerStatefulWidget {
   const TemplatesScreen({super.key});
@@ -31,42 +31,19 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
     var selectedToolIds = <String>[];
     final toolsFuture = ref.read(toolDefinitionsProvider.future);
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) {
-          final isDark = Theme.of(ctx).brightness == Brightness.dark;
-          return Padding(
-            padding: EdgeInsets.fromLTRB(
-              16,
-              20,
-              16,
-              MediaQuery.of(ctx).viewInsets.bottom + 32,
-            ),
+          return DialogShell(
+            title: 'New Template',
             child: Form(
               key: formKey,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Center(
-                    child: SvgPicture.asset(
-                      isDark
-                          ? 'assets/branding/icon.svg'
-                          : 'assets/branding/icon.svg',
-                      height: 128,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'New Template',
-                    style: Theme.of(ctx).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 16),
                   TextFormField(
                     controller: nameCtrl,
                     decoration: const InputDecoration(labelText: 'Name *'),
@@ -149,30 +126,31 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
                       );
                     },
                   ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: _isWorking
-                        ? null
-                        : () async {
-                            if (!formKey.currentState!.validate()) return;
-                            Navigator.of(ctx).pop();
-                            await _createTemplate(
-                              name: nameCtrl.text.trim(),
-                              description: descCtrl.text.trim(),
-                              defaultStakes: stakes,
-                              requiresApproval: requiresApproval,
-                              toolIds: selectedToolIds,
-                            );
-                          },
-                    child: const Text('Create Template'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    child: const Text('Cancel'),
-                  ),
                 ],
               ),
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: _isWorking
+                    ? null
+                    : () async {
+                        if (!formKey.currentState!.validate()) return;
+                        Navigator.of(ctx).pop();
+                        await _createTemplate(
+                          name: nameCtrl.text.trim(),
+                          description: descCtrl.text.trim(),
+                          defaultStakes: stakes,
+                          requiresApproval: requiresApproval,
+                          toolIds: selectedToolIds,
+                        );
+                      },
+                child: const Text('Create Template'),
+              ),
+            ],
           );
         },
       ),
@@ -218,9 +196,9 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
   Future<void> _confirmDelete(DecisionTemplate template) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Template'),
-        content: Text(
+      builder: (ctx) => DialogShell(
+        title: 'Delete Template',
+        child: Text(
             'Delete "${template.name}"? This cannot be undone.'),
         actions: [
           TextButton(
@@ -260,38 +238,22 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
     final toolsFuture =
         ref.read(templatesRepositoryProvider).getToolsForTemplate(template.id);
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      barrierDismissible: true,
       builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.6,
-          minChildSize: 0.4,
-          maxChildSize: 0.9,
-          builder: (_, controller) => ListView(
-            controller: controller,
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+        return DialogShell(
+          title: 'Template',
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Center(
-                child: SvgPicture.asset(
-                  isDark
-                      ? 'assets/branding/icon.svg'
-                      : 'assets/branding/icon.svg',
-                  height: 128,
-                ),
-              ),
-              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
                     child: Text(
                       template.name,
-                      style: Theme.of(ctx).textTheme.titleMedium,
+                      style: Theme.of(ctx).textTheme.titleSmall,
                     ),
                   ),
                   if (template.isSystem)
@@ -317,7 +279,6 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
                 ),
               ],
               const SizedBox(height: 16),
-              // ── Metadata chips ───────────────────────────────────
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -428,21 +389,21 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
                   );
                 },
               ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  context.push(Routes.decisionsCreate, extra: template);
-                },
-                child: const Text('Use this template'),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Close'),
-              ),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Close'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                context.push(Routes.decisionsCreate, extra: template);
+              },
+              child: const Text('Use this template'),
+            ),
+          ],
         );
       },
     );
@@ -719,40 +680,19 @@ Future<DecisionTemplate?> showTemplatePicker(
 
   if (!context.mounted) return null;
 
-  return showModalBottomSheet<DecisionTemplate>(
+  return showDialog<DecisionTemplate>(
     context: context,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
+    barrierDismissible: true,
     builder: (ctx) {
-      final isDark = Theme.of(ctx).brightness == Brightness.dark;
       final system = templates.where((t) => t.isSystem).toList();
       final mine = templates.where((t) => !t.isSystem).toList();
 
-      return DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        minChildSize: 0.4,
-        maxChildSize: 0.9,
-        builder: (_, controller) => ListView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+      return DialogShell(
+        title: 'Choose Template',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: SvgPicture.asset(
-                isDark
-                    ? 'assets/branding/icon.svg'
-                    : 'assets/branding/icon.svg',
-                height: 128,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Choose a Template',
-              style: Theme.of(ctx).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 4),
             Text(
               'Pre-fills your decision form with defaults.',
               style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
@@ -800,13 +740,14 @@ Future<DecisionTemplate?> showTemplatePicker(
                     onTap: () => Navigator.of(ctx).pop(t),
                   )),
             ],
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
       );
     },
   );

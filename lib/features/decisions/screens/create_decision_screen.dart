@@ -13,6 +13,7 @@ import 'package:reflect_os/features/tags/providers/tags_provider.dart';
 import 'package:reflect_os/features/templates/data/models/decision_template.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/templates/screens/templates_screen.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 
 class CreateDecisionScreen extends ConsumerStatefulWidget {
   const CreateDecisionScreen({
@@ -496,27 +497,15 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                           onTap: () {
                             showDialog(
                               context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: Row(
-                                  children: [
-                                    Icon(Icons.lightbulb_outline,
-                                        color: Theme.of(ctx)
-                                            .colorScheme
-                                            .primary,
-                                        size: 20),
-                                    const SizedBox(width: 8),
-                                    const Text('Projected outcome'),
-                                  ],
-                                ),
-                                content: SizedBox(
+                              builder: (ctx) => DialogShell(
+                                title: 'Projected outcome',
+                                child: SizedBox(
                                   width: double.maxFinite,
-                                  child: SingleChildScrollView(
-                                    child: Text(
-                                      _projectedOutcome!,
-                                      style: Theme.of(ctx)
-                                          .textTheme
-                                          .bodyMedium,
-                                    ),
+                                  child: Text(
+                                    _projectedOutcome!,
+                                    style: Theme.of(ctx)
+                                        .textTheme
+                                        .bodyMedium,
                                   ),
                                 ),
                                 actions: [

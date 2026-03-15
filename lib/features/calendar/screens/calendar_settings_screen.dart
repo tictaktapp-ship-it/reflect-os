@@ -12,6 +12,7 @@ import 'package:reflect_os/features/calendar/data/models/calendar_connection.dar
 import 'package:reflect_os/features/calendar/providers/calendar_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 import 'calendar_platform_stub.dart'
     if (dart.library.html) 'calendar_platform_web.dart';
 
@@ -123,9 +124,9 @@ class _CalendarSettingsScreenState
   Future<void> _disconnect(CalendarConnection connection) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Disconnect ${connection.provider}?'),
-        content: const Text(
+      builder: (_) => DialogShell(
+        title: 'Disconnect ${connection.provider}?',
+        child: const Text(
           'Future checkpoints will not be synced. '
           'Existing calendar events will not be removed.',
         ),
