@@ -48,8 +48,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
       newErr = 'Must contain at least one uppercase letter';
     } else if (!RegExp(r'[0-9]').hasMatch(pw)) {
       newErr = 'Must contain at least one number';
-    } else if (!RegExp(r'[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]')
-        .hasMatch(pw)) {
+    } else if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(pw)) {
       newErr = 'Must contain at least one special character';
     }
 
