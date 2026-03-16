@@ -88,6 +88,7 @@ void showWorkspaceSwitcherSheet(BuildContext context, WidgetRef ref) {
                       : null,
                   onTap: () {
                     ref.read(selectedWorkspaceIdProvider.notifier).state = w.id;
+                    persistWorkspaceSelection(w.id);
                     Navigator.of(dialogCtx).pop();
                   },
                 ),

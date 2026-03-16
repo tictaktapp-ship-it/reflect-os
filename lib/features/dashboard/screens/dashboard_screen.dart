@@ -61,27 +61,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final checkpointsAsync = ref.watch(upcomingCheckpointsProvider);
     final analytics = analyticsAsync.valueOrNull;
 
-    final avgQuality = switch (_selectedRange) {
-      _DateRange.thirtyDays => analytics?.rolling30dAvgQuality,
-      _DateRange.ninetyDays => analytics?.rolling90dAvgQuality,
-      _DateRange.allTime => analytics?.allTimeAvgQuality,
-    };
+    // Quality gauge always shows all-time average outcome quality.
+    final avgQuality = analytics?.allTimeAvgQuality;
 
-    final onTrack = switch (_selectedRange) {
-      _DateRange.thirtyDays => analytics?.rolling30dOnTrackCount,
-      _DateRange.ninetyDays => analytics?.rolling90dOnTrackCount,
-      _DateRange.allTime => null,
-    };
-    final needsAttn = switch (_selectedRange) {
-      _DateRange.thirtyDays => analytics?.rolling30dNeedsAttentionCount,
-      _DateRange.ninetyDays => analytics?.rolling90dNeedsAttentionCount,
-      _DateRange.allTime => null,
-    };
-    final overdue = switch (_selectedRange) {
-      _DateRange.thirtyDays => analytics?.rolling30dOverdueCount,
-      _DateRange.ninetyDays => analytics?.rolling90dOverdueCount,
-      _DateRange.allTime => null,
-    };
+    // Health donut uses checkpoint-based counts (all active decisions).
+    final onTrack = analytics?.checkpointOnTrackCount;
+    final needsAttn = analytics?.checkpointNeedsAttentionCount;
+    final overdue = analytics?.checkpointOverdueCount;
 
     return Scaffold(
       appBar: AppHeader(
@@ -187,7 +173,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                   onTrack: onTrack,
                                   needsAttention: needsAttn,
                                   overdue: overdue,
-                                  isAllTime: _selectedRange == _DateRange.allTime,
                                 ),
                               ),
                             ],
@@ -227,7 +212,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         onTrack: onTrack,
                         needsAttention: needsAttn,
                         overdue: overdue,
-                        isAllTime: _selectedRange == _DateRange.allTime,
                       ),
                       const SizedBox(height: 16),
                       _StatusBarChart(
@@ -625,18 +609,16 @@ class _HealthDonut extends StatelessWidget {
     required this.onTrack,
     required this.needsAttention,
     required this.overdue,
-    required this.isAllTime,
   });
 
   final int? onTrack;
   final int? needsAttention;
   final int? overdue;
-  final bool isAllTime;
 
   @override
   Widget build(BuildContext context) {
     final total = (onTrack ?? 0) + (needsAttention ?? 0) + (overdue ?? 0);
-    final hasData = !isAllTime && total > 0;
+    final hasData = total > 0;
 
     return Card(
       child: Padding(
@@ -702,9 +684,7 @@ class _HealthDonut extends StatelessWidget {
                     )
                   : Center(
                       child: Text(
-                        isAllTime
-                            ? 'Health tracked\nper period'
-                            : 'No data yet',
+                        'No active\ndecisions',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context)

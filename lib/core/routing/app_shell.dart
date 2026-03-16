@@ -1,18 +1,11 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/connectivity_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
-import 'package:reflect_os/features/decisions/data/models/decision.dart';
-import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:reflect_os/features/settings/providers/profile_provider.dart';
-import 'package:reflect_os/features/team/data/models/workspace_membership.dart';
-import 'package:reflect_os/features/team/providers/team_provider.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({required this.navigationShell, super.key});
@@ -84,7 +77,7 @@ class _OfflineBanner extends StatelessWidget {
 
 // ── Wide layout ────────────────────────────────────────────────────────────────
 
-class _WideShell extends ConsumerStatefulWidget {
+class _WideShell extends StatelessWidget {
   const _WideShell({
     required this.navigationShell,
     required this.selectedIndex,
@@ -96,162 +89,16 @@ class _WideShell extends ConsumerStatefulWidget {
   final ValueChanged<int> onDestinationSelected;
 
   @override
-  ConsumerState<_WideShell> createState() => _WideShellState();
-}
-
-class _WideShellState extends ConsumerState<_WideShell> {
-  final TextEditingController _searchController = TextEditingController();
-  Timer? _debounce;
-  String _searchQuery = '';
-  bool _showResults = false;
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String value) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () {
-      if (mounted) {
-        setState(() {
-          _searchQuery = value.trim();
-          _showResults = _searchQuery.isNotEmpty;
-        });
-      }
-    });
-  }
-
-  void _dismissSearch() {
-    setState(() {
-      _searchQuery = '';
-      _showResults = false;
-      _searchController.clear();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
+      body: Row(
         children: [
-          Column(
-            children: [
-              // ── Global top strip ────────────────────────────────────────
-              _GlobalHeader(
-                searchController: _searchController,
-                onSearchChanged: _onSearchChanged,
-                onDismissSearch: _dismissSearch,
-              ),
-              // ── Main row: nav pane + content ────────────────────────────
-              Expanded(
-                child: Row(
-                  children: [
-                    _NavPane(
-                      selectedIndex: widget.selectedIndex,
-                      onDestinationSelected: widget.onDestinationSelected,
-                    ),
-                    const VerticalDivider(thickness: 1, width: 1),
-                    Expanded(child: widget.navigationShell),
-                  ],
-                ),
-              ),
-            ],
+          _NavPane(
+            selectedIndex: selectedIndex,
+            onDestinationSelected: onDestinationSelected,
           ),
-          // ── Search results overlay ──────────────────────────────────────
-          if (_showResults)
-            Positioned(
-              top: 48,
-              right: 16,
-              child: _SearchResultsPanel(
-                query: _searchQuery,
-                onDismiss: _dismissSearch,
-              ),
-            ),
-          // ── Tap outside to dismiss ──────────────────────────────────────
-          if (_showResults)
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: _dismissSearch,
-                child: const SizedBox.expand(),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Global header strip ────────────────────────────────────────────────────────
-
-class _GlobalHeader extends ConsumerWidget {
-  const _GlobalHeader({
-    required this.searchController,
-    required this.onSearchChanged,
-    required this.onDismissSearch,
-  });
-
-  final TextEditingController searchController;
-  final ValueChanged<String> onSearchChanged;
-  final VoidCallback onDismissSearch;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final dividerColor = Colors.black12;
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: dividerColor, width: 1),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          SvgPicture.asset('assets/branding/icon.svg', height: 28),
-          const Spacer(),
-          SizedBox(
-            width: 280,
-            height: 32,
-            child: TextField(
-              controller: searchController,
-              onChanged: onSearchChanged,
-              style: const TextStyle(color: Colors.black87, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'Search decisions, team…',
-                hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
-                prefixIcon: const Icon(Icons.search, size: 16, color: Colors.black54),
-                suffixIcon: searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.close, size: 14, color: Colors.black54),
-                        onPressed: onDismissSearch,
-                        padding: EdgeInsets.zero,
-                      )
-                    : null,
-                isDense: true,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.black12),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.black12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: AppColors.accentPrimary),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          const _UserAvatarButton(),
+          const VerticalDivider(thickness: 1, width: 1),
+          Expanded(child: navigationShell),
         ],
       ),
     );
@@ -403,225 +250,6 @@ class _NavPaneSettingsItem extends StatelessWidget {
   }
 }
 
-// ── Search results panel ───────────────────────────────────────────────────────
-
-class _SearchResultsPanel extends ConsumerWidget {
-  const _SearchResultsPanel({
-    required this.query,
-    required this.onDismiss,
-  });
-
-  final String query;
-  final VoidCallback onDismiss;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final decisionsAsync = ref.watch(searchProvider(query));
-    final membersAsync = ref.watch(teamMembersProvider);
-
-    final decisions = decisionsAsync.valueOrNull ?? <Decision>[];
-    final allMembers = membersAsync.valueOrNull ?? <WorkspaceMembership>[];
-    final lowerQuery = query.toLowerCase();
-    final members = allMembers.where((m) {
-      final name = (m.displayName ?? '').toLowerCase();
-      return name.contains(lowerQuery);
-    }).toList();
-
-    return Material(
-      elevation: 0,
-      color: Colors.transparent,
-      child: Container(
-        width: 380,
-        constraints: const BoxConstraints(maxHeight: 500),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Theme.of(context).dividerColor),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
-                children: [
-                  Text(
-                    'Search results for "$query"',
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 16),
-                    onPressed: onDismiss,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  // Decisions section
-                  _ResultsSectionHeader(
-                      title: 'Decisions', count: decisions.length),
-                  if (decisionsAsync.isLoading)
-                    const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(
-                          child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child:
-                            CircularProgressIndicator(strokeWidth: 2),
-                      )),
-                    )
-                  else if (decisions.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: Text(
-                        'No decisions found',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.4),
-                            ),
-                      ),
-                    )
-                  else
-                    ...decisions.map(
-                      (d) => ListTile(
-                        dense: true,
-                        title: Text(
-                          d.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(d.state),
-                        leading: const Icon(Icons.task_alt_outlined, size: 18),
-                        onTap: () {
-                          onDismiss();
-                          context.push('/decisions/detail/${d.id}');
-                        },
-                      ),
-                    ),
-
-                  // Team members section
-                  _ResultsSectionHeader(
-                      title: 'Team Members', count: members.length),
-                  if (members.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: Text(
-                        'No team members found',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.4),
-                            ),
-                      ),
-                    )
-                  else
-                    ...members.map(
-                      (m) => ListTile(
-                        dense: true,
-                        title: Text(
-                          m.displayName ?? m.userId.substring(0, 8),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(m.role),
-                        leading: CircleAvatar(
-                          radius: 12,
-                          backgroundImage: m.avatarUrl != null
-                              ? NetworkImage(m.avatarUrl!)
-                              : null,
-                          backgroundColor: AppColors.accentPrimary,
-                          child: m.avatarUrl == null
-                              ? Text(
-                                  (m.displayName ?? '?')[0].toUpperCase(),
-                                  style: const TextStyle(
-                                      fontSize: 10, color: Colors.white),
-                                )
-                              : null,
-                        ),
-                        onTap: () {
-                          onDismiss();
-                          context.push(Routes.team);
-                        },
-                      ),
-                    ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ResultsSectionHeader extends StatelessWidget {
-  const _ResultsSectionHeader({required this.title, required this.count});
-
-  final String title;
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppColors.accentPrimary.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              '$count',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.accentPrimary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ── Narrow layout (BottomNavigationBar) ───────────────────────────────────────
 
 class _NarrowShell extends StatefulWidget {
@@ -741,7 +369,7 @@ class _NarrowShellState extends State<_NarrowShell> {
   }
 }
 
-// ── User Avatar Button ─────────────────────────────────────────────────────────
+// ── User Avatar Button (narrow shell only) ────────────────────────────────────
 
 class _UserAvatarButton extends ConsumerWidget {
   const _UserAvatarButton();
