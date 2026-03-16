@@ -257,7 +257,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             .withValues(alpha: 0.6),
                       ),
                 ),
-                initiallyExpanded: false,
+                initiallyExpanded: true,
                 children: [
                   if (needsAttention.isEmpty)
                     Padding(
@@ -347,7 +347,7 @@ class _QualityDial extends StatelessWidget {
     return Card(
       color: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -360,37 +360,38 @@ class _QualityDial extends StatelessWidget {
                       letterSpacing: 0.6,
                     )),
             const SizedBox(height: 8),
-            // Half-donut: clip bottom half away
-            ClipRect(
-              child: Align(
-                alignment: Alignment.topCenter,
-                heightFactor: 0.55,
-                child: SizedBox(
-                  height: 160,
-                  child: Stack(
-                    alignment: Alignment.bottomCenter,
-                    children: [
-                      PieChart(
+            // Outer Stack: score text sits at the flat base of the visible arc.
+            // ClipRect determines the Stack height (88px = 160 × 0.55).
+            // Score text is outside ClipRect so it is never clipped.
+            Stack(
+              alignment: Alignment.bottomCenter,
+              children: [
+                // Half-donut: clips the lower half of the PieChart away
+                ClipRect(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    heightFactor: 0.55,
+                    child: SizedBox(
+                      height: 160,
+                      child: PieChart(
                         PieChartData(
                           startDegreeOffset: 180,
                           sectionsSpace: 0,
                           centerSpaceRadius: 44,
                           sections: [
-                            // Filled arc
                             PieChartSectionData(
                               value: filledFraction,
                               color: arcColor,
                               radius: 28,
                               showTitle: false,
                             ),
-                            // Empty / background arc
                             PieChartSectionData(
                               value: emptyFraction,
                               color: bgArcColor,
                               radius: 28,
                               showTitle: false,
                             ),
-                            // Hidden lower half (transparent, same size)
+                            // Transparent lower half
                             PieChartSectionData(
                               value: 1,
                               color: Colors.transparent,
@@ -400,43 +401,34 @@ class _QualityDial extends StatelessWidget {
                           ],
                         ),
                       ),
-                      // Centre label — score on 0–10 scale
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              hasData
-                                  ? (q / 10).toStringAsFixed(1)
-                                  : '—',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: arcColor,
-                                  ),
-                            ),
-                            Text(
-                              hasData ? 'out of 10' : 'No data yet',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.5),
-                                  ),
-                            ),
-                          ],
+                    ),
+                  ),
+                ),
+                // Score overlay — aligned to the bottom of the visible arc
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        hasData ? (q / 10).toStringAsFixed(1) : '--',
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF19CBD6),
+                        ),
+                      ),
+                      Text(
+                        hasData ? '/ 10' : '',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF94A3B8),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -765,35 +757,37 @@ class _ConfidenceDeltaCard extends StatelessWidget {
       label = '—';
       description = 'No calibration data yet';
     } else {
-      final abs = d.abs();
-      if (abs <= 5) {
-        pillColor = AppColors.success;
-      } else if (abs <= 15) {
-        pillColor = AppColors.warning;
+      if (d > 1.0) {
+        pillColor = const Color(0xFFD97D24); // amber — overconfident
+        description = 'You tend to be overconfident';
+      } else if (d < -1.0) {
+        pillColor = const Color(0xFF19CBD6); // teal — underconfident
+        description = 'You tend to be underconfident';
       } else {
-        pillColor = AppColors.destructive;
+        pillColor = const Color(0xFF2EA073); // green — well calibrated
+        description = 'Well calibrated';
       }
       final sign = d >= 0 ? '+' : '';
       label = '$sign${d.toStringAsFixed(1)}%';
-      description = d >= 0
-          ? 'You tend to be overconfident'
-          : 'You tend to be underconfident';
     }
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text('Confidence Calibration',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                      letterSpacing: 0.6,
-                    )),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Confidence Calibration',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                        letterSpacing: 0.6,
+                      )),
+            ),
             const SizedBox(height: 12),
             Container(
               padding:
@@ -815,6 +809,7 @@ class _ConfidenceDeltaCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               description,
+              textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context)
                         .colorScheme

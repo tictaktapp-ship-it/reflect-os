@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reflect_os/core/providers/auth_state_provider.dart';
+import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/workspace/providers/workspace_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -23,11 +24,37 @@ final currentWorkspaceProvider = FutureProvider<String?>((ref) async {
   final lastId = prefs.getString(_kLastWorkspaceKey);
   if (lastId != null && workspaces.any((w) => w.id == lastId)) return lastId;
 
-  try {
-    return workspaces.firstWhere((w) => w.workspaceType == 'team').id;
-  } catch (_) {}
+  // Prefer first team workspace ordered by joinedAt ascending.
+  final teamWorkspaces = workspaces
+      .where((w) => w.workspaceType == 'team')
+      .toList()
+    ..sort((a, b) {
+      final aDate = a.joinedAt ?? DateTime(2000);
+      final bDate = b.joinedAt ?? DateTime(2000);
+      return aDate.compareTo(bDate);
+    });
+  if (teamWorkspaces.isNotEmpty) return teamWorkspaces.first.id;
 
-  return workspaces.first.id;
+  // No team workspace — pick personal workspace with the most decisions.
+  // Never default to an empty workspace if a non-empty one exists.
+  final candidates = workspaces.toList();
+  if (candidates.length == 1) return candidates.first.id;
+
+  try {
+    final counts = <String, int>{};
+    for (final ws in candidates) {
+      final rows = await supabase
+          .from('user_visible_decisions')
+          .select('id')
+          .eq('workspace_id', ws.id);
+      counts[ws.id] = rows.length;
+    }
+    candidates.sort(
+        (a, b) => (counts[b.id] ?? 0).compareTo(counts[a.id] ?? 0));
+    return candidates.first.id;
+  } catch (_) {
+    return candidates.first.id;
+  }
 });
 
 /// Call this whenever the user explicitly switches workspace so the choice

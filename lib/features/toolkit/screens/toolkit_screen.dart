@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
-import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
 import '../data/models/tool_definition.dart';
 import '../providers/toolkit_providers.dart';
 import '../widgets/tool_card.dart';
@@ -92,7 +91,7 @@ class _ToolkitScreenState extends ConsumerState<ToolkitScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tool Kit'),
-        actions: const [WorkspaceSwitcherChip(), SizedBox(width: 8)],
+        actions: const [],
       ),
       body: Column(
         children: [

@@ -646,6 +646,7 @@ class _UserAvatarButton extends ConsumerWidget {
         ? profile!.displayName!
         : email;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final avatarUrl = profile?.avatarUrl;
 
     return GestureDetector(
       onTap: () =>
@@ -655,14 +656,18 @@ class _UserAvatarButton extends ConsumerWidget {
         child: CircleAvatar(
           radius: 16,
           backgroundColor: const Color(0xFF19CBD6),
-          child: Text(
-            initial,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          backgroundImage:
+              avatarUrl != null ? NetworkImage(avatarUrl) : null,
+          child: avatarUrl == null
+              ? Text(
+                  initial,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                )
+              : null,
         ),
       ),
     );
