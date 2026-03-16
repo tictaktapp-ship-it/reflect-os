@@ -462,93 +462,97 @@ class _DecisionGroupState extends State<_DecisionGroup> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // ── Group header ──────────────────────────────────────────────────────
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => setState(() => _expanded = !_expanded),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Row(
-              children: [
-                _StateGroupDot(state: widget.state),
-                const SizedBox(width: 8),
-                Text(
-                  widget.state.toUpperCase(),
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.7),
-                        letterSpacing: 0.6,
-                      ),
-                ),
-                const SizedBox(width: 8),
-                // Count badge
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF19CBD6),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${widget.decisions.length}',
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Group header ────────────────────────────────────────────────────
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                children: [
+                  _StateGroupDot(state: widget.state),
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.state.toUpperCase(),
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: Color(0xFF64748B),
+                      letterSpacing: 1.2,
                     ),
                   ),
-                ),
-                const Spacer(),
-                AnimatedRotation(
-                  turns: _expanded ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: const Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    size: 20,
-                    color: Color(0xFF94A3B8),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF19CBD6),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${widget.decisions.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  const Spacer(),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: const Icon(
+                      Icons.keyboard_arrow_down,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
 
-        // ── Content (deck or expanded grid) ──────────────────────────────────
-        AnimatedSize(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeInOut,
-          alignment: Alignment.topCenter,
-          child: _expanded
-              ? Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: LayoutBuilder(
-                    builder: (ctx, constraints) {
-                      final w = constraints.maxWidth;
-                      final cols = w > 1100 ? 4 : w > 700 ? 3 : 2;
-                      const gap = 8.0;
-                      final cardWidth = (w - gap * (cols - 1)) / cols;
-                      return Wrap(
-                        spacing: gap,
-                        runSpacing: gap,
-                        children: widget.decisions
-                            .map((d) => SizedBox(
-                                  width: cardWidth,
-                                  height: 190,
-                                  child: _PortraitCard(decision: d),
-                                ))
-                            .toList(),
-                      );
-                    },
+          // ── Content (fan deck or expanded grid) ─────────────────────────────
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: _expanded
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: LayoutBuilder(
+                      builder: (ctx, constraints) {
+                        final w = constraints.maxWidth;
+                        final cols = w > 1100 ? 4 : w > 700 ? 3 : 2;
+                        const gap = 12.0;
+                        final cardWidth = (w - gap * (cols - 1)) / cols;
+                        final cardHeight = cardWidth / 0.72;
+                        return Wrap(
+                          spacing: gap,
+                          runSpacing: gap,
+                          children: widget.decisions
+                              .map((d) => SizedBox(
+                                    width: cardWidth,
+                                    height: cardHeight,
+                                    child: _PortraitCard(decision: d),
+                                  ))
+                              .toList(),
+                        );
+                      },
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.only(top: 24),
+                    child: _FanDeck(decisions: widget.decisions),
                   ),
-                )
-              : _DeckView(decisions: widget.decisions),
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -568,8 +572,8 @@ class _StateGroupDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 8,
-      height: 8,
+      width: 10,
+      height: 10,
       decoration: BoxDecoration(
         color: _colorFor(state),
         shape: BoxShape.circle,
@@ -617,11 +621,9 @@ class _PortraitCardState extends State<_PortraitCard> {
           border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
           boxShadow: [
             BoxShadow(
-              blurRadius: _hovered ? 8 : 4,
-              offset: const Offset(0, 2),
-              color: _hovered
-                  ? Colors.black12
-                  : const Color(0x14000000), // ~black08
+              blurRadius: _hovered ? 10 : 6,
+              offset: const Offset(0, 3),
+              color: Colors.black12,
             ),
           ],
         ),
@@ -770,114 +772,51 @@ class _StateBadge extends StatelessWidget {
   }
 }
 
-// ── Deck view (collapsed stack of card edges) ────────────────────────────────
+// ── Fan deck (collapsed group — physical card spread) ────────────────────────
 
-class _DeckView extends StatelessWidget {
-  const _DeckView({required this.decisions});
+class _FanDeck extends StatelessWidget {
+  const _FanDeck({required this.decisions});
   final List<Decision> decisions;
 
-  static const double _cardH = 190.0;
-  static const double _peekH = 36.0;
+  static const double _cardH = 160.0;
+  static const List<double> _rotations = [0.0, 0.04, 0.08, 0.12];
+  static const List<double> _translateX = [0.0, 18.0, 36.0, 54.0];
+  static const List<double> _translateY = [0.0, 6.0, 12.0, 18.0];
+  static const List<double> _opacities = [1.0, 0.90, 0.75, 0.60];
 
   @override
   Widget build(BuildContext context) {
     if (decisions.isEmpty) return const SizedBox.shrink();
-    final peekCount = (decisions.length - 1).clamp(0, 2);
-    final stackH = _cardH + peekCount * _peekH;
+    final count = decisions.length.clamp(1, 4);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: SizedBox(
-        height: stackH,
-        child: Stack(
-          children: [
-            // Peeking cards (behind) — rendered first so top card is on top
-            for (int i = peekCount; i >= 1; i--)
-              Positioned(
-                top: _cardH + (i - 1) * _peekH,
-                left: 0,
-                right: 0,
-                child: Opacity(
-                  opacity: i == 1 ? 0.85 : 0.65,
-                  child: _PeekingCardTitle(decision: decisions[i]),
+    return LayoutBuilder(
+      builder: (ctx, constraints) {
+        final cardW = constraints.maxWidth;
+        return SizedBox(
+          height: _cardH + 18,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Draw back cards first (highest index = furthest behind)
+              for (int i = count - 1; i >= 0; i--)
+                Positioned(
+                  left: _translateX[i],
+                  top: _translateY[i],
+                  width: cardW,
+                  height: _cardH,
+                  child: Opacity(
+                    opacity: _opacities[i],
+                    child: Transform.rotate(
+                      angle: _rotations[i],
+                      alignment: Alignment.bottomCenter,
+                      child: _PortraitCard(decision: decisions[i]),
+                    ),
+                  ),
                 ),
-              ),
-            // Top card
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: _cardH,
-              child: _PortraitCard(decision: decisions[0]),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Peeking card title strip ──────────────────────────────────────────────────
-
-class _PeekingCardTitle extends StatelessWidget {
-  const _PeekingCardTitle({required this.decision});
-  final Decision decision;
-
-  static Color _healthColor(String? h) => switch (h) {
-        'on_track' => const Color(0xFF2EA073),
-        'needs_attention' => const Color(0xFFD97D24),
-        'overdue' => const Color(0xFFDC4444),
-        _ => const Color(0xFF94A3B8),
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    final health = decision.healthState;
-    return Container(
-      height: _DeckView._peekH,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
-        ),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-        boxShadow: const [
-          BoxShadow(
-            blurRadius: 4,
-            offset: Offset(0, 2),
-            color: Color(0x14000000),
+            ],
           ),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-      child: Row(
-        children: [
-          if (health != null) ...[
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: _healthColor(health),
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 6),
-          ],
-          Expanded(
-            child: Text(
-              decision.title,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF64748B),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
