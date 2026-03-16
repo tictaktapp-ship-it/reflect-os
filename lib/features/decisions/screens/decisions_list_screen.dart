@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/utils/csv_downloader.dart';
@@ -12,8 +11,6 @@ import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
-
-final _dateFmt = DateFormat('d MMM');
 
 enum _SortOrder { newestFirst, oldestFirst, titleAsc, titleDesc }
 
@@ -465,7 +462,7 @@ class _DecisionGroupState extends State<_DecisionGroup> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Group header ────────────────────────────────────────────────────
           GestureDetector(
@@ -517,39 +514,23 @@ class _DecisionGroupState extends State<_DecisionGroup> {
             ),
           ),
 
-          // ── Content (fan deck or expanded grid) ─────────────────────────────
+          // ── Content ──────────────────────────────────────────────────────────
           AnimatedSize(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeInOut,
-            alignment: Alignment.topCenter,
-            child: _expanded
-                ? Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: LayoutBuilder(
-                      builder: (ctx, constraints) {
-                        final w = constraints.maxWidth;
-                        final cols = w > 1100 ? 4 : w > 700 ? 3 : 2;
-                        const gap = 12.0;
-                        final cardWidth = (w - gap * (cols - 1)) / cols;
-                        final cardHeight = cardWidth / 0.72;
-                        return Wrap(
-                          spacing: gap,
-                          runSpacing: gap,
-                          children: widget.decisions
-                              .map((d) => SizedBox(
-                                    width: cardWidth,
-                                    height: cardHeight,
-                                    child: _PortraitCard(decision: d),
-                                  ))
-                              .toList(),
-                        );
-                      },
-                    ),
-                  )
-                : Padding(
-                    padding: const EdgeInsets.only(top: 24),
-                    child: _FanDeck(decisions: widget.decisions),
-                  ),
+            alignment: Alignment.topLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16, top: 12, bottom: 16),
+              child: _expanded
+                  ? Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: widget.decisions
+                          .map((d) => _DecisionCard(decision: d))
+                          .toList(),
+                    )
+                  : _FanDeck(decisions: widget.decisions),
+            ),
           ),
         ],
       ),
@@ -582,18 +563,12 @@ class _StateGroupDot extends StatelessWidget {
   }
 }
 
-// ── Portrait card ─────────────────────────────────────────────────────────────
+// ── Decision card (portrait, fixed 200×140px) ────────────────────────────────
 
-class _PortraitCard extends StatefulWidget {
-  const _PortraitCard({required this.decision});
+class _DecisionCard extends StatelessWidget {
+  const _DecisionCard({required this.decision});
+
   final Decision decision;
-
-  @override
-  State<_PortraitCard> createState() => _PortraitCardState();
-}
-
-class _PortraitCardState extends State<_PortraitCard> {
-  bool _hovered = false;
 
   static Color _healthColor(String? h) => switch (h) {
         'on_track' => const Color(0xFF2EA073),
@@ -604,122 +579,98 @@ class _PortraitCardState extends State<_PortraitCard> {
 
   @override
   Widget build(BuildContext context) {
-    final d = widget.decision;
+    final d = decision;
     final health = d.healthState;
-    final hasCategory = d.categoryName?.isNotEmpty == true;
-    final hasStakes = d.stakes?.isNotEmpty == true;
     final hasConfidence = d.initialConfidence != null;
-    final hasDeadline = d.decisionDeadline != null;
+    final hasCategory = d.categoryName?.isNotEmpty == true;
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+    return SizedBox(
+      width: 200,
+      height: 140,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
-              blurRadius: _hovered ? 10 : 6,
-              offset: const Offset(0, 3),
-              color: Colors.black12,
+              blurRadius: 8,
+              offset: Offset(2, 4),
+              color: Color(0x26000000),
             ),
           ],
         ),
         child: Material(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(12),
+          clipBehavior: Clip.antiAlias,
           child: InkWell(
-            borderRadius: BorderRadius.circular(12),
             onTap: () => context.push('/decisions/detail/${d.id}'),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Top row: health dot + state badge ──────────────────────
+                  // ── Row 1: health dot + state badge ────────────────────────
                   Row(
                     children: [
-                      if (health != null) ...[
+                      if (health != null)
                         Container(
-                          width: 8,
-                          height: 8,
+                          width: 7,
+                          height: 7,
                           decoration: BoxDecoration(
                             color: _healthColor(health),
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                      ],
                       const Spacer(),
                       _StateBadge(state: d.state),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
 
-                  // ── Title ───────────────────────────────────────────────────
+                  // ── Row 2: title ────────────────────────────────────────────
                   Text(
                     d.title,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF1E293B),
                     ),
-                    maxLines: 2,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
-
-                  // ── Category + stakes ────────────────────────────────────
-                  if (hasCategory)
-                    Row(
-                      children: [
-                        const Icon(Icons.label_outline,
-                            size: 12, color: Color(0xFF64748B)),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            d.categoryName!,
-                            style: const TextStyle(
-                                fontSize: 11, color: Color(0xFF64748B)),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  if (hasStakes) ...[
-                    if (hasCategory) const SizedBox(height: 2),
-                    Text(
-                      d.stakes!,
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFF64748B)),
-                    ),
-                  ],
 
                   const Spacer(),
 
-                  // ── Bottom: divider + confidence + deadline ───────────────
+                  // ── Divider ─────────────────────────────────────────────────
                   const Divider(
-                      color: Color(0xFFE2E8F0), height: 1, thickness: 1),
-                  const SizedBox(height: 6),
+                      height: 1, thickness: 1, color: Color(0xFFE2E8F0)),
+                  const SizedBox(height: 4),
+
+                  // ── Row 3: confidence + category ────────────────────────────
                   Row(
                     children: [
                       if (hasConfidence)
                         Text(
                           '${d.initialConfidence}/10',
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: Color(0xFF19CBD6),
                           ),
                         ),
                       const Spacer(),
-                      if (hasDeadline)
-                        Text(
-                          'Due ${_dateFmt.format(d.decisionDeadline!)}',
-                          style: const TextStyle(
-                              fontSize: 11, color: Color(0xFF94A3B8)),
+                      if (hasCategory)
+                        Flexible(
+                          child: Text(
+                            d.categoryName!,
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: Color(0xFF94A3B8),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                     ],
                   ),
@@ -756,17 +707,18 @@ class _StateBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: _bg(state),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         state,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: _fg(state),
-              fontWeight: FontWeight.w600,
-            ),
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w600,
+          color: _fg(state),
+        ),
       ),
     );
   }
@@ -778,45 +730,66 @@ class _FanDeck extends StatelessWidget {
   const _FanDeck({required this.decisions});
   final List<Decision> decisions;
 
-  static const double _cardH = 160.0;
-  static const List<double> _rotations = [0.0, 0.04, 0.08, 0.12];
-  static const List<double> _translateX = [0.0, 18.0, 36.0, 54.0];
-  static const List<double> _translateY = [0.0, 6.0, 12.0, 18.0];
-  static const List<double> _opacities = [1.0, 0.90, 0.75, 0.60];
+  // Front card (index 0) is rightmost; back cards fan to the left.
+  // translateX is negative so back cards shift left of the front card.
+  static const _rotations = [0.0, -0.06, -0.12, -0.18, -0.22];
+  static const _translateX = [0.0, -14.0, -28.0, -42.0, -54.0];
+  static const _translateY = [0.0, 6.0, 12.0, 18.0, 22.0];
+  static const _opacities = [1.0, 0.88, 0.72, 0.56, 0.40];
+
+  // Left buffer = max |translateX| so back cards stay within the SizedBox.
+  static const double _leftBuffer = 60.0;
+  static const double _cardW = 200.0;
+  static const double _cardH = 140.0;
+  static const double _stackW = _leftBuffer + _cardW + 40.0; // 300px
+  static const double _stackH = _cardH + 22.0 + 20.0;       // 182px
 
   @override
   Widget build(BuildContext context) {
     if (decisions.isEmpty) return const SizedBox.shrink();
-    final count = decisions.length.clamp(1, 4);
+    final visible = decisions.take(5).toList();
+    final extra = decisions.length - visible.length;
 
-    return LayoutBuilder(
-      builder: (ctx, constraints) {
-        final cardW = constraints.maxWidth;
-        return SizedBox(
-          height: _cardH + 18,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: _stackW,
+          height: _stackH,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
               // Draw back cards first (highest index = furthest behind)
-              for (int i = count - 1; i >= 0; i--)
+              for (int i = visible.length - 1; i >= 0; i--)
                 Positioned(
-                  left: _translateX[i],
+                  left: _leftBuffer + _translateX[i],
                   top: _translateY[i],
-                  width: cardW,
-                  height: _cardH,
-                  child: Opacity(
-                    opacity: _opacities[i],
-                    child: Transform.rotate(
-                      angle: _rotations[i],
-                      alignment: Alignment.bottomCenter,
-                      child: _PortraitCard(decision: decisions[i]),
+                  child: Transform.rotate(
+                    angle: _rotations[i],
+                    alignment: Alignment.bottomCenter,
+                    child: Opacity(
+                      opacity: _opacities[i],
+                      child: i == 0
+                          ? _DecisionCard(decision: visible[i])
+                          : IgnorePointer(
+                              child: _DecisionCard(decision: visible[i]),
+                            ),
                     ),
                   ),
                 ),
             ],
           ),
-        );
-      },
+        ),
+        if (extra > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 4),
+            child: Text(
+              '+$extra more',
+              style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+            ),
+          ),
+      ],
     );
   }
 }
