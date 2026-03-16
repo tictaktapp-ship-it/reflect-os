@@ -9,6 +9,7 @@ import 'package:reflect_os/core/constants/legal_versions.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/auth_state_provider.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
+import 'package:reflect_os/core/widgets/change_password_dialog.dart';
 import 'package:reflect_os/core/providers/package_info_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
@@ -805,6 +806,15 @@ class _EncryptionSection extends StatelessWidget {
           subtitle: const Text('Check that your data is actually encrypted'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push(Routes.encryptionStatus),
+        ),
+        const Divider(height: 1, indent: 40, endIndent: 0),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.lock_outline,
+              color: AppColors.accentPrimary),
+          title: const Text('Change password'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => showChangePasswordDialog(context),
         ),
       ],
     );

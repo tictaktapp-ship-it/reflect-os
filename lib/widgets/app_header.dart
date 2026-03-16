@@ -12,6 +12,7 @@ import 'package:reflect_os/core/providers/theme_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
+import 'package:reflect_os/core/widgets/change_password_dialog.dart';
 import 'package:reflect_os/features/settings/providers/profile_provider.dart';
 import 'package:reflect_os/features/team/data/models/workspace_membership.dart';
 
@@ -742,6 +743,17 @@ class _UserProfileSheetBody extends ConsumerWidget {
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
+            // Change password
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.lock_outline, color: Color(0xFF19CBD6)),
+              title: const Text('Change password'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).pop();
+                showChangePasswordDialog(context);
+              },
+            ),
             // Notifications
             ListTile(
               contentPadding: EdgeInsets.zero,
