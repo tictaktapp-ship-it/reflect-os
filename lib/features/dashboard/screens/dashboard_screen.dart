@@ -655,14 +655,26 @@ class _HealthDonut extends StatelessWidget {
                 child: hasData
                     ? PieChart(
                         PieChartData(
-                          sectionsSpace: 3,
+                          sectionsSpace: 0,
                           centerSpaceRadius: 55,
                           sections: [
+                            // on_track — inner (lighter) half
                             PieChartSectionData(
-                              value: onTrack!.toDouble(),
-                              color: const Color(0xFF2EA073),
+                              value: onTrack! / 2.0,
+                              color: const Color(0xFF5EEAD4),
                               radius: 45,
-                              showTitle: total > 0 && onTrack! / total >= 0.15,
+                              showTitle: false,
+                              title: '',
+                              borderSide: const BorderSide(
+                                  color: Colors.white, width: 1.5),
+                            ),
+                            // on_track — outer (full) half
+                            PieChartSectionData(
+                              value: onTrack! / 2.0,
+                              color: const Color(0xFF2DD4BF),
+                              radius: 45,
+                              showTitle:
+                                  total > 0 && onTrack! / total >= 0.15,
                               title: onTrack! > 0 ? '$onTrack' : '',
                               titleStyle: const TextStyle(
                                 fontSize: 13,
@@ -671,16 +683,28 @@ class _HealthDonut extends StatelessWidget {
                               ),
                               titlePositionPercentageOffset: 0.55,
                               borderSide: const BorderSide(
-                                  color: Colors.white, width: 2),
+                                  color: Colors.white, width: 1.5),
                             ),
+                            // needs_attention — inner (lighter) half
                             PieChartSectionData(
-                              value: needsAttention!.toDouble(),
-                              color: const Color(0xFFD97D24),
+                              value: needsAttention! / 2.0,
+                              color: const Color(0xFFFCD34D),
                               radius: 45,
-                              showTitle:
-                                  total > 0 && needsAttention! / total >= 0.15,
-                              title:
-                                  needsAttention! > 0 ? '$needsAttention' : '',
+                              showTitle: false,
+                              title: '',
+                              borderSide: const BorderSide(
+                                  color: Colors.white, width: 1.5),
+                            ),
+                            // needs_attention — outer (full) half
+                            PieChartSectionData(
+                              value: needsAttention! / 2.0,
+                              color: const Color(0xFFF59E0B),
+                              radius: 45,
+                              showTitle: total > 0 &&
+                                  needsAttention! / total >= 0.15,
+                              title: needsAttention! > 0
+                                  ? '$needsAttention'
+                                  : '',
                               titleStyle: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -688,11 +712,22 @@ class _HealthDonut extends StatelessWidget {
                               ),
                               titlePositionPercentageOffset: 0.55,
                               borderSide: const BorderSide(
-                                  color: Colors.white, width: 2),
+                                  color: Colors.white, width: 1.5),
                             ),
+                            // overdue — inner (lighter) half
                             PieChartSectionData(
-                              value: overdue!.toDouble(),
-                              color: const Color(0xFFDC4444),
+                              value: overdue! / 2.0,
+                              color: const Color(0xFFFCA5A5),
+                              radius: 45,
+                              showTitle: false,
+                              title: '',
+                              borderSide: const BorderSide(
+                                  color: Colors.white, width: 1.5),
+                            ),
+                            // overdue — outer (full) half
+                            PieChartSectionData(
+                              value: overdue! / 2.0,
+                              color: const Color(0xFFF87171),
                               radius: 45,
                               showTitle:
                                   total > 0 && overdue! / total >= 0.15,
@@ -704,7 +739,7 @@ class _HealthDonut extends StatelessWidget {
                               ),
                               titlePositionPercentageOffset: 0.55,
                               borderSide: const BorderSide(
-                                  color: Colors.white, width: 2),
+                                  color: Colors.white, width: 1.5),
                             ),
                           ],
                         ),
@@ -730,14 +765,14 @@ class _HealthDonut extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _LegendItem(
-                      color: const Color(0xFF2EA073), label: 'On track'),
+                      color: const Color(0xFF2DD4BF), label: 'On track'),
                   const SizedBox(width: 16),
                   _LegendItem(
-                      color: const Color(0xFFD97D24),
+                      color: const Color(0xFFF59E0B),
                       label: 'Needs attention'),
                   const SizedBox(width: 16),
                   _LegendItem(
-                      color: const Color(0xFFDC4444), label: 'Overdue'),
+                      color: const Color(0xFFF87171), label: 'Overdue'),
                 ],
               ),
           ],
