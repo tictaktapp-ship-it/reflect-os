@@ -11,6 +11,7 @@ import 'package:reflect_os/core/utils/csv_downloader.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:reflect_os/widgets/app_header.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 
 final _dateFmt = DateFormat('d MMM');
 
@@ -109,6 +110,68 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Exported ${decisions.length} decisions')),
+    );
+  }
+
+  // ── Actions dialog ───────────────────────────────────────────────────────────
+
+  void _showActionsDialog(List<Decision> all, List<Decision> sorted) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => DialogShell(
+        title: 'Actions',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ActionRow(
+              icon: Icons.mic_outlined,
+              label: 'Capture from meeting',
+              onTap: () {
+                Navigator.of(ctx).pop();
+                context.push(Routes.decisionsMeetingCapture);
+              },
+            ),
+            const Divider(color: Color(0xFFE2E8F0), height: 1),
+            _ActionRow(
+              icon: Icons.sort_outlined,
+              label: 'Sort decisions',
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _showTuneSheet(all, sorted);
+              },
+            ),
+            const Divider(color: Color(0xFFE2E8F0), height: 1),
+            _ActionRow(
+              icon: Icons.filter_list_outlined,
+              label: 'Filter decisions',
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _showTuneSheet(all, sorted);
+              },
+            ),
+            const Divider(color: Color(0xFFE2E8F0), height: 1),
+            _ActionRow(
+              icon: Icons.download_outlined,
+              label: 'Export',
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _showTuneSheet(all, sorted);
+              },
+            ),
+            const Divider(color: Color(0xFFE2E8F0), height: 1),
+            _ActionRow(
+              icon: Icons.notifications_outlined,
+              label: 'Notifications',
+              onTap: () {
+                Navigator.of(ctx).pop();
+                context.push(Routes.notifications);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 
@@ -294,23 +357,9 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
       appBar: AppHeader(
         actions: [
           IconButton(
-            icon: const Icon(Icons.notes_outlined),
-            tooltip: 'Capture from Meeting',
-            onPressed: () => context.push(Routes.decisionsMeetingCapture),
-          ),
-          IconButton(
-            icon: Badge(
-              isLabelVisible: _filtersActive,
-              child: const Icon(Icons.tune_outlined),
-            ),
-            tooltip: 'Sort, filter & export',
-            onPressed: () =>
-                _showTuneSheet(allDecisions, sorted),
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            tooltip: 'Notifications',
-            onPressed: () => context.push(Routes.notifications),
+            icon: const Icon(Icons.tune_rounded),
+            tooltip: 'Actions',
+            onPressed: () => _showActionsDialog(allDecisions, sorted),
           ),
         ],
       ),
@@ -375,8 +424,7 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
                 _DecisionGroup(
                   state: entry.key,
                   decisions: entry.value,
-                  initiallyExpanded:
-                      entry.key == 'Active' || entry.key == 'Draft',
+                  initiallyExpanded: entry.key == 'Active',
                 ),
             ],
           );
@@ -386,13 +434,13 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
   }
 }
 
-// ── Decision group (collapsible) ──────────────────────────────────────────────
+// ── Decision group (collapsible deck-of-cards) ────────────────────────────────
 
-class _DecisionGroup extends StatelessWidget {
+class _DecisionGroup extends StatefulWidget {
   const _DecisionGroup({
     required this.state,
     required this.decisions,
-    this.initiallyExpanded = true,
+    this.initiallyExpanded = false,
   });
 
   final String state;
@@ -400,50 +448,97 @@ class _DecisionGroup extends StatelessWidget {
   final bool initiallyExpanded;
 
   @override
+  State<_DecisionGroup> createState() => _DecisionGroupState();
+}
+
+class _DecisionGroupState extends State<_DecisionGroup> {
+  late bool _expanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = widget.initiallyExpanded;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Theme(
-      // Remove the dividers inside ExpansionTile
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-      child: ExpansionTile(
-        initiallyExpanded: initiallyExpanded,
-        tilePadding: const EdgeInsets.only(left: 4, right: 8),
-        childrenPadding: EdgeInsets.zero,
-        title: Row(
-          children: [
-            _StateGroupDot(state: state),
-            const SizedBox(width: 8),
-            Text(
-              state.toUpperCase(),
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
-                    letterSpacing: 0.6,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ── Group header ──────────────────────────────────────────────────────
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              children: [
+                _StateGroupDot(state: widget.state),
+                const SizedBox(width: 8),
+                Text(
+                  widget.state.toUpperCase(),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
+                        letterSpacing: 0.6,
+                      ),
+                ),
+                const SizedBox(width: 8),
+                // Count badge
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF19CBD6),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              '${decisions.length}',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.4),
+                  child: Text(
+                    '${widget.decisions.length}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
-            ),
-          ],
-        ),
-        children: [
-          ...decisions.map(
-            (d) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _DecisionCard(decision: d),
+                ),
+                const Spacer(),
+                AnimatedRotation(
+                  turns: _expanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 20,
+                    color: Color(0xFF94A3B8),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-        ],
-      ),
+        ),
+
+        // ── Content (deck or expanded list) ──────────────────────────────────
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeInOut,
+          alignment: Alignment.topCenter,
+          child: _expanded
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...widget.decisions.map(
+                      (d) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _DecisionCard(decision: d),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                )
+              : _DeckView(decisions: widget.decisions),
+        ),
+      ],
     );
   }
 }
@@ -494,12 +589,27 @@ class _DecisionCard extends StatelessWidget {
     final hasConfidence = decision.initialConfidence != null;
     final hasDeadline = decision.decisionDeadline != null;
 
-    return Card(
-      clipBehavior: Clip.hardEdge,
-      child: InkWell(
-        onTap: () => context.push('/decisions/detail/${decision.id}'),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+        boxShadow: const [
+          BoxShadow(
+            blurRadius: 4,
+            offset: Offset(0, 2),
+            color: Colors.black12,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => context.push('/decisions/detail/${decision.id}'),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -565,7 +675,8 @@ class _DecisionCard extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
 
@@ -631,6 +742,105 @@ class _MetaChip extends StatelessWidget {
               ),
         ),
       ],
+    );
+  }
+}
+
+// ── Deck view (collapsed stack of card edges) ────────────────────────────────
+
+class _DeckView extends StatelessWidget {
+  const _DeckView({required this.decisions});
+  final List<Decision> decisions;
+
+  @override
+  Widget build(BuildContext context) {
+    if (decisions.isEmpty) return const SizedBox.shrink();
+    final peekCount = (decisions.length - 1).clamp(0, 2);
+
+    return Padding(
+      // Reserve space below the top card so peeking cards don't overlap next item
+      padding: EdgeInsets.only(bottom: peekCount * 8.0),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Deepest peeking edge (16px below, opacity 0.3)
+          if (peekCount >= 2)
+            Positioned(
+              bottom: -16,
+              left: 4,
+              right: 4,
+              child: Opacity(opacity: 0.3, child: const _PeekCard()),
+            ),
+          // Middle peeking edge (8px below, opacity 0.6)
+          if (peekCount >= 1)
+            Positioned(
+              bottom: -8,
+              left: 2,
+              right: 2,
+              child: Opacity(opacity: 0.6, child: const _PeekCard()),
+            ),
+          // Top card — non-positioned, sizes the Stack
+          _DecisionCard(decision: decisions[0]),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Peek card (blank card edge shown behind top card) ────────────────────────
+
+class _PeekCard extends StatelessWidget {
+  const _PeekCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 24,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+        boxShadow: const [
+          BoxShadow(blurRadius: 4, offset: Offset(0, 2), color: Colors.black12),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Action row (inside Actions dialog) ───────────────────────────────────────
+
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: SizedBox(
+        height: 48,
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: const Color(0xFF19CBD6)),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
