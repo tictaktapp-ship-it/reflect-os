@@ -518,23 +518,33 @@ class _DecisionGroupState extends State<_DecisionGroup> {
           ),
         ),
 
-        // ── Content (deck or expanded list) ──────────────────────────────────
+        // ── Content (deck or expanded grid) ──────────────────────────────────
         AnimatedSize(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeInOut,
           alignment: Alignment.topCenter,
           child: _expanded
-              ? Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ...widget.decisions.map(
-                      (d) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: _DecisionCard(decision: d),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                  ],
+              ? Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: LayoutBuilder(
+                    builder: (ctx, constraints) {
+                      final w = constraints.maxWidth;
+                      final cols = w > 1100 ? 4 : w > 700 ? 3 : 2;
+                      const gap = 8.0;
+                      final cardWidth = (w - gap * (cols - 1)) / cols;
+                      return Wrap(
+                        spacing: gap,
+                        runSpacing: gap,
+                        children: widget.decisions
+                            .map((d) => SizedBox(
+                                  width: cardWidth,
+                                  height: 190,
+                                  child: _PortraitCard(decision: d),
+                                ))
+                            .toList(),
+                      );
+                    },
+                  ),
                 )
               : _DeckView(decisions: widget.decisions),
         ),
@@ -568,115 +578,156 @@ class _StateGroupDot extends StatelessWidget {
   }
 }
 
-// ── Decision card ─────────────────────────────────────────────────────────────
+// ── Portrait card ─────────────────────────────────────────────────────────────
 
-class _DecisionCard extends StatelessWidget {
-  const _DecisionCard({required this.decision});
+class _PortraitCard extends StatefulWidget {
+  const _PortraitCard({required this.decision});
   final Decision decision;
 
-  Color _healthColor(String? h) => switch (h) {
+  @override
+  State<_PortraitCard> createState() => _PortraitCardState();
+}
+
+class _PortraitCardState extends State<_PortraitCard> {
+  bool _hovered = false;
+
+  static Color _healthColor(String? h) => switch (h) {
         'on_track' => const Color(0xFF2EA073),
         'needs_attention' => const Color(0xFFD97D24),
         'overdue' => const Color(0xFFDC4444),
-        _ => AppColors.textMuted,
+        _ => const Color(0xFF94A3B8),
       };
 
   @override
   Widget build(BuildContext context) {
-    final health = decision.healthState;
-    final hasHealth = health != null;
-    final hasCategory = decision.categoryName?.isNotEmpty == true;
-    final hasConfidence = decision.initialConfidence != null;
-    final hasDeadline = decision.decisionDeadline != null;
+    final d = widget.decision;
+    final health = d.healthState;
+    final hasCategory = d.categoryName?.isNotEmpty == true;
+    final hasStakes = d.stakes?.isNotEmpty == true;
+    final hasConfidence = d.initialConfidence != null;
+    final hasDeadline = d.decisionDeadline != null;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-        boxShadow: const [
-          BoxShadow(
-            blurRadius: 4,
-            offset: Offset(0, 2),
-            color: Colors.black12,
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          onTap: () => context.push('/decisions/detail/${decision.id}'),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Title row
-              Row(
+          border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+          boxShadow: [
+            BoxShadow(
+              blurRadius: _hovered ? 8 : 4,
+              offset: const Offset(0, 2),
+              color: _hovered
+                  ? Colors.black12
+                  : const Color(0x14000000), // ~black08
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => context.push('/decisions/detail/${d.id}'),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (hasHealth)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 3, right: 8),
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: _healthColor(health),
-                          shape: BoxShape.circle,
+                  // ── Top row: health dot + state badge ──────────────────────
+                  Row(
+                    children: [
+                      if (health != null) ...[
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _healthColor(health),
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
-                    ),
-                  Expanded(
-                    child: Text(
-                      decision.title,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                        const SizedBox(width: 6),
+                      ],
+                      const Spacer(),
+                      _StateBadge(state: d.state),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  _StateBadge(state: decision.state),
+                  const SizedBox(height: 6),
+
+                  // ── Title ───────────────────────────────────────────────────
+                  Text(
+                    d.title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E293B),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // ── Category + stakes ────────────────────────────────────
+                  if (hasCategory)
+                    Row(
+                      children: [
+                        const Icon(Icons.label_outline,
+                            size: 12, color: Color(0xFF64748B)),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            d.categoryName!,
+                            style: const TextStyle(
+                                fontSize: 11, color: Color(0xFF64748B)),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (hasStakes) ...[
+                    if (hasCategory) const SizedBox(height: 2),
+                    Text(
+                      d.stakes!,
+                      style: const TextStyle(
+                          fontSize: 11, color: Color(0xFF64748B)),
+                    ),
+                  ],
+
+                  const Spacer(),
+
+                  // ── Bottom: divider + confidence + deadline ───────────────
+                  const Divider(
+                      color: Color(0xFFE2E8F0), height: 1, thickness: 1),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      if (hasConfidence)
+                        Text(
+                          '${d.initialConfidence}/10',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF19CBD6),
+                          ),
+                        ),
+                      const Spacer(),
+                      if (hasDeadline)
+                        Text(
+                          'Due ${_dateFmt.format(d.decisionDeadline!)}',
+                          style: const TextStyle(
+                              fontSize: 11, color: Color(0xFF94A3B8)),
+                        ),
+                    ],
+                  ),
                 ],
               ),
-
-              // Meta chips row
-              if (hasCategory || hasConfidence || hasDeadline) ...[
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    if (hasCategory)
-                      _MetaChip(
-                        icon: Icons.category_outlined,
-                        label: decision.categoryName!,
-                      ),
-                    if (hasConfidence)
-                      _MetaChip(
-                        icon: Icons.signal_cellular_alt_outlined,
-                        label: '${decision.initialConfidence}/10',
-                      ),
-                    if (hasDeadline)
-                      _MetaChip(
-                        icon: Icons.event_outlined,
-                        label: _dateFmt.format(decision.decisionDeadline!),
-                        color: decision.decisionDeadline!
-                                .isBefore(DateTime.now())
-                            ? const Color(0xFFDC4444)
-                            : null,
-                      ),
-                  ],
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
   }
 }
 
@@ -719,89 +770,112 @@ class _StateBadge extends StatelessWidget {
   }
 }
 
-class _MetaChip extends StatelessWidget {
-  const _MetaChip({required this.icon, required this.label, this.color});
-  final IconData icon;
-  final String label;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final effectiveColor = color ??
-        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 12, color: effectiveColor),
-        const SizedBox(width: 3),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: effectiveColor,
-                fontSize: 11,
-              ),
-        ),
-      ],
-    );
-  }
-}
-
 // ── Deck view (collapsed stack of card edges) ────────────────────────────────
 
 class _DeckView extends StatelessWidget {
   const _DeckView({required this.decisions});
   final List<Decision> decisions;
 
+  static const double _cardH = 190.0;
+  static const double _peekH = 36.0;
+
   @override
   Widget build(BuildContext context) {
     if (decisions.isEmpty) return const SizedBox.shrink();
     final peekCount = (decisions.length - 1).clamp(0, 2);
+    final stackH = _cardH + peekCount * _peekH;
 
     return Padding(
-      // Reserve space below the top card so peeking cards don't overlap next item
-      padding: EdgeInsets.only(bottom: peekCount * 8.0),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Deepest peeking edge (16px below, opacity 0.3)
-          if (peekCount >= 2)
+      padding: const EdgeInsets.only(bottom: 8),
+      child: SizedBox(
+        height: stackH,
+        child: Stack(
+          children: [
+            // Peeking cards (behind) — rendered first so top card is on top
+            for (int i = peekCount; i >= 1; i--)
+              Positioned(
+                top: _cardH + (i - 1) * _peekH,
+                left: 0,
+                right: 0,
+                child: Opacity(
+                  opacity: i == 1 ? 0.85 : 0.65,
+                  child: _PeekingCardTitle(decision: decisions[i]),
+                ),
+              ),
+            // Top card
             Positioned(
-              bottom: -16,
-              left: 4,
-              right: 4,
-              child: Opacity(opacity: 0.3, child: const _PeekCard()),
+              top: 0,
+              left: 0,
+              right: 0,
+              height: _cardH,
+              child: _PortraitCard(decision: decisions[0]),
             ),
-          // Middle peeking edge (8px below, opacity 0.6)
-          if (peekCount >= 1)
-            Positioned(
-              bottom: -8,
-              left: 2,
-              right: 2,
-              child: Opacity(opacity: 0.6, child: const _PeekCard()),
-            ),
-          // Top card — non-positioned, sizes the Stack
-          _DecisionCard(decision: decisions[0]),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-// ── Peek card (blank card edge shown behind top card) ────────────────────────
+// ── Peeking card title strip ──────────────────────────────────────────────────
 
-class _PeekCard extends StatelessWidget {
-  const _PeekCard();
+class _PeekingCardTitle extends StatelessWidget {
+  const _PeekingCardTitle({required this.decision});
+  final Decision decision;
+
+  static Color _healthColor(String? h) => switch (h) {
+        'on_track' => const Color(0xFF2EA073),
+        'needs_attention' => const Color(0xFFD97D24),
+        'overdue' => const Color(0xFFDC4444),
+        _ => const Color(0xFF94A3B8),
+      };
 
   @override
   Widget build(BuildContext context) {
+    final health = decision.healthState;
     return Container(
-      height: 24,
+      height: _DeckView._peekH,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+        ),
         border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
         boxShadow: const [
-          BoxShadow(blurRadius: 4, offset: Offset(0, 2), color: Colors.black12),
+          BoxShadow(
+            blurRadius: 4,
+            offset: Offset(0, 2),
+            color: Color(0x14000000),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+      child: Row(
+        children: [
+          if (health != null) ...[
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: _healthColor(health),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Expanded(
+            child: Text(
+              decision.title,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF64748B),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
