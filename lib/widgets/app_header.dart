@@ -21,12 +21,12 @@ import 'package:reflect_os/features/team/data/models/workspace_membership.dart';
 /// Dashboard mode (no title / centreContent):
 ///   Left  : logo + WorkspaceSwitcherChip
 ///   Centre: global search bar
-///   Right : screen-specific [actions] + tune icon + user avatar
+///   Right : screen-specific [actions] + user avatar
 ///
 /// Sub-screen mode (title or centreContent provided):
 ///   Left  : [← back?] + logo
 ///   Centre: [centreContent] or title Text
-///   Right : screen-specific [actions] + tune icon + user avatar
+///   Right : screen-specific [actions] + user avatar
 class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
   const AppHeader({
     super.key,
@@ -120,11 +120,6 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
 
     final rightActions = [
       ...?actions,
-      IconButton(
-        icon: const Icon(Icons.tune_outlined, color: Color(0xFF64748B)),
-        tooltip: 'Workspace settings',
-        onPressed: () => context.push(Routes.settingsWorkspaces),
-      ),
       const _UserAvatarButton(),
       const SizedBox(width: 8),
     ];

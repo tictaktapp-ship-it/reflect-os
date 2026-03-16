@@ -347,7 +347,7 @@ class _QualityDial extends StatelessWidget {
     return Card(
       color: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -360,75 +360,70 @@ class _QualityDial extends StatelessWidget {
                       letterSpacing: 0.6,
                     )),
             const SizedBox(height: 8),
-            // Outer Stack: score text sits at the flat base of the visible arc.
-            // ClipRect determines the Stack height (88px = 160 × 0.55).
-            // Score text is outside ClipRect so it is never clipped.
-            Stack(
-              alignment: Alignment.bottomCenter,
-              children: [
-                // Half-donut: clips the lower half of the PieChart away
-                ClipRect(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    heightFactor: 0.55,
-                    child: SizedBox(
-                      height: 160,
-                      child: PieChart(
-                        PieChartData(
-                          startDegreeOffset: 180,
-                          sectionsSpace: 0,
-                          centerSpaceRadius: 44,
-                          sections: [
-                            PieChartSectionData(
-                              value: filledFraction,
-                              color: arcColor,
-                              radius: 28,
-                              showTitle: false,
-                            ),
-                            PieChartSectionData(
-                              value: emptyFraction,
-                              color: bgArcColor,
-                              radius: 28,
-                              showTitle: false,
-                            ),
-                            // Transparent lower half
-                            PieChartSectionData(
-                              value: 1,
-                              color: Colors.transparent,
-                              radius: 28,
-                              showTitle: false,
-                            ),
-                          ],
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 200),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Half-donut: clips the lower half of the PieChart away
+                  ClipRect(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      heightFactor: 0.55,
+                      child: SizedBox(
+                        height: 200,
+                        child: PieChart(
+                          PieChartData(
+                            startDegreeOffset: 180,
+                            sectionsSpace: 0,
+                            centerSpaceRadius: 55,
+                            sections: [
+                              PieChartSectionData(
+                                value: filledFraction,
+                                color: arcColor,
+                                radius: 35,
+                                showTitle: false,
+                              ),
+                              PieChartSectionData(
+                                value: emptyFraction,
+                                color: bgArcColor,
+                                radius: 35,
+                                showTitle: false,
+                              ),
+                              // Transparent lower half
+                              PieChartSectionData(
+                                value: 1,
+                                color: Colors.transparent,
+                                radius: 35,
+                                showTitle: false,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                // Score overlay — aligned to the bottom of the visible arc
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        hasData ? (q / 10).toStringAsFixed(1) : '--',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF19CBD6),
-                        ),
-                      ),
-                      Text(
-                        hasData ? '/ 10' : '',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF94A3B8),
-                        ),
-                      ),
-                    ],
+                  // Score sits below the arc with clearance
+                  const SizedBox(height: 8),
+                  Text(
+                    hasData ? (q / 10).toStringAsFixed(1) : '--',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: hasData
+                          ? const Color(0xFF19CBD6)
+                          : const Color(0xFF94A3B8),
+                    ),
                   ),
-                ),
-              ],
+                  Text(
+                    hasData ? '/ 10' : '',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -614,7 +609,7 @@ class _HealthDonut extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -628,21 +623,21 @@ class _HealthDonut extends StatelessWidget {
                     )),
             const SizedBox(height: 8),
             SizedBox(
-              height: 130,
+              height: 200,
               child: hasData
                   ? PieChart(
                       PieChartData(
                         sectionsSpace: 3,
-                        centerSpaceRadius: 44,
+                        centerSpaceRadius: 55,
                         sections: [
                           PieChartSectionData(
                             value: onTrack!.toDouble(),
                             color: const Color(0xFF2EA073),
-                            radius: 18,
+                            radius: 23,
                             showTitle: onTrack! > 0,
                             title: onTrack! > 0 ? '$onTrack' : '',
                             titleStyle: const TextStyle(
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                             ),
@@ -650,11 +645,11 @@ class _HealthDonut extends StatelessWidget {
                           PieChartSectionData(
                             value: needsAttention!.toDouble(),
                             color: const Color(0xFFD97D24),
-                            radius: 18,
+                            radius: 23,
                             showTitle: needsAttention! > 0,
                             title: needsAttention! > 0 ? '$needsAttention' : '',
                             titleStyle: const TextStyle(
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                             ),
@@ -662,11 +657,11 @@ class _HealthDonut extends StatelessWidget {
                           PieChartSectionData(
                             value: overdue!.toDouble(),
                             color: const Color(0xFFDC4444),
-                            radius: 18,
+                            radius: 23,
                             showTitle: overdue! > 0,
                             title: overdue! > 0 ? '$overdue' : '',
                             titleStyle: const TextStyle(
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                             ),
@@ -687,17 +682,25 @@ class _HealthDonut extends StatelessWidget {
                       ),
                     ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             if (hasData)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _LegendItem(color: const Color(0xFF2EA073), label: 'On track'),
-                  const SizedBox(width: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _LegendItem(
+                          color: const Color(0xFF2EA073), label: 'On track'),
+                      const SizedBox(width: 12),
+                      _LegendItem(
+                          color: const Color(0xFFDC4444), label: 'Overdue'),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
                   _LegendItem(
-                      color: const Color(0xFFD97D24), label: 'Needs attention'),
-                  const SizedBox(width: 12),
-                  _LegendItem(color: const Color(0xFFDC4444), label: 'Overdue'),
+                      color: const Color(0xFFD97D24),
+                      label: 'Needs attention'),
                 ],
               ),
           ],
