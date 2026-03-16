@@ -19,8 +19,8 @@ import 'package:reflect_os/features/team/data/models/workspace_membership.dart';
 /// Brand app bar used by every screen in Reflect OS.
 ///
 /// Dashboard mode (no title / centreContent):
-///   Left  : logo + WorkspaceSwitcherChip
-///   Centre: global search bar
+///   Left  : logo
+///   Centre: WorkspaceSwitcherChip + search bar
 ///   Right : screen-specific [actions] + user avatar
 ///
 /// Sub-screen mode (title or centreContent provided):
@@ -62,7 +62,7 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
       leadingWidget = leading!;
       leadingWidth = canPop ? 140 : 180;
     } else if (_isDashboardMode) {
-      // Dashboard: logo + workspace chip side by side
+      // Dashboard: logo only — chip lives in the centre section
       leadingWidget = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -72,11 +72,9 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
             height: 36,
             fit: BoxFit.contain,
           ),
-          const SizedBox(width: 10),
-          const WorkspaceSwitcherChip(),
         ],
       );
-      leadingWidth = 340;
+      leadingWidth = 180;
     } else {
       // Sub-screen: optional back arrow + logo
       leadingWidget = Row(
@@ -114,8 +112,21 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
         ),
       );
     } else {
-      // Dashboard mode: global search bar
-      centre = const _HeaderSearchBar();
+      // Dashboard mode: workspace chip + search bar centred together
+      centre = Row(
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const WorkspaceSwitcherChip(),
+          const SizedBox(width: 12),
+          Flexible(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: const _HeaderSearchBar(),
+            ),
+          ),
+        ],
+      );
     }
 
     final rightActions = [

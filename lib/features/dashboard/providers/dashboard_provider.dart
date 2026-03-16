@@ -18,6 +18,8 @@ class DashboardAnalytics {
     this.checkpointNeedsAttentionCount,
     this.checkpointOverdueCount,
     this.confidenceCalibrationDelta,
+    this.avgConfidenceGiven,
+    this.avgOutcomeScore,
   });
 
   final double? rolling30dAvgQuality;
@@ -34,6 +36,9 @@ class DashboardAnalytics {
   final int? checkpointNeedsAttentionCount;
   final int? checkpointOverdueCount;
   final double? confidenceCalibrationDelta;
+  // Calibration supporting metrics (1–10 scale)
+  final double? avgConfidenceGiven;
+  final double? avgOutcomeScore;
 }
 
 /// Computes analytics directly from user_visible_decisions + outcome_updates
@@ -71,11 +76,24 @@ final dashboardAnalyticsProvider =
 
   final decisionIds = rows.map((r) => r['id'] as String).toList();
 
+  // ── Avg confidence given (1–10, from initial_confidence on all decisions) ─────
+  double? avgConfidenceGiven;
+  {
+    final vals = rows
+        .map((r) => (r['initial_confidence'] as num?)?.toDouble())
+        .whereType<double>()
+        .toList();
+    if (vals.isNotEmpty) {
+      avgConfidenceGiven = vals.reduce((a, b) => a + b) / vals.length;
+    }
+  }
+
   // ── Quality: from outcome_updates.outcome_quality_score (1–10 → ×10 → 0–100) ─
   double? allTimeQuality;
   double? rolling30dQuality;
   double? rolling90dQuality;
   double? calibrationDelta;
+  double? avgOutcomeScore;
 
   try {
     final outcomeRows = await supabase
@@ -136,6 +154,16 @@ final dashboardAnalyticsProvider =
       }
       if (deltas.isNotEmpty) {
         calibrationDelta = deltas.reduce((a, b) => a + b) / deltas.length;
+      }
+
+      // Avg outcome score (1–10 scale, latest per decision)
+      final outcomeScores = latestByDecision.values
+          .map((v) => (v['outcome_quality_score'] as num?)?.toDouble())
+          .whereType<double>()
+          .toList();
+      if (outcomeScores.isNotEmpty) {
+        avgOutcomeScore =
+            outcomeScores.reduce((a, b) => a + b) / outcomeScores.length;
       }
     }
   } catch (e) {
@@ -217,6 +245,8 @@ final dashboardAnalyticsProvider =
     checkpointNeedsAttentionCount: checkpointNeedsAttention,
     checkpointOverdueCount: checkpointOverdue,
     confidenceCalibrationDelta: calibrationDelta,
+    avgConfidenceGiven: avgConfidenceGiven,
+    avgOutcomeScore: avgOutcomeScore,
     computedAt: now,
   );
 });

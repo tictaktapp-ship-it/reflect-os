@@ -196,6 +196,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               Expanded(
                                 child: _ConfidenceDeltaCard(
                                   delta: analytics?.confidenceCalibrationDelta,
+                                  avgConfidence: analytics?.avgConfidenceGiven,
+                                  avgOutcomeScore: analytics?.avgOutcomeScore,
                                 ),
                               ),
                             ],
@@ -224,6 +226,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       const SizedBox(height: 16),
                       _ConfidenceDeltaCard(
                         delta: analytics?.confidenceCalibrationDelta,
+                        avgConfidence: analytics?.avgConfidenceGiven,
+                        avgOutcomeScore: analytics?.avgOutcomeScore,
                       ),
                     ],
                   );
@@ -324,7 +328,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 }
 
 // ── Quality Dial ─────────────────────────────────────────────────────────────
-// Half-donut arc gauge. quality is 0–10. Clipped to upper half.
+// Semicircle gauge drawn with CustomPaint for gradient arc support.
 
 class _QualityDial extends StatelessWidget {
   const _QualityDial({required this.quality});
@@ -333,16 +337,10 @@ class _QualityDial extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // quality is passed as 0–100 (confidence 1–10 scaled ×10).
-    // Display on a 0–10 scale for readability.
+    // quality is 0–100 (outcome score 1–10 scaled ×10). Display as 0–10.
     final q = quality?.clamp(0.0, 100.0) ?? 0.0;
     final hasData = quality != null && quality! > 0;
-
-    final arcColor = AppColors.accentPrimary;
-    const bgArcColor = Color(0xFFE2E8F0);
-
     final filledFraction = hasData ? q / 100.0 : 0.0;
-    final emptyFraction = 1.0 - filledFraction;
 
     return Card(
       color: Colors.white,
@@ -351,85 +349,102 @@ class _QualityDial extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Decision Quality',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                      letterSpacing: 0.6,
-                    )),
-            const SizedBox(height: 8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 200),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Half-donut: clips the lower half of the PieChart away
-                  ClipRect(
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      heightFactor: 0.55,
-                      child: SizedBox(
-                        height: 200,
-                        child: PieChart(
-                          PieChartData(
-                            startDegreeOffset: 180,
-                            sectionsSpace: 0,
-                            centerSpaceRadius: 55,
-                            sections: [
-                              PieChartSectionData(
-                                value: filledFraction,
-                                color: arcColor,
-                                radius: 35,
-                                showTitle: false,
-                              ),
-                              PieChartSectionData(
-                                value: emptyFraction,
-                                color: bgArcColor,
-                                radius: 35,
-                                showTitle: false,
-                              ),
-                              // Transparent lower half
-                              PieChartSectionData(
-                                value: 1,
-                                color: Colors.transparent,
-                                radius: 35,
-                                showTitle: false,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Score sits below the arc with clearance
-                  const SizedBox(height: 8),
-                  Text(
-                    hasData ? (q / 10).toStringAsFixed(1) : '--',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: hasData
-                          ? const Color(0xFF19CBD6)
-                          : const Color(0xFF94A3B8),
-                    ),
-                  ),
-                  Text(
-                    hasData ? '/ 10' : '',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF94A3B8),
-                    ),
-                  ),
-                ],
+            const Text(
+              'Decision Quality',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF64748B),
               ),
+            ),
+            const SizedBox(height: 8),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: 130,
+                  child: CustomPaint(
+                    painter: _GaugePainter(
+                      fraction: filledFraction,
+                      hasData: hasData,
+                    ),
+                    size: Size.infinite,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  hasData ? (q / 10).toStringAsFixed(1) : '--',
+                  style: TextStyle(
+                    fontSize: 38,
+                    fontWeight: FontWeight.w700,
+                    color: hasData
+                        ? const Color(0xFF19CBD6)
+                        : const Color(0xFF94A3B8),
+                  ),
+                ),
+                Text(
+                  hasData ? '/ 10' : '',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF94A3B8),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
   }
+}
+
+class _GaugePainter extends CustomPainter {
+  const _GaugePainter({required this.fraction, required this.hasData});
+
+  final double fraction;
+  final bool hasData;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const strokeWidth = 22.0;
+    final radius = size.height - strokeWidth / 2;
+    final center = Offset(size.width / 2, size.height);
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    // Background arc (full semicircle, left to right)
+    canvas.drawArc(
+      rect,
+      math.pi,
+      math.pi,
+      false,
+      Paint()
+        ..color = const Color(0xFFE2E8F0)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.butt,
+    );
+
+    // Filled gradient arc
+    if (hasData && fraction > 0) {
+      canvas.drawArc(
+        rect,
+        math.pi,
+        math.pi * fraction,
+        false,
+        Paint()
+          ..shader = const LinearGradient(
+            colors: [Color(0xFF19CBD6), Color(0xFF0E9AAF)],
+          ).createShader(rect)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..strokeCap = StrokeCap.butt,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GaugePainter old) =>
+      old.fraction != fraction || old.hasData != hasData;
 }
 
 // ── Status Bar Chart ─────────────────────────────────────────────────────────
@@ -613,14 +628,14 @@ class _HealthDonut extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Decision Health',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                      letterSpacing: 0.6,
-                    )),
+            const Text(
+              'Decision Health',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF64748B),
+              ),
+            ),
             const SizedBox(height: 8),
             SizedBox(
               height: 200,
@@ -628,41 +643,43 @@ class _HealthDonut extends StatelessWidget {
                   ? PieChart(
                       PieChartData(
                         sectionsSpace: 3,
-                        centerSpaceRadius: 55,
+                        centerSpaceRadius: 45,
                         sections: [
                           PieChartSectionData(
                             value: onTrack!.toDouble(),
                             color: const Color(0xFF2EA073),
-                            radius: 23,
-                            showTitle: onTrack! > 0,
+                            radius: 45,
+                            showTitle: total > 0 && onTrack! / total >= 0.15,
                             title: onTrack! > 0 ? '$onTrack' : '',
                             titleStyle: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
                               color: Colors.white,
                             ),
                           ),
                           PieChartSectionData(
                             value: needsAttention!.toDouble(),
                             color: const Color(0xFFD97D24),
-                            radius: 23,
-                            showTitle: needsAttention! > 0,
-                            title: needsAttention! > 0 ? '$needsAttention' : '',
+                            radius: 45,
+                            showTitle:
+                                total > 0 && needsAttention! / total >= 0.15,
+                            title:
+                                needsAttention! > 0 ? '$needsAttention' : '',
                             titleStyle: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
                               color: Colors.white,
                             ),
                           ),
                           PieChartSectionData(
                             value: overdue!.toDouble(),
                             color: const Color(0xFFDC4444),
-                            radius: 23,
-                            showTitle: overdue! > 0,
+                            radius: 45,
+                            showTitle: total > 0 && overdue! / total >= 0.15,
                             title: overdue! > 0 ? '$overdue' : '',
                             titleStyle: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
                               color: Colors.white,
                             ),
                           ),
@@ -684,23 +701,18 @@ class _HealthDonut extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             if (hasData)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _LegendItem(
-                          color: const Color(0xFF2EA073), label: 'On track'),
-                      const SizedBox(width: 12),
-                      _LegendItem(
-                          color: const Color(0xFFDC4444), label: 'Overdue'),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
+                  _LegendItem(
+                      color: const Color(0xFF2EA073), label: 'On track'),
+                  const SizedBox(width: 12),
                   _LegendItem(
                       color: const Color(0xFFD97D24),
                       label: 'Needs attention'),
+                  const SizedBox(width: 12),
+                  _LegendItem(
+                      color: const Color(0xFFDC4444), label: 'Overdue'),
                 ],
               ),
           ],
@@ -729,11 +741,8 @@ class _LegendItem extends StatelessWidget {
         const SizedBox(width: 4),
         Text(label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontSize: 10,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.7),
+                  fontSize: 12,
+                  color: const Color(0xFF64748B),
                 )),
       ],
     );
@@ -743,9 +752,15 @@ class _LegendItem extends StatelessWidget {
 // ── Confidence Delta Card ────────────────────────────────────────────────────
 
 class _ConfidenceDeltaCard extends StatelessWidget {
-  const _ConfidenceDeltaCard({required this.delta});
+  const _ConfidenceDeltaCard({
+    required this.delta,
+    required this.avgConfidence,
+    required this.avgOutcomeScore,
+  });
 
   final double? delta;
+  final double? avgConfidence;
+  final double? avgOutcomeScore;
 
   @override
   Widget build(BuildContext context) {
@@ -761,64 +776,139 @@ class _ConfidenceDeltaCard extends StatelessWidget {
       description = 'No calibration data yet';
     } else {
       if (d > 1.0) {
-        pillColor = const Color(0xFFD97D24); // amber — overconfident
+        pillColor = const Color(0xFFD97D24);
         description = 'You tend to be overconfident';
       } else if (d < -1.0) {
-        pillColor = const Color(0xFF19CBD6); // teal — underconfident
+        pillColor = const Color(0xFF19CBD6);
         description = 'You tend to be underconfident';
       } else {
-        pillColor = const Color(0xFF2EA073); // green — well calibrated
+        pillColor = const Color(0xFF2EA073);
         description = 'Well calibrated';
       }
       final sign = d >= 0 ? '+' : '';
       label = '$sign${d.toStringAsFixed(1)}%';
     }
 
+    final confStr = avgConfidence != null
+        ? '${avgConfidence!.toStringAsFixed(1)} / 10'
+        : '--';
+    final outcomeStr = avgOutcomeScore != null
+        ? '${avgOutcomeScore!.toStringAsFixed(1)} / 10'
+        : '--';
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        padding: const EdgeInsets.all(24),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Align(
+            const Align(
               alignment: Alignment.centerLeft,
-              child: Text('Confidence Calibration',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
-                        letterSpacing: 0.6,
-                      )),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: pillColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                    color: pillColor.withValues(alpha: 0.5), width: 1),
-              ),
               child: Text(
-                label,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: pillColor,
-                      fontWeight: FontWeight.w700,
+                'Confidence Calibration',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: pillColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                          color: pillColor.withValues(alpha: 0.5), width: 1),
                     ),
+                    child: Text(
+                      label,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: pillColor,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    description,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(color: Color(0xFFE2E8F0), height: 1),
+            const SizedBox(height: 12),
+            // Metric row 1: avg confidence given
+            SizedBox(
+              height: 32,
+              child: Row(
+                children: [
+                  const Icon(Icons.psychology_outlined,
+                      size: 16, color: Color(0xFF19CBD6)),
+                  const SizedBox(width: 6),
+                  const Expanded(
+                    child: Text(
+                      'Avg. confidence given',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    confStr,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              description,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
+            // Metric row 2: avg outcome score
+            SizedBox(
+              height: 32,
+              child: Row(
+                children: [
+                  const Icon(Icons.track_changes,
+                      size: 16, color: Color(0xFF2EA073)),
+                  const SizedBox(width: 6),
+                  const Expanded(
+                    child: Text(
+                      'Avg. outcome score',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
                   ),
+                  Text(
+                    outcomeStr,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
