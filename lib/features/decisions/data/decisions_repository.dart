@@ -654,6 +654,20 @@ class DecisionsRepository {
     }).eq('id', approvalRecordId);
   }
 
+  /// Inserts an Approved approval record for the current user then activates
+  /// the decision. Used by the "Approve & Activate" flow where the approver
+  /// and the action happen in one tap.
+  Future<void> approveAndActivate(String decisionId) async {
+    final userId = supabase.auth.currentUser!.id;
+    await supabase.from('approval_records').insert({
+      'decision_id': decisionId,
+      'approver_user_id': userId,
+      'status': 'Approved',
+      'decided_at': DateTime.now().toUtc().toIso8601String(),
+    });
+    await supabase.rpc('activate_decision', params: {'p_decision_id': decisionId});
+  }
+
   Future<void> rejectDecision(String approvalRecordId) async {
     await supabase.from('approval_records').update({
       'status': 'Rejected',

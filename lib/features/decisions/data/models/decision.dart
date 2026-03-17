@@ -21,6 +21,12 @@ abstract class Decision with _$Decision {
     @JsonKey(name: 'created_at') required DateTime createdAt,
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
     @Default(false) @JsonKey(name: 'requires_approval') bool requiresApproval,
+    @Default(false) @JsonKey(name: 'continuous') bool isContinuous,
+    @Default(false)
+    @JsonKey(name: 'deadline_notification_enabled')
+    bool deadlineNotificationEnabled,
+    @JsonKey(name: 'deadline_notification_offset_days')
+    int? deadlineNotificationOffsetDays,
     // Provenance — populated when this decision is a fork of another.
     @JsonKey(name: 'source_decision_id') String? sourceDecisionId,
     @JsonKey(name: 'shared_to_team_at') DateTime? sharedToTeamAt,

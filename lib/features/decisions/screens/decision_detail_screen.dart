@@ -379,23 +379,25 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
           _CollapsibleSection(
             title: 'State & Health',
             initiallyExpanded: true,
-            child: Row(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
               children: [
                 _StateBadge(state: decision.state),
-                if (decision.healthState != null) ...[
-                  const SizedBox(width: 8),
+                if (decision.healthState != null)
                   _HealthBadge(healthState: decision.healthState!),
-                ],
-                if (decision.sharedToTeamAt != null) ...[
-                  const SizedBox(width: 8),
-                  Chip(
-                    avatar: const Icon(Icons.share_outlined, size: 14),
-                    label: const Text('Shared to team'),
+                if (decision.isContinuous)
+                  const _ContinuousBadge(),
+                if (decision.requiresApproval && decision.isDraft)
+                  const _PendingApprovalBadge(),
+                if (decision.sharedToTeamAt != null)
+                  const Chip(
+                    avatar: Icon(Icons.share_outlined, size: 14),
+                    label: Text('Shared to team'),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     padding: EdgeInsets.zero,
                     visualDensity: VisualDensity.compact,
                   ),
-                ],
               ],
             ),
           ),
@@ -1052,6 +1054,36 @@ class _StateTransitionBarState extends ConsumerState<_StateTransitionBar> {
     }
   }
 
+  Future<void> _archiveContinuousWithPrompt(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => DialogShell(
+        title: 'Archive this standing decision?',
+        child: const Text(
+          'This continuous decision will be archived. '
+          'It can be restored later from the Archived state.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+                backgroundColor: AppColors.textMuted),
+            child: const Text('Archive',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _run(() =>
+          ref.read(decisionsRepositoryProvider).archiveDecision(id));
+    }
+  }
+
   Future<void> _closeWithDebriefPrompt(String id) async {
     final repo = ref.read(decisionsRepositoryProvider);
     await _run(() => repo.closeDecision(id));
@@ -1117,19 +1149,46 @@ class _StateTransitionBarState extends ConsumerState<_StateTransitionBar> {
         !approvals.any((a) => a.status == 'Approved');
 
     final buttons = switch (state) {
+      'Draft' when approvalBlocked => <Widget>[
+          // Owner sees "Awaiting Approval" label — cannot self-activate.
+          Text(
+            'Awaiting Approval',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textMuted,
+                  fontStyle: FontStyle.italic,
+                ),
+          ),
+          const SizedBox(width: 12),
+          // Any user (including owner) can approve & activate in one tap.
+          FilledButton(
+            onPressed: _isLoading
+                ? null
+                : () => _run(() => repo.approveAndActivate(id)),
+            style: FilledButton.styleFrom(
+                backgroundColor: AppColors.accentPrimary),
+            child: const Text('Approve & Activate',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
       'Draft' => <Widget>[
-          Tooltip(
-            message: approvalBlocked
-                ? 'Approval required before activating'
-                : '',
-            child: OutlinedButton(
-              onPressed: (_isLoading || approvalBlocked)
-                  ? null
-                  : () => _run(() => repo.activateDecision(id)),
-              style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.accentHover),
-              child: const Text('Activate'),
-            ),
+          OutlinedButton(
+            onPressed: _isLoading
+                ? null
+                : () => _run(() => repo.activateDecision(id)),
+            style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.accentHover),
+            child: const Text('Activate'),
+          ),
+        ],
+      'Active' when widget.decision.isContinuous => <Widget>[
+          // Continuous decisions are archived, not closed.
+          OutlinedButton(
+            onPressed: _isLoading
+                ? null
+                : () => _archiveContinuousWithPrompt(id),
+            style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textMuted),
+            child: const Text('Archive standing decision'),
           ),
         ],
       'Active' => <Widget>[
@@ -1237,6 +1296,70 @@ class _StateBadge extends StatelessWidget {
               color: _foreground,
               fontWeight: FontWeight.w600,
             ),
+      ),
+    );
+  }
+}
+
+// ── Continuous badge ──────────────────────────────────────────────────────────
+
+class _ContinuousBadge extends StatelessWidget {
+  const _ContinuousBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.accentPrimary.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.all_inclusive,
+              size: 12, color: AppColors.accentPrimary),
+          const SizedBox(width: 4),
+          Text(
+            'Continuous',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppColors.accentPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Pending approval badge ────────────────────────────────────────────────────
+
+class _PendingApprovalBadge extends StatelessWidget {
+  const _PendingApprovalBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.pending_outlined,
+              size: 12, color: AppColors.warning),
+          const SizedBox(width: 4),
+          Text(
+            'Pending Approval',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppColors.warning,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
       ),
     );
   }

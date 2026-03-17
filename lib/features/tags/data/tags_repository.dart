@@ -44,6 +44,29 @@ class TagsRepository {
         .isFilter('deleted_at', null);
   }
 
+  Future<List<Tag>> searchTags(String workspaceId, String query) async {
+    final rows = await supabase
+        .from('tags')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .ilike('name', '%$query%')
+        .isFilter('deleted_at', null)
+        .order('name')
+        .limit(10);
+    return rows.map((row) => Tag.fromJson(row)).toList();
+  }
+
+  Future<List<Tag>> getRecentTags(String workspaceId) async {
+    final rows = await supabase
+        .from('tags')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .isFilter('deleted_at', null)
+        .order('created_at', ascending: false)
+        .limit(5);
+    return rows.map((row) => Tag.fromJson(row)).toList();
+  }
+
   Future<Tag> createTag(String workspaceId, String name) async {
     final row = await supabase
         .from('tags')

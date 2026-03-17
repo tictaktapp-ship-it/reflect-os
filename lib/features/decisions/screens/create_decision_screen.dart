@@ -1,18 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
-import 'package:reflect_os/core/providers/workspace_ai_provider.dart';
 import 'package:reflect_os/core/providers/draft_persistence_provider.dart';
+import 'package:reflect_os/core/providers/workspace_ai_provider.dart';
+import 'package:reflect_os/core/routing/routes.dart';
+import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/create_decision_input.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:reflect_os/features/settings/providers/vertical_provider.dart';
+import 'package:reflect_os/features/tags/data/models/tag.dart';
 import 'package:reflect_os/features/tags/providers/tags_provider.dart';
 import 'package:reflect_os/features/templates/data/models/decision_template.dart';
-import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/templates/screens/templates_screen.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
 
@@ -39,20 +43,35 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
 
+  // ── Category / stakes / visibility ───────────────────────────────────────
   String? _categoryId;
   String? _stakes;
-  bool _requiresApproval = false;
-  bool _useConfidence = false;
-  int _confidence = 5;
-  DateTime? _deadline;
   String _visibility = 'workspace';
+
+  // ── Approval / continuous ─────────────────────────────────────────────────
+  bool _requiresApproval = false;
   bool _isContinuous = false;
+
+  // ── Initial confidence (FIX 2: always visible, no toggle) ────────────────
+  int _confidence = 5;
+
+  // ── Deadline (FIX 3: + notification fields) ───────────────────────────────
+  DateTime? _deadline;
+  bool _deadlineNotificationEnabled = false;
+  int? _deadlineNotificationOffsetDays; // null = on the day
+
+  // ── Tags (FIX 1: custom autocomplete) ────────────────────────────────────
+  final _tagInputController = TextEditingController();
+  final _tagInputFocus = FocusNode();
+  List<Tag> _selectedTags = [];
+  List<Tag> _tagSuggestions = [];
+  bool _tagDropdownVisible = false;
+  Timer? _tagDebounce;
+
+  // ── Template / meeting banner ─────────────────────────────────────────────
   bool _isSubmitting = false;
   DecisionTemplate? _appliedTemplate;
   String? _projectedOutcome;
-  final Set<String> _selectedSuggestedTags = {};
-
-  // Meeting capture banner state
   bool _showMeetingBanner = false;
   String? _meetingCategoryName;
 
@@ -74,7 +93,109 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
       _meetingCategoryName = mc['category'] as String?;
       _showMeetingBanner = true;
     }
+    _tagInputFocus.addListener(_onTagFocusChange);
   }
+
+  void _onTagFocusChange() {
+    if (_tagInputFocus.hasFocus) {
+      setState(() => _tagDropdownVisible = true);
+      if (_tagInputController.text.isEmpty) _loadRecentTags();
+    } else {
+      // Delay hiding so taps on suggestions register first.
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (mounted && !_tagInputFocus.hasFocus) {
+          setState(() => _tagDropdownVisible = false);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _tagInputController.dispose();
+    _tagInputFocus.removeListener(_onTagFocusChange);
+    _tagInputFocus.dispose();
+    _tagDebounce?.cancel();
+    super.dispose();
+  }
+
+  // ── Tag helpers ───────────────────────────────────────────────────────────
+
+  Future<void> _loadRecentTags() async {
+    final workspaceId = ref.read(currentWorkspaceProvider).valueOrNull;
+    if (workspaceId == null) return;
+    try {
+      final tags = await ref
+          .read(tagsRepositoryProvider)
+          .getRecentTags(workspaceId);
+      if (mounted) setState(() => _tagSuggestions = tags);
+    } catch (_) {}
+  }
+
+  void _onTagInputChanged(String query) {
+    _tagDebounce?.cancel();
+    if (query.trim().isEmpty) {
+      _loadRecentTags();
+      return;
+    }
+    _tagDebounce = Timer(const Duration(milliseconds: 250), () async {
+      final workspaceId = ref.read(currentWorkspaceProvider).valueOrNull;
+      if (workspaceId == null || !mounted) return;
+      try {
+        final tags = await ref
+            .read(tagsRepositoryProvider)
+            .searchTags(workspaceId, query.trim());
+        if (mounted) setState(() => _tagSuggestions = tags);
+      } catch (_) {}
+    });
+  }
+
+  void _addTag(Tag tag) {
+    if (!_selectedTags.any((t) => t.id == tag.id)) {
+      setState(() => _selectedTags.add(tag));
+    }
+    _tagInputController.clear();
+    setState(() {
+      _tagSuggestions = [];
+      _tagDropdownVisible = false;
+    });
+    _tagInputFocus.requestFocus();
+  }
+
+  Future<void> _createAndAddTag(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    final workspaceId = ref.read(currentWorkspaceProvider).valueOrNull;
+    if (workspaceId == null) return;
+    try {
+      final tag = await ref
+          .read(tagsRepositoryProvider)
+          .createTag(workspaceId, trimmed);
+      if (mounted) {
+        _addTag(tag);
+        ref.invalidate(workspaceTagsProvider);
+      }
+    } catch (e) {
+      _showError('Failed to create tag: $e');
+    }
+  }
+
+  void _onTagSubmitted(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return;
+    final existing = _tagSuggestions
+        .where((t) => t.name.toLowerCase() == trimmed.toLowerCase())
+        .firstOrNull;
+    if (existing != null) {
+      _addTag(existing);
+    } else {
+      _createAndAddTag(trimmed);
+    }
+  }
+
+  // ── Template ──────────────────────────────────────────────────────────────
 
   void _applyTemplate(DecisionTemplate template) {
     setState(() {
@@ -96,6 +217,8 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
     final template = await showTemplatePicker(context, ref);
     if (template != null) _applyTemplate(template);
   }
+
+  // ── Meeting import ────────────────────────────────────────────────────────
 
   void _onImportFromMeetingNotes() {
     showDialog<void>(
@@ -201,20 +324,33 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
   }
 
   Future<void> _openToolkitForProjectedOutcome() async {
-    debugPrint('OPENING TOOLKIT PICKER');
     final result = await context.push<String>(Routes.toolkitPicker);
-    debugPrint('TOOLKIT PICKER RESULT: "$result"');
     if (result != null && result.isNotEmpty && mounted) {
       setState(() => _projectedOutcome = result);
     }
   }
 
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    super.dispose();
+  // ── Deadline ──────────────────────────────────────────────────────────────
+
+  Future<void> _pickDeadline() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _deadline ?? DateTime.now().add(const Duration(days: 7)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+    );
+    if (picked != null) setState(() => _deadline = picked);
   }
+
+  void _clearDeadline() {
+    setState(() {
+      _deadline = null;
+      _deadlineNotificationEnabled = false;
+      _deadlineNotificationOffsetDays = null;
+    });
+  }
+
+  // ── Submit ────────────────────────────────────────────────────────────────
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -233,32 +369,61 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
         title: _titleController.text.trim(),
         categoryId: _categoryId,
         stakes: _stakes,
-        initialConfidence: _useConfidence ? _confidence : null,
+        initialConfidence: _confidence,
         descriptionEncrypted: description.isEmpty ? null : description,
-        decisionDeadline: _deadline,
+        decisionDeadline: _isContinuous ? null : _deadline,
         isContinuous: _isContinuous,
         visibility: _visibility,
         requiresApproval: _requiresApproval,
         projectedOutcome: _projectedOutcome,
+        deadlineNotificationEnabled:
+            _isContinuous ? false : _deadlineNotificationEnabled,
+        deadlineNotificationOffsetDays:
+            _isContinuous ? null : _deadlineNotificationOffsetDays,
       );
 
       final id = await ref
           .read(decisionsRepositoryProvider)
           .createDecision(input);
 
-      // Apply suggested tags selected by the user.
-      if (_selectedSuggestedTags.isNotEmpty) {
-        final existingTags =
-            ref.read(workspaceTagsProvider).valueOrNull ?? [];
+      // Save selected tags.
+      if (_selectedTags.isNotEmpty) {
         final tagsRepo = ref.read(tagsRepositoryProvider);
-        for (final tagName in _selectedSuggestedTags) {
-          var tag = existingTags
-              .where((t) =>
-                  t.name.toLowerCase() == tagName.toLowerCase())
-              .firstOrNull;
-          tag ??= await tagsRepo.createTag(workspaceId, tagName);
+        for (final tag in _selectedTags) {
           await tagsRepo.addTagToDecision(id, tag.id);
         }
+      }
+
+      // Upsert deadline notification queue entry if enabled.
+      if (!_isContinuous &&
+          _deadline != null &&
+          _deadlineNotificationEnabled) {
+        final offsetDays = _deadlineNotificationOffsetDays;
+        final scheduledDate = offsetDays != null
+            ? _deadline!.subtract(Duration(days: offsetDays))
+            : _deadline!;
+        final scheduledFor = DateTime.utc(
+          scheduledDate.year,
+          scheduledDate.month,
+          scheduledDate.day,
+          9,
+          0,
+          0,
+        );
+        final userId = supabase.auth.currentUser!.id;
+        await supabase.from('notification_queue').upsert(
+          {
+            'workspace_id': workspaceId,
+            'user_id': userId,
+            'type': 'deadline_reminder',
+            'related_entity_type': 'decision',
+            'related_entity_id': id,
+            'scheduled_for': scheduledFor.toIso8601String(),
+            'status': 'Pending',
+            'dedupe_key': 'deadline_reminder_$id',
+          },
+          onConflict: 'dedupe_key',
+        );
       }
 
       // Clean up any locally persisted draft for this id.
@@ -286,22 +451,13 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
     );
   }
 
-  Future<void> _pickDeadline() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _deadline ?? DateTime.now().add(const Duration(days: 7)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
-    );
-    if (picked != null) setState(() => _deadline = picked);
-  }
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesProvider);
     final verticalAsync = ref.watch(currentVerticalProvider);
     final vertical = verticalAsync.valueOrNull;
-    final suggestedTagNames = vertical?.suggestedTags ?? [];
     final suggestedCategoryNames = vertical?.suggestedCategories ?? [];
     final aiEnabled =
         ref.watch(workspaceAiEnabledProvider).valueOrNull ?? true;
@@ -309,7 +465,9 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
     // Resolve meeting-extracted category name → ID once categories load.
     if (_meetingCategoryName != null && _categoryId == null) {
       ref.listen(categoriesProvider, (_, next) {
-        if (next.hasValue && _meetingCategoryName != null && _categoryId == null) {
+        if (next.hasValue &&
+            _meetingCategoryName != null &&
+            _categoryId == null) {
           final match = next.value
               ?.where((c) =>
                   c.name.toLowerCase() == _meetingCategoryName!.toLowerCase())
@@ -324,11 +482,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
         title: SizedBox(
           width: 28,
           height: 28,
-          child: SvgPicture.asset(
-            Theme.of(context).brightness == Brightness.dark
-                ? 'assets/branding/icon.svg'
-                : 'assets/branding/icon.svg',
-          ),
+          child: SvgPicture.asset('assets/branding/icon.svg'),
         ),
         actions: [
           Padding(
@@ -367,15 +521,10 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                         color: Colors.teal.withValues(alpha: 0.3)),
                   ),
                   child: ListTile(
-                    leading: const Icon(
-                      Icons.auto_awesome_outlined,
-                      color: Colors.teal,
-                      size: 18,
-                    ),
-                    title: const Text(
-                      'Pre-filled from meeting notes',
-                      style: TextStyle(fontSize: 13),
-                    ),
+                    leading: const Icon(Icons.auto_awesome_outlined,
+                        color: Colors.teal, size: 18),
+                    title: const Text('Pre-filled from meeting notes',
+                        style: TextStyle(fontSize: 13)),
                     trailing: IconButton(
                       icon: const Icon(Icons.close, size: 16),
                       onPressed: () =>
@@ -388,7 +537,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                 ),
               ),
 
-            // ── Template ───────────────────────────────────────────
+            // ── Template / import ───────────────────────────────────
             _SectionCard(
               children: [
                 Wrap(
@@ -405,7 +554,8 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                       Chip(
                         avatar:
                             const Icon(Icons.article_outlined, size: 16),
-                        label: Text('Template: ${_appliedTemplate!.name}'),
+                        label:
+                            Text('Template: ${_appliedTemplate!.name}'),
                         deleteIcon: const Icon(Icons.close, size: 16),
                         onDeleted: _clearTemplate,
                       ),
@@ -431,7 +581,8 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                         child: Text(
                           'AI disabled for this workspace',
                           style: TextStyle(
-                              fontSize: 12, color: AppColors.textMuted),
+                              fontSize: 12,
+                              color: AppColors.textMuted),
                         ),
                       ),
                   ],
@@ -439,7 +590,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
               ],
             ),
 
-            // ── Title ──────────────────────────────────────────────
+            // ── Title ───────────────────────────────────────────────
             _SectionCard(
               children: [
                 TextFormField(
@@ -458,7 +609,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
               ],
             ),
 
-            // ── Category & Stakes ───────────────────────────────────
+            // ── Category & Stakes ────────────────────────────────────
             _SectionCard(
               children: [
                 categoriesAsync.when(
@@ -468,8 +619,6 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                   ),
                   error: (e, st) => const SizedBox.shrink(),
                   data: (categories) {
-                    // Sort: vertical's suggested categories first, then rest
-                    // alphabetically.
                     final sorted = [...categories]..sort((a, b) {
                         final aIdx = suggestedCategoryNames.indexWhere(
                             (s) => s.toLowerCase() == a.name.toLowerCase());
@@ -486,9 +635,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                       hint: const Text('Select a category'),
                       items: [
                         const DropdownMenuItem(
-                          value: null,
-                          child: Text('None'),
-                        ),
+                            value: null, child: Text('None')),
                         ...sorted.map(
                           (c) => DropdownMenuItem(
                             value: c.id,
@@ -505,124 +652,215 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                 DropdownButtonFormField<String>(
                   key: ValueKey(_stakes),
                   initialValue: _stakes,
-                  decoration: const InputDecoration(labelText: 'Stakes'),
+                  decoration:
+                      const InputDecoration(labelText: 'Stakes'),
                   hint: const Text('Select stakes'),
                   items: const [
                     DropdownMenuItem(value: null, child: Text('None')),
                     DropdownMenuItem(value: 'Low', child: Text('Low')),
-                    DropdownMenuItem(value: 'Medium', child: Text('Medium')),
+                    DropdownMenuItem(
+                        value: 'Medium', child: Text('Medium')),
                     DropdownMenuItem(value: 'High', child: Text('High')),
-                    DropdownMenuItem(value: 'Critical', child: Text('Critical')),
+                    DropdownMenuItem(
+                        value: 'Critical', child: Text('Critical')),
                   ],
                   onChanged: (value) => setState(() => _stakes = value),
                 ),
               ],
             ),
 
-            // ── Suggested Tags (from vertical) ──────────────────────
-            if (suggestedTagNames.isNotEmpty)
-              _SectionCard(
-                children: [
-                  Text(
-                    'Suggested Tags',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: suggestedTagNames.map((tagName) {
-                      final selected =
-                          _selectedSuggestedTags.contains(tagName);
-                      return FilterChip(
-                        label: Text(tagName),
-                        selected: selected,
-                        selectedColor: Colors.teal.withValues(alpha: 0.15),
-                        checkmarkColor: Colors.teal,
-                        labelStyle: TextStyle(
-                          color:
-                              selected ? Colors.teal : AppColors.textSecondary,
-                        ),
-                        side: BorderSide(
-                          color: selected
-                              ? Colors.teal
-                              : Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.2),
-                        ),
-                        onSelected: (on) => setState(() {
-                          if (on) {
-                            _selectedSuggestedTags.add(tagName);
-                          } else {
-                            _selectedSuggestedTags.remove(tagName);
-                          }
-                        }),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-
-            // ── Initial Confidence ──────────────────────────────────
+            // ── Tags (FIX 1: custom autocomplete) ───────────────────
             _SectionCard(
               children: [
+                Text(
+                  'Tags',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+                const SizedBox(height: 8),
+
+                // Selected tag chips
+                if (_selectedTags.isNotEmpty) ...[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: _selectedTags
+                        .map((tag) => Chip(
+                              label: Text(tag.name),
+                              deleteIcon:
+                                  const Icon(Icons.close, size: 16),
+                              visualDensity: VisualDensity.compact,
+                              onDeleted: () => setState(() =>
+                                  _selectedTags.removeWhere(
+                                      (t) => t.id == tag.id)),
+                            ))
+                        .toList(),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                // Tag text input
+                TextField(
+                  controller: _tagInputController,
+                  focusNode: _tagInputFocus,
+                  decoration: InputDecoration(
+                    hintText: 'Add a tag…',
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                    suffixIcon: _tagInputController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close, size: 16),
+                            onPressed: () {
+                              _tagInputController.clear();
+                              setState(() => _tagSuggestions = []);
+                              _loadRecentTags();
+                            },
+                          )
+                        : null,
+                  ),
+                  onChanged: _onTagInputChanged,
+                  onSubmitted: _onTagSubmitted,
+                ),
+
+                // Suggestions dropdown
+                if (_tagDropdownVisible &&
+                    (_tagSuggestions.isNotEmpty ||
+                        _tagInputController.text.isNotEmpty))
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black
+                              .withValues(alpha: 0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Matching existing tags (excluding already selected)
+                        ..._tagSuggestions
+                            .where((t) => !_selectedTags
+                                .any((s) => s.id == t.id))
+                            .map(
+                              (tag) => InkWell(
+                                onTap: () => _addTag(tag),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 10),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                          Icons.label_outline,
+                                          size: 16,
+                                          color: Color(0xFF94A3B8)),
+                                      const SizedBox(width: 8),
+                                      Text(tag.name,
+                                          style: const TextStyle(
+                                              fontSize: 13)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                        // "Create" option if no exact match
+                        if (_tagInputController.text.trim().isNotEmpty &&
+                            !_tagSuggestions.any((t) =>
+                                t.name.toLowerCase() ==
+                                _tagInputController.text
+                                    .trim()
+                                    .toLowerCase()))
+                          InkWell(
+                            onTap: () => _createAndAddTag(
+                                _tagInputController.text),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.add,
+                                      size: 16,
+                                      color: Color(0xFF19CBD6)),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Create "${_tagInputController.text.trim()}"',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF19CBD6),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+
+            // ── Initial Confidence (FIX 2: always visible, no toggle) ──
+            _SectionCard(
+              children: [
+                Text(
+                  'Initial Confidence',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                      ),
+                ),
+                const SizedBox(height: 4),
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        'Initial Confidence',
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                            ),
+                      child: Slider(
+                        value: _confidence.toDouble(),
+                        min: 1,
+                        max: 10,
+                        divisions: 9,
+                        label: '$_confidence / 10',
+                        onChanged: (value) =>
+                            setState(() => _confidence = value.round()),
                       ),
                     ),
-                    Switch(
-                      value: _useConfidence,
-                      onChanged: (value) =>
-                          setState(() => _useConfidence = value),
+                    SizedBox(
+                      width: 56,
+                      child: Text(
+                        '$_confidence / 10',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        textAlign: TextAlign.end,
+                      ),
                     ),
                   ],
                 ),
-                if (_useConfidence) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Slider(
-                          value: _confidence.toDouble(),
-                          min: 1,
-                          max: 10,
-                          divisions: 9,
-                          label: '$_confidence / 10',
-                          onChanged: (value) =>
-                              setState(() => _confidence = value.round()),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 56,
-                        child: Text(
-                          '$_confidence / 10',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                          textAlign: TextAlign.end,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+
                 const SizedBox(height: 8),
                 // ── Projected outcome attachment ──────────────────
                 Row(
                   children: [
                     Icon(Icons.lightbulb_outline,
                         size: 16,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant),
                     const SizedBox(width: 8),
                     Text(
                       'Projected outcome',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurfaceVariant,
@@ -648,7 +886,8 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                                 ),
                                 actions: [
                                   TextButton(
-                                    onPressed: () => Navigator.pop(context),
+                                    onPressed: () =>
+                                        Navigator.pop(context),
                                     child: const Text('Close'),
                                   ),
                                   TextButton(
@@ -658,11 +897,13 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                                         Routes.toolkitPicker,
                                         extra: {
                                           'pickerMode': false,
-                                          'readOnlyResult': _projectedOutcome,
+                                          'readOnlyResult':
+                                              _projectedOutcome,
                                         },
                                       );
                                     },
-                                    child: const Text('View full details'),
+                                    child: const Text(
+                                        'View full details'),
                                   ),
                                   TextButton(
                                     onPressed: () {
@@ -683,8 +924,11 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                                 .textTheme
                                 .bodySmall
                                 ?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  decoration: TextDecoration.underline,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary,
+                                  decoration:
+                                      TextDecoration.underline,
                                 ),
                           ),
                         ),
@@ -695,7 +939,8 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 6),
                         minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        tapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
                       ),
                       icon: Icon(
                           _projectedOutcome == null
@@ -712,14 +957,15 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
               ],
             ),
 
-            // ── Description ─────────────────────────────────────────
+            // ── Description ──────────────────────────────────────────
             _SectionCard(
               children: [
                 TextFormField(
                   controller: _descriptionController,
                   decoration: const InputDecoration(
                     labelText: 'Description',
-                    hintText: 'Context, reasoning, key considerations...',
+                    hintText:
+                        'Context, reasoning, key considerations...',
                     alignLabelWithHint: true,
                   ),
                   textCapitalization: TextCapitalization.sentences,
@@ -729,49 +975,133 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
               ],
             ),
 
-            // ── Deadline ────────────────────────────────────────────
+            // ── Deadline (FIX 3: + notification opt-in) ─────────────
             _SectionCard(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Decision Deadline',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelMedium
-                                ?.copyWith(color: AppColors.textSecondary),
+                Opacity(
+                  // Grey out when continuous — continuous decisions have
+                  // no fixed end date.
+                  opacity: _isContinuous ? 0.4 : 1.0,
+                  child: IgnorePointer(
+                    ignoring: _isContinuous,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Decision Deadline',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(
+                                            color: AppColors
+                                                .textSecondary),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _deadline != null
+                                        ? DateFormat('d MMM yyyy')
+                                            .format(_deadline!)
+                                        : 'No deadline set',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_deadline != null)
+                              IconButton(
+                                icon: const Icon(Icons.clear),
+                                tooltip: 'Clear deadline',
+                                onPressed: _clearDeadline,
+                              ),
+                            IconButton(
+                              icon: const Icon(
+                                  Icons.calendar_today_outlined),
+                              tooltip: 'Pick date',
+                              onPressed: _pickDeadline,
+                            ),
+                          ],
+                        ),
+
+                        // Notification opt-in (FIX 3)
+                        if (_deadline != null) ...[
+                          const Divider(height: 20),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            secondary: const Icon(
+                                Icons.notifications_outlined,
+                                size: 20),
+                            title: const Text(
+                                'Notify me about this deadline'),
+                            value: _deadlineNotificationEnabled,
+                            onChanged: (v) => setState(() {
+                              _deadlineNotificationEnabled = v;
+                              if (!v)
+                                _deadlineNotificationOffsetDays =
+                                    null;
+                            }),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _deadline != null
-                                ? DateFormat('d MMM yyyy').format(_deadline!)
-                                : 'No deadline set',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
+                          if (_deadlineNotificationEnabled) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Text('Remind me:',
+                                    style: TextStyle(fontSize: 13)),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: DropdownButtonFormField<int?>(
+                                    value:
+                                        _deadlineNotificationOffsetDays,
+                                    decoration:
+                                        const InputDecoration(
+                                            isDense: true),
+                                    items: const [
+                                      DropdownMenuItem(
+                                          value: null,
+                                          child: Text(
+                                              'On the deadline day')),
+                                      DropdownMenuItem(
+                                          value: 1,
+                                          child:
+                                              Text('1 day before')),
+                                      DropdownMenuItem(
+                                          value: 3,
+                                          child:
+                                              Text('3 days before')),
+                                      DropdownMenuItem(
+                                          value: 7,
+                                          child:
+                                              Text('7 days before')),
+                                      DropdownMenuItem(
+                                          value: 14,
+                                          child: Text(
+                                              '14 days before')),
+                                    ],
+                                    onChanged: (v) => setState(() =>
+                                        _deadlineNotificationOffsetDays =
+                                            v),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
-                      ),
+                      ],
                     ),
-                    if (_deadline != null)
-                      IconButton(
-                        icon: const Icon(Icons.clear),
-                        tooltip: 'Clear deadline',
-                        onPressed: () => setState(() => _deadline = null),
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.calendar_today_outlined),
-                      tooltip: 'Pick date',
-                      onPressed: _pickDeadline,
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
 
-            // ── Visibility & Continuous ─────────────────────────────
+            // ── Visibility, Continuous & Requires Approval ───────────
             _SectionCard(
               children: [
                 Text(
@@ -783,7 +1113,8 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                 const SizedBox(height: 8),
                 SegmentedButton<String>(
                   segments: const [
-                    ButtonSegment(value: 'workspace', label: Text('Workspace')),
+                    ButtonSegment(
+                        value: 'workspace', label: Text('Workspace')),
                     ButtonSegment(
                         value: 'stakeholders_only',
                         label: Text('Stakeholders Only')),
@@ -793,26 +1124,45 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                       setState(() => _visibility = selection.first),
                 ),
                 const SizedBox(height: 16),
+
+                // Continuous (FIX 4: updated helper text)
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Continuous Decision'),
                   subtitle: Text(
-                    'An ongoing process rather than a one-time choice',
+                    'This is a standing decision with no fixed end date',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.4),
                         ),
                   ),
                   value: _isContinuous,
-                  onChanged: (value) =>
-                      setState(() => _isContinuous = value),
+                  onChanged: (value) {
+                    setState(() {
+                      _isContinuous = value;
+                      // Continuous decisions have no deadline.
+                      if (value) {
+                        _deadline = null;
+                        _deadlineNotificationEnabled = false;
+                        _deadlineNotificationOffsetDays = null;
+                      }
+                    });
+                  },
                 ),
+
+                // Requires approval (FIX 4: updated helper text)
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Requires Approval'),
                   subtitle: Text(
-                    'Workspace admin must approve before this decision is published',
+                    'Another team member must approve before activating',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.4),
                         ),
                   ),
                   value: _requiresApproval,

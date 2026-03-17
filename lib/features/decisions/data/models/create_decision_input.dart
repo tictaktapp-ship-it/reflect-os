@@ -12,6 +12,8 @@ class CreateDecisionInput {
     this.visibility = 'workspace',
     this.requiresApproval = false,
     this.projectedOutcome,
+    this.deadlineNotificationEnabled = false,
+    this.deadlineNotificationOffsetDays,
   });
 
   final String workspaceId;
@@ -26,6 +28,8 @@ class CreateDecisionInput {
   final String visibility;
   final bool requiresApproval;
   final String? projectedOutcome;
+  final bool deadlineNotificationEnabled;
+  final int? deadlineNotificationOffsetDays;
 
   Map<String, dynamic> toJson() => {
         'workspace_id': workspaceId,
@@ -42,5 +46,8 @@ class CreateDecisionInput {
         'visibility_mode': visibility,
         'requires_approval': requiresApproval,
         if (projectedOutcome != null) 'projected_outcome_encrypted': projectedOutcome,
+        'deadline_notification_enabled': deadlineNotificationEnabled,
+        if (deadlineNotificationOffsetDays != null)
+          'deadline_notification_offset_days': deadlineNotificationOffsetDays,
       };
 }
