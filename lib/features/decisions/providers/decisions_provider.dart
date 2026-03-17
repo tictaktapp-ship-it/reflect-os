@@ -15,8 +15,7 @@ final decisionsRepositoryProvider = Provider<DecisionsRepository>(
   (ref) => const DecisionsRepository(),
 );
 
-final decisionsProvider =
-    FutureProvider.autoDispose<List<Decision>>((ref) async {
+final decisionsProvider = FutureProvider<List<Decision>>((ref) async {
   final workspaceId = await ref.watch(currentWorkspaceProvider.future);
   if (workspaceId == null) return [];
   return ref
