@@ -1,10 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
-import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
+import 'package:reflect_os/widgets/app_header.dart';
 
 class MeetingCaptureScreen extends ConsumerStatefulWidget {
   const MeetingCaptureScreen({super.key});
@@ -19,7 +22,6 @@ class _MeetingCaptureScreenState
   final _notesController = TextEditingController();
   bool _isExtracting = false;
   String? _errorMessage;
-  bool _isNetworkError = false;
 
   @override
   void dispose() {
@@ -40,16 +42,33 @@ class _MeetingCaptureScreenState
     setState(() {
       _isExtracting = true;
       _errorMessage = null;
-      _isNetworkError = false;
     });
 
     try {
-      final response = await supabase.functions.invoke(
-        'extract-decision-from-meeting',
-        body: {'meeting_notes': notes},
+      final session = supabase.auth.currentSession;
+      if (session == null) {
+        throw Exception('Not authenticated — please sign in again.');
+      }
+
+      final uri = Uri.parse(
+        '$supabaseProjectUrl/functions/v1/extract-decision-from-meeting',
       );
 
-      final data = response.data as Map<String, dynamic>?;
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer ${session.accessToken}',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'meeting_notes': notes}),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Server error ${response.statusCode}: ${response.body}');
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>?;
       if (data == null || (data['title'] as String?)?.isEmpty == true) {
         throw Exception('No decision could be extracted from these notes.');
       }
@@ -67,17 +86,9 @@ class _MeetingCaptureScreenState
       );
     } catch (e) {
       if (!mounted) return;
-      final msg = e.toString();
-      final isNetwork = msg.contains('Failed to fetch') ||
-          msg.contains('XMLHttpRequest') ||
-          msg.contains('NetworkError');
       setState(() {
         _isExtracting = false;
-        _isNetworkError = isNetwork;
-        _errorMessage = isNetwork
-            ? 'Could not reach the AI service. This may be a network '
-                'restriction.'
-            : 'Failed to extract decision: $msg';
+        _errorMessage = 'Failed to extract decision: $e';
       });
     }
   }
@@ -195,13 +206,11 @@ class _MeetingCaptureScreenState
                         ),
                       ],
                     ),
-                    if (_isNetworkError) ...[
-                      const SizedBox(height: 12),
-                      OutlinedButton(
-                        onPressed: _fillManually,
-                        child: const Text('Fill in manually instead'),
-                      ),
-                    ],
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: _fillManually,
+                      child: const Text('Fill in manually instead'),
+                    ),
                   ],
                 ),
               ),
