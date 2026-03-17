@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
+import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 
 class MeetingCaptureScreen extends ConsumerStatefulWidget {
@@ -92,19 +92,9 @@ class _MeetingCaptureScreenState
     final hasEnoughWords = wordCount >= 100;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            SvgPicture.asset(
-              Theme.of(context).brightness == Brightness.dark
-                  ? 'assets/branding/icon.svg'
-                  : 'assets/branding/icon.svg',
-              height: 160,
-            ),
-            const SizedBox(width: 8),
-            const Text('Capture from Meeting'),
-          ],
-        ),
+      appBar: AppHeader(
+        title: 'Capture from Meeting',
+        automaticallyImplyLeading: true,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
