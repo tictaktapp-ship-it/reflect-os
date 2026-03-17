@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,7 @@ import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
+import 'package:reflect_os/features/decisions/data/models/category.dart';
 import 'package:reflect_os/features/decisions/data/models/create_decision_input.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:reflect_os/widgets/app_header.dart';
@@ -54,6 +56,9 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
   bool _isExtracting = false;
   String? _errorMessage;
 
+  // ── Categories (loaded on init for category-name → UUID mapping) ─────────
+  List<Category> _workspaceCategories = [];
+
   // ── Review step ──────────────────────────────────────────────────────────
   bool _inReviewMode = false;
   List<Map<String, dynamic>> _extractedDecisions = [];
@@ -70,6 +75,8 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() => setState(() {}));
+    // Load categories immediately so they are ready before any extraction.
+    _loadCategories();
   }
 
   @override
@@ -80,6 +87,42 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
     _transcriptController.dispose();
     _transcriptPasteController.dispose();
     super.dispose();
+  }
+
+  // ── Category loading ──────────────────────────────────────────────────────
+
+  Future<void> _loadCategories() async {
+    try {
+      final workspaceId = await ref.read(currentWorkspaceProvider.future);
+      if (workspaceId == null) return;
+      final cats = await ref
+          .read(decisionsRepositoryProvider)
+          .getCategories(workspaceId);
+      debugPrint('[MeetingCapture] Loaded ${cats.length} categories: '
+          '${cats.map((c) => '${c.name}(${c.id})').join(', ')}');
+      if (mounted) setState(() => _workspaceCategories = cats);
+    } catch (e) {
+      debugPrint('[MeetingCapture] Failed to load categories: $e');
+    }
+  }
+
+  /// Resolves an AI-returned category name to its workspace UUID.
+  /// Falls back to the first category if no exact match. Returns null if
+  /// the categories list is empty.
+  String? _resolveCategoryId(String? name) {
+    if (name == null || name.isEmpty || _workspaceCategories.isEmpty) {
+      return null;
+    }
+    try {
+      return _workspaceCategories
+          .firstWhere(
+            (c) => c.name.toLowerCase() == name.toLowerCase(),
+            orElse: () => _workspaceCategories.first,
+          )
+          .id;
+    } catch (_) {
+      return null;
+    }
   }
 
   int get _wordCount {
@@ -163,6 +206,11 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
     return session.accessToken;
   }
 
+  // ── Shared category payload ───────────────────────────────────────────────
+
+  List<Map<String, String>> get _categoriesPayload =>
+      _workspaceCategories.map((c) => {'id': c.id, 'name': c.name}).toList();
+
   // ── Extraction helpers ────────────────────────────────────────────────────
 
   /// Calls the extract-decision-from-meeting function (Tab 1).
@@ -174,7 +222,11 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({'meeting_notes': notes, 'mode': 'multiple'}),
+      body: jsonEncode({
+        'meeting_notes': notes,
+        'mode': 'multiple',
+        'categories': _categoriesPayload,
+      }),
     );
     if (response.statusCode != 200) {
       throw Exception('Server error ${response.statusCode}: ${response.body}');
@@ -204,6 +256,7 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
         'content': content,
         'content_type': contentType,
         'mode': 'multiple',
+        'categories': _categoriesPayload,
       }),
     );
     if (response.statusCode != 200) {
@@ -286,8 +339,7 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
     final file = result.files.first;
     final bytes = file.bytes;
     if (bytes == null) return;
-    final content =
-        const Utf8Decoder(allowMalformed: true).convert(bytes);
+    final content = const Utf8Decoder(allowMalformed: true).convert(bytes);
     setState(() {
       _uploadedFileName = file.name;
       _uploadedFileContent = content;
@@ -426,6 +478,13 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
         throw Exception('No workspace found. Please contact support.');
       }
 
+      final currentUserId = supabase.auth.currentUser?.id ?? 'unknown';
+
+      debugPrint('[MeetingCapture] Creating ${selected.length} decision(s).'
+          '\n  workspaceId=$workspaceId'
+          '\n  userId=$currentUserId'
+          '\n  categories available: ${_workspaceCategories.length}');
+
       for (final d in selected) {
         final rawConf = d['confidence'] ?? d['initial_confidence'];
         final initialConfidence = rawConf is int
@@ -434,9 +493,21 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
                 ? rawConf.toInt()
                 : null;
 
+        final catName = d['category'] as String?;
+        final categoryId = _resolveCategoryId(catName);
+
+        debugPrint('[MeetingCapture] Insert payload:'
+            '\n  title=${d['title']}'
+            '\n  state=Draft'
+            '\n  categoryName=$catName  →  categoryId=$categoryId'
+            '\n  stakes=${d['stakes']}'
+            '\n  initialConfidence=$initialConfidence');
+
         final input = CreateDecisionInput(
           workspaceId: workspaceId,
           title: d['title'] as String? ?? '',
+          state: 'Draft',
+          categoryId: categoryId,
           stakes: d['stakes'] as String?,
           initialConfidence: initialConfidence,
           descriptionEncrypted:
@@ -444,7 +515,10 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
                   ? d['description'] as String
                   : null,
         );
-        await ref.read(decisionsRepositoryProvider).createDecision(input);
+
+        final createdId =
+            await ref.read(decisionsRepositoryProvider).createDecision(input);
+        debugPrint('[MeetingCapture] Created decision id=$createdId');
       }
 
       ref.invalidate(decisionsProvider);
@@ -460,7 +534,8 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
           ),
         ),
       );
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('[MeetingCapture] _createSelected error: $e\n$stack');
       if (!mounted) return;
       setState(() => _isCreating = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -514,6 +589,20 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                ),
+
+                // ── DEBUG: tap to print resolution info ─────────────────
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _debugPrintResolution,
+                    icon: const Icon(Icons.bug_report_outlined, size: 16),
+                    label: const Text('Debug info',
+                        style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF94A3B8),
                     ),
                   ),
                 ),
@@ -604,8 +693,9 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
               child: FilledButton(
                 style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF19CBD6)),
-                onPressed:
-                    (selectedCount == 0 || _isCreating) ? null : _createSelected,
+                onPressed: (selectedCount == 0 || _isCreating)
+                    ? null
+                    : _createSelected,
                 child: _isCreating
                     ? const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -633,6 +723,21 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
         ],
       ),
     );
+  }
+
+  void _debugPrintResolution() async {
+    final workspaceId = ref.read(currentWorkspaceProvider).valueOrNull;
+    final userId = supabase.auth.currentUser?.id;
+    debugPrint('[DEBUG] workspaceId=$workspaceId  userId=$userId');
+    debugPrint('[DEBUG] categories (${_workspaceCategories.length}): '
+        '${_workspaceCategories.map((c) => '${c.name}=${c.id}').join(', ')}');
+    for (final d in _extractedDecisions) {
+      final catName = d['category'] as String?;
+      final catId = _resolveCategoryId(catName);
+      debugPrint('[DEBUG] "${d['title']}"  '
+          'category="$catName" → id=$catId  '
+          'stakes=${d['stakes']}');
+    }
   }
 
   // ── Main build ────────────────────────────────────────────────────────────
@@ -799,7 +904,6 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
           ),
         ),
 
-        // Drop zone / file picker
         GestureDetector(
           onTap: _pickFile,
           child: Container(
@@ -925,8 +1029,8 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
                 errorText: _linkError,
-                prefixIcon: const Icon(Icons.link, size: 18,
-                    color: Color(0xFF94A3B8)),
+                prefixIcon: const Icon(Icons.link,
+                    size: 18, color: Color(0xFF94A3B8)),
               ),
               onChanged: (_) => setState(() => _linkError = null),
             ),
@@ -984,7 +1088,6 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
                 ),
                 const SizedBox(height: 12),
 
-                // File pick area
                 GestureDetector(
                   onTap: _pickAudioFile,
                   child: Container(
@@ -1025,15 +1128,14 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
                         if (_audioFileName != null)
                           IconButton(
                             icon: const Icon(Icons.close, size: 18),
-                            onPressed: () => setState(
-                                () => _audioFileName = null),
+                            onPressed: () =>
+                                setState(() => _audioFileName = null),
                           ),
                       ],
                     ),
                   ),
                 ),
 
-                // Transcription not yet supported banner
                 if (_audioFileName != null) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -1059,10 +1161,6 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
                       ],
                     ),
                   ),
-                ],
-
-                // Transcript textarea (shown after file is picked)
-                if (_audioFileName != null) ...[
                   const SizedBox(height: 12),
                   TextField(
                     controller: _transcriptController,
@@ -1084,8 +1182,8 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
                       onPressed: (_isExtracting ||
                               _transcriptController.text.trim().isEmpty)
                           ? null
-                          : () => _extractFromTranscript(
-                              fromUploadCard: true),
+                          : () =>
+                              _extractFromTranscript(fromUploadCard: true),
                       child: _isExtracting
                           ? _loadingRow('Analysing transcript...')
                           : const Text(
@@ -1177,7 +1275,8 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.error_outline, size: 18, color: AppColors.destructive),
+            Icon(Icons.error_outline,
+                size: 18, color: AppColors.destructive),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -1201,7 +1300,8 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
         const SizedBox(
           width: 16,
           height: 16,
-          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+          child: CircularProgressIndicator(
+              strokeWidth: 2, color: Colors.white),
         ),
         const SizedBox(width: 10),
         Text(label),

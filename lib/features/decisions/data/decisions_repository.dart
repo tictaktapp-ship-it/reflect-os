@@ -668,6 +668,7 @@ class DecisionsRepository {
         .from('categories')
         .select('id, name')
         .eq('workspace_id', workspaceId)
+        .isFilter('deleted_at', null)
         .order('name');
     return rows.map((row) => Category.fromJson(row)).toList();
   }
