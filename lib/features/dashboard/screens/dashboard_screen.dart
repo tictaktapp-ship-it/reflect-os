@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:reflect_os/widgets/app_header.dart';
@@ -452,6 +453,131 @@ class _GaugePainter extends CustomPainter {
       old.fraction != fraction || old.hasData != hasData;
 }
 
+// ── Gradient Donut Chart ──────────────────────────────────────────────────────
+
+class GradientDonutSegment {
+  const GradientDonutSegment({
+    required this.value,
+    required this.startColor,
+    required this.endColor,
+    required this.label,
+  });
+
+  final double value;
+  final Color startColor;
+  final Color endColor;
+  final String label;
+}
+
+class GradientDonutChart extends StatelessWidget {
+  const GradientDonutChart({
+    super.key,
+    required this.segments,
+    required this.size,
+    required this.strokeWidth,
+  });
+
+  final List<GradientDonutSegment> segments;
+  final double size;
+  final double strokeWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(
+        painter: _DonutPainter(
+          segments: segments,
+          strokeWidth: strokeWidth,
+        ),
+        size: Size(size, size),
+      ),
+    );
+  }
+}
+
+class _DonutPainter extends CustomPainter {
+  const _DonutPainter({required this.segments, required this.strokeWidth});
+
+  final List<GradientDonutSegment> segments;
+  final double strokeWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = segments.fold<double>(0, (s, seg) => s + seg.value);
+    if (total == 0) return;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - strokeWidth / 2;
+    final innerRadius = radius - strokeWidth / 2;
+    final outerRadius = radius + strokeWidth / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final arcPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+
+    final separatorPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    // Start at top (12 o'clock = -π/2)
+    double currentAngle = -math.pi / 2;
+
+    for (final seg in segments) {
+      if (seg.value <= 0) continue;
+      final sweepAngle = (seg.value / total) * 2 * math.pi;
+
+      // Gradient arc
+      arcPaint.shader = SweepGradient(
+        center: Alignment.center,
+        startAngle: currentAngle,
+        endAngle: currentAngle + sweepAngle,
+        colors: [seg.startColor, seg.endColor],
+        tileMode: TileMode.clamp,
+      ).createShader(rect);
+
+      canvas.drawArc(rect, currentAngle, sweepAngle, false, arcPaint);
+
+      // White separator at start of segment
+      final sc = math.cos(currentAngle);
+      final ss = math.sin(currentAngle);
+      canvas.drawLine(
+        Offset(center.dx + innerRadius * sc, center.dy + innerRadius * ss),
+        Offset(center.dx + outerRadius * sc, center.dy + outerRadius * ss),
+        separatorPaint,
+      );
+
+      // Count label at midpoint of segment
+      final midAngle = currentAngle + sweepAngle / 2;
+      final labelPos = Offset(
+        center.dx + radius * math.cos(midAngle),
+        center.dy + radius * math.sin(midAngle),
+      );
+      final tp = TextPainter(
+        text: TextSpan(
+          text: seg.label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        textDirection: ui.TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, labelPos - Offset(tp.width / 2, tp.height / 2));
+
+      currentAngle += sweepAngle;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DonutPainter old) => true;
+}
+
 // ── Status Bar Chart ─────────────────────────────────────────────────────────
 // Always "All time" data from the decisions list.
 
@@ -653,96 +779,29 @@ class _HealthDonut extends StatelessWidget {
                 width: 200,
                 height: 200,
                 child: hasData
-                    ? PieChart(
-                        PieChartData(
-                          sectionsSpace: 0,
-                          centerSpaceRadius: 55,
-                          sections: [
-                            // on_track — inner (lighter) half
-                            PieChartSectionData(
-                              value: onTrack! / 2.0,
-                              color: const Color(0xFF5EEAD4),
-                              radius: 45,
-                              showTitle: false,
-                              title: '',
-                              borderSide: const BorderSide(
-                                  color: Colors.white, width: 1.5),
-                            ),
-                            // on_track — outer (full) half
-                            PieChartSectionData(
-                              value: onTrack! / 2.0,
-                              color: const Color(0xFF2DD4BF),
-                              radius: 45,
-                              showTitle:
-                                  total > 0 && onTrack! / total >= 0.15,
-                              title: onTrack! > 0 ? '$onTrack' : '',
-                              titleStyle: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                              titlePositionPercentageOffset: 0.55,
-                              borderSide: const BorderSide(
-                                  color: Colors.white, width: 1.5),
-                            ),
-                            // needs_attention — inner (lighter) half
-                            PieChartSectionData(
-                              value: needsAttention! / 2.0,
-                              color: const Color(0xFFFCD34D),
-                              radius: 45,
-                              showTitle: false,
-                              title: '',
-                              borderSide: const BorderSide(
-                                  color: Colors.white, width: 1.5),
-                            ),
-                            // needs_attention — outer (full) half
-                            PieChartSectionData(
-                              value: needsAttention! / 2.0,
-                              color: const Color(0xFFF59E0B),
-                              radius: 45,
-                              showTitle: total > 0 &&
-                                  needsAttention! / total >= 0.15,
-                              title: needsAttention! > 0
-                                  ? '$needsAttention'
-                                  : '',
-                              titleStyle: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                              titlePositionPercentageOffset: 0.55,
-                              borderSide: const BorderSide(
-                                  color: Colors.white, width: 1.5),
-                            ),
-                            // overdue — inner (lighter) half
-                            PieChartSectionData(
-                              value: overdue! / 2.0,
-                              color: const Color(0xFFFCA5A5),
-                              radius: 45,
-                              showTitle: false,
-                              title: '',
-                              borderSide: const BorderSide(
-                                  color: Colors.white, width: 1.5),
-                            ),
-                            // overdue — outer (full) half
-                            PieChartSectionData(
-                              value: overdue! / 2.0,
-                              color: const Color(0xFFF87171),
-                              radius: 45,
-                              showTitle:
-                                  total > 0 && overdue! / total >= 0.15,
-                              title: overdue! > 0 ? '$overdue' : '',
-                              titleStyle: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                              titlePositionPercentageOffset: 0.55,
-                              borderSide: const BorderSide(
-                                  color: Colors.white, width: 1.5),
-                            ),
-                          ],
-                        ),
+                    ? GradientDonutChart(
+                        size: 200,
+                        strokeWidth: 44,
+                        segments: [
+                          GradientDonutSegment(
+                            value: (onTrack ?? 0).toDouble(),
+                            startColor: const Color(0xFF7EEEE4),
+                            endColor: const Color(0xFF2DD4BF),
+                            label: '${onTrack ?? 0}',
+                          ),
+                          GradientDonutSegment(
+                            value: (needsAttention ?? 0).toDouble(),
+                            startColor: const Color(0xFFFCD34D),
+                            endColor: const Color(0xFFF59E0B),
+                            label: '${needsAttention ?? 0}',
+                          ),
+                          GradientDonutSegment(
+                            value: (overdue ?? 0).toDouble(),
+                            startColor: const Color(0xFFFCA5A5),
+                            endColor: const Color(0xFFF87171),
+                            label: '${overdue ?? 0}',
+                          ),
+                        ],
                       )
                     : Center(
                         child: Text(
