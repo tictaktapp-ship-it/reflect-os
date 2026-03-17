@@ -62,7 +62,12 @@ class _MeetingCaptureScreenState
     });
 
     try {
-      final session = supabase.auth.currentSession;
+      // Refresh session if the stored token is missing or expired.
+      var session = supabase.auth.currentSession;
+      if (session == null) {
+        final refreshed = await supabase.auth.refreshSession();
+        session = refreshed.session;
+      }
       if (session == null) {
         throw Exception('Not authenticated — please sign in again.');
       }
@@ -71,16 +76,13 @@ class _MeetingCaptureScreenState
         '$supabaseProjectUrl/functions/v1/extract-decision-from-meeting',
       );
 
-      final body = <String, dynamic>{'meeting_notes': notes};
-      if (widget.mode == 'multiple') body['mode'] = 'multiple';
-
       final response = await http.post(
         uri,
         headers: {
           'Authorization': 'Bearer ${session.accessToken}',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode(body),
+        body: jsonEncode({'meeting_notes': notes, 'mode': 'multiple'}),
       );
 
       if (response.statusCode != 200) {
@@ -88,64 +90,45 @@ class _MeetingCaptureScreenState
             'Server error ${response.statusCode}: ${response.body}');
       }
 
+      // Response always: { "decisions": [...], "count": N }
       final data = jsonDecode(response.body) as Map<String, dynamic>?;
-      if (data == null) {
+      final decisions = (data?['decisions'] as List<dynamic>?)
+          ?.cast<Map<String, dynamic>>();
+      final count = data?['count'] as int? ?? decisions?.length ?? 0;
+
+      if (decisions == null || decisions.isEmpty) {
         throw Exception('No decision could be extracted from these notes.');
       }
 
       if (!mounted) return;
 
-      // ── Multiple-decision mode ──────────────────────────────────────────
-      if (widget.mode == 'multiple') {
-        final decisions = (data['decisions'] as List<dynamic>?)
-            ?.cast<Map<String, dynamic>>();
-
-        if (decisions != null && decisions.length > 1) {
-          setState(() {
-            _isExtracting = false;
-            _extractedDecisions = decisions;
-            _selectedIndices = Set.from(
-              List.generate(decisions.length, (i) => i),
-            );
-            _inReviewMode = true;
-          });
-          return;
-        }
-
-        // Single decision returned in multiple mode — use first entry or root.
-        final single = (decisions?.isNotEmpty == true)
-            ? decisions!.first
-            : data;
-        final result = <String, dynamic>{
-          'title': single['title'] as String? ?? '',
-          'description': single['description'] as String? ?? '',
-          'stakes': single['stakes'] as String?,
-          'category': single['category'] as String?,
-          'fromMeeting': true,
-        };
-        if (widget.source == 'add_decision') {
-          context.pop(result);
-        } else {
-          context.push(Routes.decisionsCreate, extra: result);
-        }
+      // ── Multiple decisions → review step ─────────────────────────────
+      if (count > 1) {
+        setState(() {
+          _isExtracting = false;
+          _extractedDecisions = decisions;
+          _selectedIndices = Set.from(
+            List.generate(decisions.length, (i) => i),
+          );
+          _inReviewMode = true;
+        });
         return;
       }
 
-      // ── Single-decision mode ────────────────────────────────────────────
-      if ((data['title'] as String?)?.isEmpty == true) {
-        throw Exception('No decision could be extracted from these notes.');
+      // ── Single decision ───────────────────────────────────────────────
+      final single = decisions.first;
+      final result = <String, dynamic>{
+        'title': single['title'] as String? ?? '',
+        'description': single['description'] as String? ?? '',
+        'stakes': single['stakes'] as String?,
+        'category': single['category'] as String?,
+        'fromMeeting': true,
+      };
+      if (widget.source == 'add_decision') {
+        context.pop(result);
+      } else {
+        context.push(Routes.decisionsCreate, extra: result);
       }
-
-      context.push(
-        Routes.decisionsCreate,
-        extra: <String, dynamic>{
-          'title': data['title'] as String? ?? '',
-          'description': data['description'] as String? ?? '',
-          'stakes': data['stakes'] as String?,
-          'category': data['category'] as String?,
-          'fromMeeting': true,
-        },
-      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
