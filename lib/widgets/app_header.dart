@@ -215,21 +215,28 @@ class _HeaderSearchBarState extends ConsumerState<_HeaderSearchBar> {
       return;
     }
     _debounce =
-        Timer(const Duration(milliseconds: 400), () => _runSearch(query));
+        Timer(const Duration(milliseconds: 300), () => _runSearch(query));
   }
 
   Future<void> _runSearch(String query) async {
-    final workspaceId = ref.read(currentWorkspaceProvider).valueOrNull;
+    final workspaceId = await ref.read(currentWorkspaceProvider.future);
     if (workspaceId == null || !mounted) return;
 
     setState(() => _loading = true);
     try {
-      // ── Decisions ────────────────────────────────────────────────────────
+      // ── Decisions (full-text prefix search via tsvector) ──────────────────
+      final tsQuery = query
+          .trim()
+          .split(' ')
+          .where((w) => w.isNotEmpty)
+          .map((w) => '$w:*')
+          .join(' & ');
       final decRows = await supabase
-          .from('user_visible_decisions')
+          .from('decisions')
           .select('id, title, state')
           .eq('workspace_id', workspaceId)
-          .ilike('title', '%$query%')
+          .isFilter('deleted_at', null)
+          .textSearch('search_vector', tsQuery)
           .limit(6);
 
       // ── Members (memberships + profile names) ─────────────────────────────
@@ -274,8 +281,8 @@ class _HeaderSearchBarState extends ConsumerState<_HeaderSearchBar> {
       _members = members;
 
       _showOverlay();
-    } catch (_) {
-      // Silently ignore search errors — search is best-effort.
+    } catch (e, st) {
+      debugPrint('[Search] error: $e\n$st');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
