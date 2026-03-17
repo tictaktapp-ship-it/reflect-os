@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/core/providers/workspace_ai_provider.dart';
 import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
@@ -490,6 +491,44 @@ class _WorkspaceManagementScreenState
                                 ),
                               ],
                             ),
+                            const Divider(height: 20),
+                            // ── AI Features toggle ─────────────────────
+                            Builder(builder: (context) {
+                              final aiAsync = ref.watch(
+                                  workspaceAiSettingProvider(w.id));
+                              final aiEnabled =
+                                  aiAsync.valueOrNull ?? true;
+                              return SwitchListTile(
+                                contentPadding: EdgeInsets.zero,
+                                secondary: const Icon(
+                                  Icons.smart_toy_outlined,
+                                  color: Color(0xFF19CBD6),
+                                  size: 20,
+                                ),
+                                title: const Text('AI features'),
+                                subtitle: const Text(
+                                  'Allow AI tools in this workspace '
+                                  '(meeting notes extraction, risk '
+                                  'assessment)',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                value: aiEnabled,
+                                onChanged: aiAsync.isLoading
+                                    ? null
+                                    : (val) async {
+                                        await ref
+                                            .read(
+                                                workspaceRepositoryProvider)
+                                            .setAiFeaturesEnabled(
+                                                w.id, val);
+                                        ref.invalidate(
+                                            workspaceAiSettingProvider(
+                                                w.id));
+                                        ref.invalidate(
+                                            workspaceAiEnabledProvider);
+                                      },
+                              );
+                            }),
                           ],
                         ],
                       ),

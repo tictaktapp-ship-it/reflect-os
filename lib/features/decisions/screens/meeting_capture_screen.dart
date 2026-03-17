@@ -34,7 +34,7 @@ class _MeetingCaptureScreenState
   bool _isExtracting = false;
   String? _errorMessage;
 
-  // Review step state (multiple mode, count > 1)
+  // Review step state (count > 1)
   bool _inReviewMode = false;
   List<Map<String, dynamic>> _extractedDecisions = [];
   Set<int> _selectedIndices = {};
@@ -155,13 +155,24 @@ class _MeetingCaptureScreenState
       }
 
       for (final d in selected) {
+        // Extract confidence — AI may return it as 'confidence' or
+        // 'initial_confidence'; normalise to int 1–10.
+        final rawConf = d['confidence'] ?? d['initial_confidence'];
+        final initialConfidence = rawConf is int
+            ? rawConf
+            : rawConf is num
+                ? rawConf.toInt()
+                : null;
+
         final input = CreateDecisionInput(
           workspaceId: workspaceId,
           title: d['title'] as String? ?? '',
           stakes: d['stakes'] as String?,
-          descriptionEncrypted: (d['description'] as String?)?.isEmpty == false
-              ? d['description'] as String
-              : null,
+          initialConfidence: initialConfidence,
+          descriptionEncrypted:
+              (d['description'] as String?)?.isNotEmpty == true
+                  ? d['description'] as String
+                  : null,
         );
         await ref.read(decisionsRepositoryProvider).createDecision(input);
       }
@@ -173,17 +184,21 @@ class _MeetingCaptureScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${selected.length} decision${selected.length == 1 ? '' : 's'} '
+            '${selected.length} '
+            'decision${selected.length == 1 ? '' : 's'} '
             'created from meeting notes',
           ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _isCreating = false;
-        _errorMessage = 'Failed to create decisions: $e';
-      });
+      setState(() => _isCreating = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to create decisions: $e'),
+          backgroundColor: AppColors.destructive,
+        ),
+      );
     }
   }
 
@@ -191,7 +206,7 @@ class _MeetingCaptureScreenState
     context.push(Routes.decisionsCreate);
   }
 
-  // ── Review step (multiple mode, count > 1) ────────────────────────────────
+  // ── Review step (count > 1) ───────────────────────────────────────────────
 
   Widget _buildReviewStep(BuildContext context) {
     final selectedCount = _selectedIndices.length;
@@ -221,17 +236,14 @@ class _MeetingCaptureScreenState
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.auto_awesome_outlined,
-                          size: 20,
-                          color: Colors.teal,
-                        ),
+                        const Icon(Icons.auto_awesome_outlined,
+                            size: 20, color: Color(0xFF19CBD6)),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             '${_extractedDecisions.length} decisions were '
-                            'extracted from your notes. Select the ones you '
-                            'want to create.',
+                            'extracted from your notes. Select the ones '
+                            'you want to create.',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
@@ -246,18 +258,16 @@ class _MeetingCaptureScreenState
                   final d = entry.value;
                   final selected = _selectedIndices.contains(i);
                   return Card(
-                    color: Theme.of(context).colorScheme.surface,
+                    // FIX 1: white background, precise border colours
+                    color: Colors.white,
                     margin: const EdgeInsets.only(bottom: 8),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
-                      side: BorderSide(
-                        color: selected
-                            ? Colors.teal
-                            : Theme.of(context)
-                                .colorScheme
-                                .outline
-                                .withValues(alpha: 0.3),
-                      ),
+                      side: selected
+                          ? const BorderSide(
+                              color: Color(0xFF19CBD6), width: 1.5)
+                          : const BorderSide(
+                              color: Color(0xFFE2E8F0), width: 1),
                     ),
                     child: CheckboxListTile(
                       value: selected,
@@ -268,7 +278,9 @@ class _MeetingCaptureScreenState
                           _selectedIndices.add(i);
                         }
                       }),
-                      activeColor: Colors.teal,
+                      // FIX 1: teal checkbox
+                      activeColor: const Color(0xFF19CBD6),
+                      checkColor: Colors.white,
                       controlAffinity: ListTileControlAffinity.leading,
                       contentPadding:
                           const EdgeInsets.fromLTRB(8, 8, 16, 8),
@@ -277,6 +289,7 @@ class _MeetingCaptureScreenState
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E293B),
                         ),
                       ),
                       subtitle: Column(
@@ -293,7 +306,8 @@ class _MeetingCaptureScreenState
                                   Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
-                          if ((d['stakes'] as String?)?.isNotEmpty == true ||
+                          if ((d['stakes'] as String?)?.isNotEmpty ==
+                                  true ||
                               (d['category'] as String?)?.isNotEmpty ==
                                   true)
                             Padding(
@@ -301,14 +315,17 @@ class _MeetingCaptureScreenState
                               child: Wrap(
                                 spacing: 6,
                                 children: [
+                                  // FIX 1: category badge — teal
                                   if ((d['category'] as String?)
                                           ?.isNotEmpty ==
                                       true)
-                                    _SmallChip(
+                                    _CategoryBadge(
                                         label: d['category'] as String),
-                                  if ((d['stakes'] as String?)?.isNotEmpty ==
+                                  // FIX 1: stakes badge — level colours
+                                  if ((d['stakes'] as String?)
+                                          ?.isNotEmpty ==
                                       true)
-                                    _SmallChip(
+                                    _StakesBadge(
                                         label: d['stakes'] as String),
                                 ],
                               ),
@@ -318,23 +335,6 @@ class _MeetingCaptureScreenState
                     ),
                   );
                 }),
-
-                // ── Error message ───────────────────────────────────────
-                if (_errorMessage != null)
-                  Card(
-                    color: AppColors.destructive.withValues(alpha: 0.08),
-                    margin: const EdgeInsets.only(top: 8),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(
-                        _errorMessage!,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: AppColors.destructive),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -345,6 +345,9 @@ class _MeetingCaptureScreenState
             child: SizedBox(
               width: double.infinity,
               child: FilledButton(
+                // FIX 1: #19CBD6 background
+                style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF19CBD6)),
                 onPressed: (selectedCount == 0 || _isCreating)
                     ? null
                     : _createSelected,
@@ -367,6 +370,7 @@ class _MeetingCaptureScreenState
                     : Text(
                         'Create $selectedCount '
                         'decision${selectedCount == 1 ? '' : 's'}',
+                        style: const TextStyle(color: Colors.white),
                       ),
               ),
             ),
@@ -402,11 +406,8 @@ class _MeetingCaptureScreenState
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.auto_awesome_outlined,
-                    size: 20,
-                    color: Colors.teal,
-                  ),
+                  const Icon(Icons.auto_awesome_outlined,
+                      size: 20, color: Color(0xFF19CBD6)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -472,11 +473,8 @@ class _MeetingCaptureScreenState
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 18,
-                          color: AppColors.destructive,
-                        ),
+                        Icon(Icons.error_outline,
+                            size: 18, color: AppColors.destructive),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -504,9 +502,10 @@ class _MeetingCaptureScreenState
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: (_isExtracting || _notesController.text.trim().isEmpty)
-                  ? null
-                  : _extract,
+              onPressed:
+                  (_isExtracting || _notesController.text.trim().isEmpty)
+                      ? null
+                      : _extract,
               child: _isExtracting
                   ? const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -545,10 +544,10 @@ class _MeetingCaptureScreenState
   }
 }
 
-// ── Small chip for review step metadata ───────────────────────────────────────
+// ── FIX 1: Category badge ─────────────────────────────────────────────────────
 
-class _SmallChip extends StatelessWidget {
-  const _SmallChip({required this.label});
+class _CategoryBadge extends StatelessWidget {
+  const _CategoryBadge({required this.label});
   final String label;
 
   @override
@@ -556,12 +555,59 @@ class _SmallChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: const Color(0xFFE0F7FA),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+        style: const TextStyle(fontSize: 10, color: Color(0xFF0E7490)),
+      ),
+    );
+  }
+}
+
+// ── FIX 1: Stakes badge (level-specific colours) ──────────────────────────────
+
+class _StakesBadge extends StatelessWidget {
+  const _StakesBadge({required this.label});
+  final String label;
+
+  static ({Color bg, Color fg}) _palette(String label) =>
+      switch (label.toLowerCase()) {
+        'low' => (
+            bg: const Color(0xFFF0FDF4),
+            fg: const Color(0xFF166534)
+          ),
+        'medium' => (
+            bg: const Color(0xFFFEF9C3),
+            fg: const Color(0xFF854D0E)
+          ),
+        'high' => (
+            bg: const Color(0xFFFFF7ED),
+            fg: const Color(0xFF9A3412)
+          ),
+        'critical' => (
+            bg: const Color(0xFFFEF2F2),
+            fg: const Color(0xFF991B1B)
+          ),
+        _ => (
+            bg: const Color(0xFFF1F5F9),
+            fg: const Color(0xFF64748B)
+          ),
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final c = _palette(label);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: c.bg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 10, color: c.fg),
       ),
     );
   }

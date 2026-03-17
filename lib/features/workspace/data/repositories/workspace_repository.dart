@@ -66,4 +66,13 @@ class WorkspaceRepository {
         .update({'deleted_at': DateTime.now().toIso8601String()})
         .eq('id', id);
   }
+
+  /// Upserts the `ai_features_enabled` flag in `workspace_settings`.
+  Future<void> setAiFeaturesEnabled(
+      String workspaceId, bool enabled) async {
+    await supabase.from('workspace_settings').upsert({
+      'workspace_id': workspaceId,
+      'ai_features_enabled': enabled,
+    });
+  }
 }

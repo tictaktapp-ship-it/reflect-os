@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
+import 'package:reflect_os/core/providers/workspace_ai_provider.dart';
 import 'package:reflect_os/core/providers/draft_persistence_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/create_decision_input.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
@@ -302,6 +303,8 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
     final vertical = verticalAsync.valueOrNull;
     final suggestedTagNames = vertical?.suggestedTags ?? [];
     final suggestedCategoryNames = vertical?.suggestedCategories ?? [];
+    final aiEnabled =
+        ref.watch(workspaceAiEnabledProvider).valueOrNull ?? true;
 
     // Resolve meeting-extracted category name → ID once categories load.
     if (_meetingCategoryName != null && _categoryId == null) {
@@ -406,21 +409,31 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                         deleteIcon: const Icon(Icons.close, size: 16),
                         onDeleted: _clearTemplate,
                       ),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.mic_outlined,
-                          color: Color(0xFF19CBD6), size: 18),
-                      label: const Text('Import from meeting notes'),
-                      onPressed: _onImportFromMeetingNotes,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF19CBD6),
-                        side: const BorderSide(
-                            color: Color(0xFF19CBD6), width: 1.5),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
+                    if (aiEnabled)
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.mic_outlined,
+                            color: Color(0xFF19CBD6), size: 18),
+                        label: const Text('Import from meeting notes'),
+                        onPressed: _onImportFromMeetingNotes,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF19CBD6),
+                          side: const BorderSide(
+                              color: Color(0xFF19CBD6), width: 1.5),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          'AI disabled for this workspace',
+                          style: TextStyle(
+                              fontSize: 12, color: AppColors.textMuted),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ],

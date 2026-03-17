@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/core/providers/workspace_ai_provider.dart';
 import 'package:reflect_os/features/risk/data/models/risk_assessment.dart';
 import 'package:reflect_os/features/risk/providers/risk_provider.dart';
 import 'package:reflect_os/widgets/app_header.dart';
+import 'package:reflect_os/widgets/dialog_shell.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -85,6 +87,65 @@ class _RiskAssessmentScreenState
       _pendingAssessment = widget.existingAssessment;
       _step = _Step.review;
     }
+  }
+
+  // ── Step B: AI consent + generate ────────────────────────────────────────
+
+  Future<void> _showAIConsentAndGenerate() async {
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => DialogShell(
+        title: 'AI data notice',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _riskConsentBullet(
+                'Your decision details will be sent to an AI service'),
+            _riskConsentBullet(
+                'Do not include highly confidential or legally sensitive data'),
+            _riskConsentBullet(
+                'By continuing you confirm you are authorised to share this '
+                'content with an external AI service'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel',
+                style: TextStyle(color: Color(0xFF64748B))),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF19CBD6)),
+            child: const Text('I understand, continue'),
+          ),
+        ],
+      ),
+    );
+    if (accepted == true && mounted) {
+      _runAIGeneration();
+    }
+  }
+
+  Widget _riskConsentBullet(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• ',
+              style: TextStyle(
+                  color: Color(0xFF19CBD6), fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Text(text,
+                style: const TextStyle(
+                    fontSize: 13, color: Color(0xFF475569))),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── Step B: AI generate ───────────────────────────────────────────────────
@@ -186,6 +247,9 @@ class _RiskAssessmentScreenState
     final readOnly =
         widget.existingAssessment?.isApproved == true;
 
+    final aiEnabled =
+        ref.watch(workspaceAiEnabledProvider).valueOrNull ?? true;
+
     return Scaffold(
       appBar: AppHeader(
         automaticallyImplyLeading: true,
@@ -196,6 +260,7 @@ class _RiskAssessmentScreenState
           constraints: const BoxConstraints(maxWidth: 680),
           child: switch (_step) {
             _Step.chooseMethod => _ChooseMethodStep(
+                aiEnabled: aiEnabled,
                 onChoose: (isAI) => setState(() {
                   _isAI = isAI;
                   _step = _Step.build;
@@ -205,7 +270,7 @@ class _RiskAssessmentScreenState
                 ? _AIBuildStep(
                     decisionId: widget.decisionId,
                     isLoading: _isLoading,
-                    onGenerate: _runAIGeneration,
+                    onGenerate: _showAIConsentAndGenerate,
                   )
                 : _ManualBuildStep(
                     risks: _manualRisks,
@@ -244,8 +309,12 @@ class _RiskAssessmentScreenState
 // ── Step A: Choose method ─────────────────────────────────────────────────────
 
 class _ChooseMethodStep extends StatelessWidget {
-  const _ChooseMethodStep({required this.onChoose});
+  const _ChooseMethodStep({
+    required this.onChoose,
+    required this.aiEnabled,
+  });
   final void Function(bool isAI) onChoose;
+  final bool aiEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -261,14 +330,16 @@ class _ChooseMethodStep extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _MethodCard(
-                  icon: Icons.auto_awesome,
-                  iconColor: AppColors.accentPrimary,
-                  title: 'Generate with AI',
-                  description:
-                      'Gemini analyses your decision and identifies key risks automatically.',
-                  onTap: () => onChoose(true),
-                ),
+                child: aiEnabled
+                    ? _MethodCard(
+                        icon: Icons.auto_awesome,
+                        iconColor: AppColors.accentPrimary,
+                        title: 'Generate with AI',
+                        description:
+                            'AI analyses your decision and identifies key risks automatically.',
+                        onTap: () => onChoose(true),
+                      )
+                    : _DisabledAICard(),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -283,6 +354,43 @@ class _ChooseMethodStep extends StatelessWidget {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DisabledAICard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF1F5F9),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.smart_toy_outlined,
+                color: Color(0xFFCBD5E1), size: 24),
+          ),
+          const SizedBox(height: 14),
+          const Text('Generate with AI',
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF94A3B8))),
+          const SizedBox(height: 6),
+          const Text('AI disabled for this workspace',
+              style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
         ],
       ),
     );
@@ -375,7 +483,7 @@ class _AIBuildStep extends ConsumerWidget {
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           Text(
-            'Gemini will analyse your decision title, stakes, and description '
+            'AI will analyse your decision title, stakes, and description '
             'to identify key risks using the ISO 31000 framework.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context)
@@ -394,7 +502,7 @@ class _AIBuildStep extends ConsumerWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 SizedBox(width: 12),
-                Text('Analysing decision with Gemini…'),
+                Text('Analysing decision with AI…'),
               ],
             )
           else
