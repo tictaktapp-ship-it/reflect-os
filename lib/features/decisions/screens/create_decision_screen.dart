@@ -96,6 +96,109 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
     if (template != null) _applyTemplate(template);
   }
 
+  void _onImportFromMeetingNotes() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => DialogShell(
+        title: 'AI data notice',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.smart_toy_outlined,
+                    color: Color(0xFF19CBD6), size: 20),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'This tool uses AI to extract decisions from your '
+                    'meeting notes.',
+                    style: TextStyle(fontSize: 14, color: Color(0xFF1E293B)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Before continuing, please confirm:',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF475569)),
+            ),
+            const SizedBox(height: 8),
+            _consentBullet(
+                'Your meeting notes will be sent to an AI service for '
+                'processing'),
+            _consentBullet(
+                'Do not include highly confidential, personally identifiable, '
+                'or legally sensitive information'),
+            _consentBullet(
+                "By continuing, you confirm you are authorised to share this "
+                "content with an external AI service under your organisation's "
+                "data policy"),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel',
+                style: TextStyle(color: Color(0xFF64748B))),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _navigateToCaptureFromMeeting();
+            },
+            style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF19CBD6)),
+            child: const Text('I understand, continue'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _consentBullet(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• ',
+              style: TextStyle(
+                  color: Color(0xFF19CBD6),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Text(text,
+                style: const TextStyle(
+                    fontSize: 13, color: Color(0xFF475569))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _navigateToCaptureFromMeeting() async {
+    final result = await context.push<Map<String, dynamic>>(
+      Routes.decisionsMeetingCapture,
+      extra: <String, dynamic>{'mode': 'multiple', 'source': 'add_decision'},
+    );
+    if (result != null && mounted) {
+      setState(() {
+        _titleController.text = result['title'] as String? ?? '';
+        _descriptionController.text = result['description'] as String? ?? '';
+        final stakes = result['stakes'] as String?;
+        if (stakes != null) _stakes = stakes;
+        _meetingCategoryName = result['category'] as String?;
+        _showMeetingBanner = true;
+      });
+    }
+  }
+
   Future<void> _openToolkitForProjectedOutcome() async {
     debugPrint('OPENING TOOLKIT PICKER');
     final result = await context.push<String>(Routes.toolkitPicker);
@@ -285,19 +388,41 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
             // ── Template ───────────────────────────────────────────
             _SectionCard(
               children: [
-                if (_appliedTemplate == null)
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.article_outlined, size: 18),
-                    label: const Text('Use a template'),
-                    onPressed: _showTemplatePicker,
-                  )
-                else
-                  Chip(
-                    avatar: const Icon(Icons.article_outlined, size: 16),
-                    label: Text('Template: ${_appliedTemplate!.name}'),
-                    deleteIcon: const Icon(Icons.close, size: 16),
-                    onDeleted: _clearTemplate,
-                  ),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    if (_appliedTemplate == null)
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.article_outlined, size: 18),
+                        label: const Text('Use a template'),
+                        onPressed: _showTemplatePicker,
+                      )
+                    else
+                      Chip(
+                        avatar:
+                            const Icon(Icons.article_outlined, size: 16),
+                        label: Text('Template: ${_appliedTemplate!.name}'),
+                        deleteIcon: const Icon(Icons.close, size: 16),
+                        onDeleted: _clearTemplate,
+                      ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.mic_outlined,
+                          color: Color(0xFF19CBD6), size: 18),
+                      label: const Text('Import from meeting notes'),
+                      onPressed: _onImportFromMeetingNotes,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF19CBD6),
+                        side: const BorderSide(
+                            color: Color(0xFF19CBD6), width: 1.5),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
 

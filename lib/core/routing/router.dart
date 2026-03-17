@@ -123,7 +123,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: Routes.decisionsMeetingCapture,
-        builder: (context, state) => const MeetingCaptureScreen(),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return MeetingCaptureScreen(
+            mode: extra?['mode'] as String?,
+            source: extra?['source'] as String?,
+          );
+        },
       ),
       GoRoute(
         path: Routes.decisionsEdit,
