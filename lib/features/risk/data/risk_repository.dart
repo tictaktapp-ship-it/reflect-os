@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/risk/data/models/risk_assessment.dart';
 
@@ -39,28 +36,15 @@ class RiskRepository {
   /// Invokes the assess-risk Edge Function (Gemini). Returns the saved
   /// RiskAssessment (status = 'pending_approval').
   Future<RiskAssessment> generateRiskAssessment(String decisionId) async {
-    final token =
-        Supabase.instance.client.auth.currentSession?.accessToken;
-    if (token == null) {
-      throw Exception('No active session — please sign in again.');
-    }
-    final url = '$supabaseProjectUrl/functions/v1/assess-risk';
-    final response = await http
-        .post(
-          Uri.parse(url),
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode({'decision_id': decisionId}),
-        )
-        .timeout(const Duration(seconds: 45));
-
-    if (response.statusCode >= 400) {
+    final response = await supabase.functions.invoke(
+      'assess-risk',
+      body: {'decision_id': decisionId},
+    );
+    if (response.status >= 400) {
       throw Exception(
-          'assess-risk failed (${response.statusCode}): ${response.body}');
+          'assess-risk failed (${response.status}): ${response.data}');
     }
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = response.data as Map<String, dynamic>;
     return RiskAssessment.fromJson(data);
   }
 
