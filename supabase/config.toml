@@ -1,0 +1,11 @@
+# Supabase project configuration
+# Project ref: omazuyditjbtoupmipcr
+
+[functions.assess-risk]
+verify_jwt = false
+
+[functions.send-weekly-digest]
+verify_jwt = false
+
+[functions.send-activation-emails]
+verify_jwt = false

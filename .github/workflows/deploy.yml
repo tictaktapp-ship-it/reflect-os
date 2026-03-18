@@ -46,3 +46,11 @@ jobs:
 
       - name: Build Flutter web
         run: flutter build web --release
+
+      - name: Deploy Edge Functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          npx supabase@latest functions deploy assess-risk \
+            --no-verify-jwt \
+            --project-ref omazuyditjbtoupmipcr
