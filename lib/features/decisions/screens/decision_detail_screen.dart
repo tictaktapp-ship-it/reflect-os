@@ -25,7 +25,6 @@ import 'package:reflect_os/features/outcomes/providers/outcomes_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/decision_relationship.dart';
 import 'package:reflect_os/features/evidence/data/models/evidence_item.dart';
 import 'package:reflect_os/features/evidence/providers/evidence_provider.dart';
-import 'package:reflect_os/features/risk/data/models/risk_assessment.dart';
 import 'package:reflect_os/features/risk/providers/risk_provider.dart';
 import 'package:reflect_os/features/calendar/providers/calendar_provider.dart';
 import 'package:reflect_os/features/coaching/data/models/coach_note.dart';
@@ -77,16 +76,20 @@ class DecisionDetailScreen extends ConsumerWidget {
             body: const Center(child: Text('Decision not found.')),
           );
         }
-        return _DecisionDetail(decision: decision);
+        final tabParam =
+            GoRouterState.of(context).uri.queryParameters['tab'];
+        final initialTab = (int.tryParse(tabParam ?? '') ?? 0).clamp(0, 5);
+        return _DecisionDetail(decision: decision, initialTab: initialTab);
       },
     );
   }
 }
 
 class _DecisionDetail extends ConsumerStatefulWidget {
-  const _DecisionDetail({required this.decision});
+  const _DecisionDetail({required this.decision, this.initialTab = 0});
 
   final Decision decision;
+  final int initialTab;
 
   @override
   ConsumerState<_DecisionDetail> createState() => _DecisionDetailState();
@@ -95,6 +98,13 @@ class _DecisionDetail extends ConsumerStatefulWidget {
 class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
   bool _isGenerating = false;
   bool _outcomesExpanded = false;
+  int _tab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _tab = widget.initialTab;
+  }
 
   String _formatDate(DateTime dt) =>
       DateFormat('d MMM yyyy').format(dt.toLocal());
@@ -222,45 +232,43 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
     }
   }
 
+  Future<void> _onDeleteTapped(
+      BuildContext context, Decision decision) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => DialogShell(
+        title: 'Delete Decision',
+        child: const Text(
+          'This will permanently remove this decision. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.destructive,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(decisionsRepositoryProvider).deleteDecision(decision.id);
+    ref.invalidate(decisionsProvider);
+    if (context.mounted) context.go(Routes.decisionsList);
+  }
+
   @override
   Widget build(BuildContext context) {
     final decision = widget.decision;
     final outcomesAsync = ref.watch(outcomesProvider(decision.id));
+    final screenWidth = MediaQuery.of(context).size.width;
 
-    Future<void> onDeleteTapped() async {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (_) => DialogShell(
-          title: 'Delete Decision',
-          child: const Text(
-            'This will permanently remove this decision. This cannot be undone.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.destructive,
-              ),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
-      );
-      if (confirmed != true) return;
-      await ref
-          .read(decisionsRepositoryProvider)
-          .deleteDecision(decision.id);
-      ref.invalidate(decisionsProvider);
-      if (context.mounted) context.go(Routes.decisionsList);
-    }
-
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
+    return Scaffold(
       appBar: AppHeader(
         title: decision.title,
         automaticallyImplyLeading: true,
@@ -287,7 +295,7 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
               } else if (value == 'share_links') {
                 context.push('/decisions/${decision.id}/share-links');
               } else if (value == 'delete') {
-                await onDeleteTapped();
+                await _onDeleteTapped(context, decision);
               }
             },
             itemBuilder: (ctx) => [
@@ -338,304 +346,443 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
             ],
           ),
         ],
-        bottom: TabBar(
-          indicatorColor: AppColors.accentPrimary,
-          indicatorWeight: 3,
-          labelColor: AppColors.accentPrimary,
-          unselectedLabelColor: const Color(0xFF64748B),
-          labelStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-          tabs: const [
-            Tab(text: 'Details'),
-            Tab(text: 'Lens'),
-          ],
-        ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () =>
-            context.push('/outcomes/create/${decision.id}'),
+        onPressed: () => context.push('/outcomes/create/${decision.id}'),
         tooltip: 'Add outcome',
         child: const Icon(Icons.add_chart_outlined),
       ),
-      body: TabBarView(
+      body: Column(
         children: [
-          ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // ── Summary card ──────────────────────────────────────────
-          _SummaryCard(decision: decision),
-          const SizedBox(height: 12),
-
-          // ── State transitions ─────────────────────────────────────
-          _StateTransitionBar(decision: decision),
-
-          // ── State & health ────────────────────────────────────────
-          _CollapsibleSection(
-            title: 'State & Health',
-            initiallyExpanded: true,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 6,
+          _FilingCabinetTabBar(
+            selectedIndex: _tab,
+            onTabSelected: (i) => setState(() => _tab = i),
+            narrow: screenWidth < 600,
+            scrollable: screenWidth < 400,
+            tabs: const [
+              _TabDef(label: 'Overview', icon: Icons.info_outline),
+              _TabDef(label: 'Details', icon: Icons.notes),
+              _TabDef(label: 'People', icon: Icons.group_outlined),
+              _TabDef(label: 'Evidence', icon: Icons.attach_file),
+              _TabDef(label: 'Risk', icon: Icons.shield_outlined),
+              _TabDef(label: 'Lens', icon: Icons.analytics_outlined),
+            ],
+          ),
+          Expanded(
+            child: IndexedStack(
+              index: _tab,
               children: [
-                _StateBadge(state: decision.state),
-                if (decision.healthState != null)
-                  _HealthBadge(healthState: decision.healthState!),
-                if (decision.isContinuous)
-                  const _ContinuousBadge(),
-                if (decision.requiresApproval && decision.isDraft)
-                  const _PendingApprovalBadge(),
-                if (decision.sharedToTeamAt != null)
-                  const Chip(
-                    avatar: Icon(Icons.share_outlined, size: 14),
-                    label: Text('Shared to team'),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                  ),
-              ],
-            ),
-          ),
-
-          // ── Approvals (requires_approval decisions only) ──────────
-          if (decision.requiresApproval)
-            _ApprovalsSection(decisionId: decision.id),
-
-          // ── Shared from (forked decisions only) ───────────────────
-          if (decision.sourceDecisionId != null)
-            _CollapsibleSection(
-              title: 'Shared From',
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.call_received_outlined,
-                    size: 16,
-                    color: AppColors.textSecondary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Shared from another workspace'
-                      '${decision.sharedFromPersonalAt != null ? ' on ${_formatDate(decision.sharedFromPersonalAt!)}' : ''}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // ── Overview ──────────────────────────────────────────────
-          _CollapsibleSection(
-            title: 'Overview',
-            initiallyExpanded: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (decision.stakes != null)
-                  _DetailRow(label: 'Stakes', value: decision.stakes!),
-                if (decision.categoryName != null)
-                  _DetailRow(label: 'Category', value: decision.categoryName!),
-                if (decision.initialConfidence != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Initial confidence',
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.6),
-                              ),
-                        ),
-                        const SizedBox(height: 2),
-                        _EffectiveConfidenceBadge(
-                          decisionId: decision.id,
-                          initialConfidence: decision.initialConfidence,
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-
-          // ── Description ───────────────────────────────────────────
-          if (decision.descriptionEncrypted != null)
-            _CollapsibleSection(
-              title: 'Description',
-              child: _DetailRow(
-                label: 'Description',
-                value: decision.descriptionEncrypted!,
-                valueMaxLines: null,
-              ),
-            ),
-
-          // ── Projected Outcome ─────────────────────────────────────
-          _ProjectedOutcomeSection(decisionId: decision.id),
-
-          // ── Dates ─────────────────────────────────────────────────
-          _CollapsibleSection(
-            title: 'Dates',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (decision.decisionDeadline != null)
-                  _DetailRow(
-                    label: 'Deadline',
-                    value: _formatDate(decision.decisionDeadline!),
-                  ),
-                _DetailRow(
-                  label: 'Created',
-                  value: _formatDate(decision.createdAt),
-                ),
-                _DetailRow(
-                  label: 'Updated',
-                  value: _formatDate(decision.updatedAt),
-                ),
-              ],
-            ),
-          ),
-
-          // ── Outcomes ──────────────────────────────────────────────
-          InkWell(
-            onTap: () => setState(() => _outcomesExpanded = !_outcomesExpanded),
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Outcomes',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                    ),
-                  ),
-                  Icon(
-                    _outcomesExpanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (_outcomesExpanded)
-            ...outcomesAsync.when(
-              loading: () => [
-                _SectionCard(
-                  children: const [
-                    Center(child: CircularProgressIndicator()),
-                  ],
-                ),
-              ],
-              error: (e, _) => [
-                _SectionCard(
+                // ── Tab 0: Overview ───────────────────────────────────
+                ListView(
+                  padding: const EdgeInsets.all(16),
                   children: [
-                    Text(
-                      'Failed to load outcomes.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                          ),
+                    _SummaryCard(decision: decision),
+                    const SizedBox(height: 12),
+                    _StateTransitionBar(decision: decision),
+                    _CollapsibleSection(
+                      title: 'State & Health',
+                      initiallyExpanded: true,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          _StateBadge(state: decision.state),
+                          if (decision.healthState != null)
+                            _HealthBadge(healthState: decision.healthState!),
+                          if (decision.isContinuous) const _ContinuousBadge(),
+                          if (decision.requiresApproval && decision.isDraft)
+                            const _PendingApprovalBadge(),
+                          if (decision.sharedToTeamAt != null)
+                            const Chip(
+                              avatar: Icon(Icons.share_outlined, size: 14),
+                              label: Text('Shared to team'),
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                        ],
+                      ),
                     ),
+                    if (decision.sourceDecisionId != null)
+                      _CollapsibleSection(
+                        title: 'Shared From',
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.call_received_outlined,
+                              size: 16,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Shared from another workspace'
+                                '${decision.sharedFromPersonalAt != null ? ' on ${_formatDate(decision.sharedFromPersonalAt!)}' : ''}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                        color: AppColors.textSecondary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    _ProjectedOutcomeSection(decisionId: decision.id),
+                    _CollapsibleSection(
+                      title: 'Dates',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (decision.decisionDeadline != null)
+                            _DetailRow(
+                              label: 'Deadline',
+                              value: _formatDate(decision.decisionDeadline!),
+                            ),
+                          _DetailRow(
+                            label: 'Created',
+                            value: _formatDate(decision.createdAt),
+                          ),
+                          _DetailRow(
+                            label: 'Updated',
+                            value: _formatDate(decision.updatedAt),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 80),
                   ],
                 ),
-              ],
-              data: (outcomes) {
-                if (outcomes.isEmpty) {
-                  return [
-                    _SectionCard(
-                      children: [
-                        Text(
-                          'No outcomes recorded yet.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+
+                // ── Tab 1: Details ────────────────────────────────────
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _CollapsibleSection(
+                      title: 'Overview',
+                      initiallyExpanded: true,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (decision.stakes != null)
+                            _DetailRow(
+                                label: 'Stakes', value: decision.stakes!),
+                          if (decision.categoryName != null)
+                            _DetailRow(
+                                label: 'Category',
+                                value: decision.categoryName!),
+                          if (decision.initialConfidence != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Initial confidence',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelSmall
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
+                                        ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  _EffectiveConfidenceBadge(
+                                    decisionId: decision.id,
+                                    initialConfidence:
+                                        decision.initialConfidence,
+                                  ),
+                                ],
                               ),
-                        ),
-                      ],
+                            ),
+                        ],
+                      ),
                     ),
-                  ];
-                }
-                return outcomes
-                    .map((o) => _OutcomeCard(
-                          outcome: o,
-                          formatDate: _formatDate,
-                        ))
-                    .toList();
-              },
+                    if (decision.descriptionEncrypted != null)
+                      _CollapsibleSection(
+                        title: 'Description',
+                        child: _DetailRow(
+                          label: 'Description',
+                          value: decision.descriptionEncrypted!,
+                          valueMaxLines: null,
+                        ),
+                      ),
+                    _TagsSection(decisionId: decision.id),
+                    _InitiativesSection(decisionId: decision.id),
+                    _RelatedDecisionsSection(decisionId: decision.id),
+                    const SizedBox(height: 80),
+                  ],
+                ),
+
+                // ── Tab 2: People ─────────────────────────────────────
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _StakeholdersSection(decisionId: decision.id),
+                    _CoachNotesSection(decisionId: decision.id),
+                    if (decision.state == 'Active')
+                      _CommentsSection(decisionId: decision.id),
+                    const SizedBox(height: 80),
+                  ],
+                ),
+
+                // ── Tab 3: Evidence ───────────────────────────────────
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    InkWell(
+                      onTap: () => setState(
+                          () => _outcomesExpanded = !_outcomesExpanded),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 6, horizontal: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Outcomes',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelMedium
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.6),
+                                    ),
+                              ),
+                            ),
+                            Icon(
+                              _outcomesExpanded
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
+                              size: 20,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.6),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (_outcomesExpanded)
+                      ...outcomesAsync.when(
+                        loading: () => [
+                          _SectionCard(
+                            children: const [
+                              Center(child: CircularProgressIndicator()),
+                            ],
+                          ),
+                        ],
+                        error: (e, _) => [
+                          _SectionCard(
+                            children: [
+                              Text(
+                                'Failed to load outcomes.',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.4),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        data: (outcomes) {
+                          if (outcomes.isEmpty) {
+                            return [
+                              _SectionCard(
+                                children: [
+                                  Text(
+                                    'No outcomes recorded yet.',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.4),
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ];
+                          }
+                          return outcomes
+                              .map((o) => _OutcomeCard(
+                                    outcome: o,
+                                    formatDate: _formatDate,
+                                  ))
+                              .toList();
+                        },
+                      ),
+                    if (decision.state == 'Active' ||
+                        decision.state == 'Closed')
+                      _CheckpointsSection(decisionId: decision.id),
+                    _EvidenceSection(decisionId: decision.id),
+                    _EngineeringArtifactsSection(decisionId: decision.id),
+                    _ActivitySection(decisionId: decision.id),
+                    _ToolKitSection(decisionId: decision.id),
+                    const SizedBox(height: 80),
+                  ],
+                ),
+
+                // ── Tab 4: Risk ───────────────────────────────────────
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _RiskAssessmentSection(decisionId: decision.id),
+                    if (decision.requiresApproval)
+                      _ApprovalsSection(decisionId: decision.id),
+                    _IcVoteSection(decisionId: decision.id),
+                    _LinkedAssetsSection(decisionId: decision.id),
+                    if (decision.state == 'Closed' ||
+                        decision.state == 'Archived')
+                      _DebriefSection(decisionId: decision.id),
+                    const SizedBox(height: 80),
+                  ],
+                ),
+
+                // ── Tab 5: Lens ───────────────────────────────────────
+                DecisionLensTab(decision: decision),
+              ],
             ),
-
-          // ── Initiatives ───────────────────────────────────────
-          _InitiativesSection(decisionId: decision.id),
-
-          // ── Tags ──────────────────────────────────────────────
-          _TagsSection(decisionId: decision.id),
-
-          // ── Review Checkpoints ────────────────────────────────
-          if (decision.state == 'Active' || decision.state == 'Closed')
-            _CheckpointsSection(decisionId: decision.id),
-
-          // ── Related Decisions ─────────────────────────────────
-          _RelatedDecisionsSection(decisionId: decision.id),
-
-          // ── Risk Assessment ───────────────────────────────────
-          _RiskAssessmentSection(decisionId: decision.id),
-
-          // ── Debrief (Closed / Archived only) ──────────────────
-          if (decision.state == 'Closed' || decision.state == 'Archived')
-            _DebriefSection(decisionId: decision.id),
-
-          // ── Coach Notes ───────────────────────────────────────
-          _CoachNotesSection(decisionId: decision.id),
-
-          // ── Linked Assets ─────────────────────────────────────
-          _LinkedAssetsSection(decisionId: decision.id),
-
-          // ── IC Vote ───────────────────────────────────────────
-          _IcVoteSection(decisionId: decision.id),
-
-          // ── Evidence ──────────────────────────────────────────
-          _EvidenceSection(decisionId: decision.id),
-
-          // ── Engineering Artifacts ─────────────────────────────
-          _EngineeringArtifactsSection(decisionId: decision.id),
-
-          // ── Stakeholders ──────────────────────────────────────
-          _StakeholdersSection(decisionId: decision.id),
-
-          // ── Comments ──────────────────────────────────────────
-          if (decision.state == 'Active')
-            _CommentsSection(decisionId: decision.id),
-
-          // ── Activity ──────────────────────────────────────────
-          _ActivitySection(decisionId: decision.id),
-
-          // ── Tool Kit ──────────────────────────────────────────
-          _ToolKitSection(decisionId: decision.id),
-
-          const SizedBox(height: 80), // clear the FAB
-        ],
           ),
-          DecisionLensTab(decision: decision),
         ],
       ),
+    );
+  }
+}
+
+// ── _TabDef ───────────────────────────────────────────────────────────────────
+
+class _TabDef {
+  const _TabDef({required this.label, required this.icon});
+  final String label;
+  final IconData icon;
+}
+
+// ── FilingCabinetTabBar ───────────────────────────────────────────────────────
+
+class _FilingCabinetTabBar extends StatelessWidget {
+  const _FilingCabinetTabBar({
+    required this.tabs,
+    required this.selectedIndex,
+    required this.onTabSelected,
+    this.narrow = false,
+    this.scrollable = false,
+  });
+
+  final List<_TabDef> tabs;
+  final int selectedIndex;
+  final ValueChanged<int> onTabSelected;
+
+  /// When true, shows icons only (no labels). Triggered at < 600px.
+  final bool narrow;
+
+  /// When true, wraps tabs in horizontal scroll. Triggered at < 400px.
+  final bool scrollable;
+
+  static const _selectedHeight = 52.0;
+  static const _unselectedHeight = 44.0;
+  static const _borderColor = Color(0xFFE5E7EB);
+  static const _selectedTopColor = Color(0xFF19CBD6);
+  static const _unselectedBg = Color(0xFFF3F4F6);
+
+  @override
+  Widget build(BuildContext context) {
+    final tabWidgets = List.generate(tabs.length, (i) {
+      final selected = i == selectedIndex;
+      final tab = tabs[i];
+
+      Widget label = selected
+          ? Icon(tab.icon, size: narrow ? 18 : 15, color: _selectedTopColor)
+          : Icon(tab.icon,
+              size: narrow ? 18 : 15, color: const Color(0xFF6B7280));
+
+      if (!narrow) {
+        label = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            label,
+            const SizedBox(width: 5),
+            Text(
+              tab.label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight:
+                    selected ? FontWeight.w600 : FontWeight.w500,
+                color: selected
+                    ? _selectedTopColor
+                    : const Color(0xFF6B7280),
+              ),
+            ),
+          ],
+        );
+      }
+
+      return GestureDetector(
+        onTap: () => onTabSelected(i),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.ease,
+          height: selected ? _selectedHeight : _unselectedHeight,
+          padding: EdgeInsets.symmetric(horizontal: narrow ? 8 : 12),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? Colors.white : _unselectedBg,
+            border: Border(
+              top: BorderSide(
+                color: selected ? _selectedTopColor : _borderColor,
+                width: selected ? 2.0 : 1.0,
+              ),
+              left: const BorderSide(color: _borderColor),
+              right: const BorderSide(color: _borderColor),
+              // Selected tab's white bottom "covers" the outer bottom border.
+              bottom: BorderSide(
+                color: selected ? Colors.white : _borderColor,
+              ),
+            ),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(6),
+              topRight: Radius.circular(6),
+            ),
+          ),
+          child: label,
+        ),
+      );
+    });
+
+    final row = scrollable
+        ? SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: tabWidgets,
+            ),
+          )
+        : Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: tabWidgets.map((t) => Expanded(child: t)).toList(),
+          );
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: _unselectedBg,
+        border: Border(bottom: BorderSide(color: _borderColor)),
       ),
+      child: row,
     );
   }
 }
