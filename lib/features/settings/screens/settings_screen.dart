@@ -32,7 +32,7 @@ class SettingsScreen extends ConsumerWidget {
     final isSigningOut = ref.watch(authActionProvider).isLoading;
 
     return Scaffold(
-      appBar: const AppHeader(title: 'Settings'),
+      appBar: const AppHeader(title: 'Settings', automaticallyImplyLeading: true),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
