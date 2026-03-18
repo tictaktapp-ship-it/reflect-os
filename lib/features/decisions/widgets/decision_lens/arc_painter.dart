@@ -172,8 +172,8 @@ class ArcPainter extends CustomPainter {
         text: (value * 10).toStringAsFixed(1),
         style: const TextStyle(
           color: AppColors.textPrimary,
-          fontSize: 22,
-          fontWeight: FontWeight.w700,
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
         ),
       ),
       textDirection: TextDirection.ltr,

@@ -113,7 +113,7 @@ class _LensContentState extends State<_LensContent> {
             Expanded(
               child: _GaugeCard(
                 child: SizedBox(
-                  height: 120,
+                  height: 160,
                   child: CustomPaint(
                     painter: ArcPainter(
                       value: lens.confidenceScore / 10,
@@ -128,7 +128,7 @@ class _LensContentState extends State<_LensContent> {
             Expanded(
               child: _GaugeCard(
                 child: SizedBox(
-                  height: 120,
+                  height: 160,
                   child: CustomPaint(
                     painter: DialPainter(
                       value: lens.healthScore,

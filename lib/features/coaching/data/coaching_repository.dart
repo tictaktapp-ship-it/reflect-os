@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/coaching/data/models/coach_client_relationship.dart';
 import 'package:reflect_os/features/coaching/data/models/coach_note.dart';
+import 'package:reflect_os/features/decisions/data/confidence_triggers_service.dart';
 import 'package:reflect_os/features/coaching/data/models/coaching_action_item.dart';
 import 'package:reflect_os/features/coaching/data/models/coaching_session.dart';
 import 'package:reflect_os/features/coaching/data/models/coaching_session_note.dart';
@@ -172,7 +174,12 @@ class CoachingRepository {
     };
     final row =
         await supabase.from('coach_notes').insert(data).select().single();
-    return CoachNote.fromJson(row);
+    final note = CoachNote.fromJson(row);
+    if (decisionId != null && (confidenceAdjustment != 0)) {
+      unawaited(const ConfidenceTriggersService()
+          .insertCoachNoteTrigger(note, decisionId));
+    }
+    return note;
   }
 
   // Get confidence adjustments for a decision (for all coaches)
@@ -337,7 +344,12 @@ class CoachingRepository {
       if (confidenceAdjustment != null)
         'coach_confidence_adjustment': confidenceAdjustment,
     }).select().single();
-    return CoachNote.fromJson(row);
+    final note = CoachNote.fromJson(row);
+    if (confidenceAdjustment != null && confidenceAdjustment != 0) {
+      unawaited(const ConfidenceTriggersService()
+          .insertCoachNoteTrigger(note, decisionId));
+    }
+    return note;
   }
 
   Future<void> inviteCoach(String coachEmail, String workspaceId) async {

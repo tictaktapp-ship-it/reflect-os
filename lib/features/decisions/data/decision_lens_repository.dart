@@ -1,4 +1,5 @@
 import 'package:reflect_os/core/supabase/supabase_client.dart';
+import 'package:reflect_os/features/decisions/data/confidence_triggers_service.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/data/models/decision_lens_data.dart';
 import 'package:reflect_os/features/decisions/data/models/decision_stakeholder.dart';
@@ -61,8 +62,17 @@ class DecisionLensRepository {
       ),
       ScoreComponent(
         label: 'Evidence',
-        value: (evidence.length / 5).clamp(0.0, 1.0),
-        displayValue: '${evidence.length} item${evidence.length == 1 ? '' : 's'}',
+        value: outcomes.isEmpty
+            ? 0.0
+            : (outcomes
+                        .map((o) => o.outcomeQualityScore)
+                        .reduce((a, b) => a + b) /
+                    outcomes.length /
+                    10.0)
+                .clamp(0.0, 1.0),
+        displayValue: outcomes.isEmpty
+            ? 'No reviews'
+            : 'Avg ${(outcomes.map((o) => o.outcomeQualityScore).reduce((a, b) => a + b) / outcomes.length).toStringAsFixed(1)}/10',
       ),
       ScoreComponent(
         label: 'Risk',
@@ -77,7 +87,17 @@ class DecisionLensRepository {
       ),
     ];
 
-    final triggers = await _fetchTriggers(decision.id);
+    var triggers = await _fetchTriggers(decision.id);
+
+    // Part A: backfill triggers for decisions that have outcome reviews but
+    // no confidence_triggers rows yet (e.g. all historical decisions).
+    if (triggers.isEmpty && outcomes.isNotEmpty) {
+      triggers = await const ConfidenceTriggersService().generateAndInsert(
+        decision: decision,
+        outcomes: outcomes,
+        riskAssessment: riskAssessment,
+      );
+    }
 
     return DecisionLensData(
       confidenceScore: confidenceScore,
