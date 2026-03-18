@@ -56,13 +56,14 @@ Deno.serve(async (req: Request) => {
       return json({ error: `Decision not found: ${decErr?.message}` }, 404);
     }
 
-    // ── Call Gemini ───────────────────────────────────────────────────────
-    const geminiKey = Deno.env.get("GEMINI_API_KEY");
-    if (!geminiKey) return json({ error: "GEMINI_API_KEY not configured" }, 500);
+    // ── Call Groq ─────────────────────────────────────────────────────────
+    const groqKey = Deno.env.get("GROQ_API_KEY");
+    if (!groqKey) return json({ error: "GROQ_API_KEY not configured" }, 500);
 
-    const prompt = `You are a decision risk assessment expert using the ISO 31000 framework.
+    const systemPrompt =
+      "You are a decision risk assessment expert using the ISO 31000 framework.";
 
-Analyse the following decision and identify 3–6 specific, actionable risks.
+    const userContent = `Analyse the following decision and identify 3–6 specific, actionable risks.
 
 Decision title: ${decision.title}
 Stakes: ${decision.stakes ?? "Not specified"}
@@ -88,39 +89,44 @@ Impact scale: 1=Negligible, 2=Minor, 3=Moderate, 4=Major, 5=Catastrophic
 Severity: likelihood × impact → 1-4=low, 5-9=medium, 10-16=high, 17-25=critical
 Overall risk level = highest individual severity.`;
 
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+    const groqRes = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${groqKey}`,
+        },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            responseMimeType: "application/json",
-          },
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userContent },
+          ],
+          temperature: 0.3,
+          max_tokens: 1500,
         }),
       },
     );
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
+    if (!groqRes.ok) {
+      const errText = await groqRes.text();
       return json(
-        { error: `Gemini API error ${geminiRes.status}: ${errText}` },
+        { error: `Groq API error ${groqRes.status}: ${errText}` },
         502,
       );
     }
 
-    const geminiData = await geminiRes.json();
+    const groqData = await groqRes.json();
     const rawText: string | undefined =
-      geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawText) return json({ error: "Empty response from Gemini" }, 502);
+      groqData?.choices?.[0]?.message?.content;
+    if (!rawText) return json({ error: "Empty response from Groq" }, 502);
 
     let parsed: { risks: unknown[]; overall_risk_level: string };
     try {
       parsed = JSON.parse(rawText);
     } catch {
-      return json({ error: "Could not parse Gemini JSON response" }, 502);
+      return json({ error: "Could not parse Groq JSON response" }, 502);
     }
 
     // Ensure severity is consistent with computed score.
@@ -141,8 +147,8 @@ Overall risk level = highest individual severity.`;
         methodology: "ai",
         output_jsonb: { risks, overall_risk_level: overallLevel },
         overall_risk_level: overallLevel,
-        provider: "google",
-        model: "gemini-2.0-flash",
+        provider: "groq",
+        model: "llama-3.3-70b-versatile",
         status: "pending_approval",
       })
       .select()
