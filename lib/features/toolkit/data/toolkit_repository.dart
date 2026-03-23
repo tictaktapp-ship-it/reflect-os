@@ -121,6 +121,40 @@ class ToolkitRepository {
     );
   }
 
+  /// Inserts a generated_documents row and returns its id.
+  Future<String> insertGeneratedDocument({
+    required String workspaceId,
+    required String userId,
+    required String decisionId,
+  }) async {
+    final row = await supabase
+        .from('generated_documents')
+        .insert({
+          'workspace_id': workspaceId,
+          'created_by_user_id': userId,
+          'document_type': 'tool_output',
+          'subject_entity_type': 'decision',
+          'subject_entity_id': decisionId,
+          'status': 'Pending',
+        })
+        .select('id')
+        .single();
+    return row['id'] as String;
+  }
+
+  /// Updates the storage location and marks status as Ready.
+  Future<void> updateDocumentStoragePath({
+    required String documentId,
+    required String storageBucket,
+    required String storagePath,
+  }) async {
+    await supabase.from('generated_documents').update({
+      'storage_bucket': storageBucket,
+      'storage_path': storagePath,
+      'status': 'Ready',
+    }).eq('id', documentId);
+  }
+
   /// Saves current inputs as a named preset.
   Future<ToolPreset> savePreset({
     required String workspaceId,

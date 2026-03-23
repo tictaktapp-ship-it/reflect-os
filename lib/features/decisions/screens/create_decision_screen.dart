@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -68,6 +69,12 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
   bool _tagDropdownVisible = false;
   Timer? _tagDebounce;
 
+  // ── Auto-save ─────────────────────────────────────────────────────────────
+  late final String _draftId;
+  bool _isSavedAsDraft = false;
+  Timer? _autoSaveTimer;
+  String _autoSaveStatus = ''; // '', 'saving', 'saved'
+
   // ── Template / meeting banner ─────────────────────────────────────────────
   bool _isSubmitting = false;
   DecisionTemplate? _appliedTemplate;
@@ -78,6 +85,9 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
   @override
   void initState() {
     super.initState();
+    _draftId = _generateUuid();
+    _titleController.addListener(_scheduleAutoSave);
+    _descriptionController.addListener(_scheduleAutoSave);
     final t = widget.initialTemplate;
     if (t != null) {
       _appliedTemplate = t;
@@ -112,6 +122,9 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
 
   @override
   void dispose() {
+    _autoSaveTimer?.cancel();
+    _titleController.removeListener(_scheduleAutoSave);
+    _descriptionController.removeListener(_scheduleAutoSave);
     _titleController.dispose();
     _descriptionController.dispose();
     _tagInputController.dispose();
@@ -119,6 +132,70 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
     _tagInputFocus.dispose();
     _tagDebounce?.cancel();
     super.dispose();
+  }
+
+  // ── UUID helper ───────────────────────────────────────────────────────────
+
+  static String _generateUuid() {
+    final rng = Random.secure();
+    final b = List<int>.generate(16, (_) => rng.nextInt(256));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    String hex(int n) => n.toRadixString(16).padLeft(2, '0');
+    return '${b.sublist(0, 4).map(hex).join()}'
+        '-${b.sublist(4, 6).map(hex).join()}'
+        '-${b.sublist(6, 8).map(hex).join()}'
+        '-${b.sublist(8, 10).map(hex).join()}'
+        '-${b.sublist(10, 16).map(hex).join()}';
+  }
+
+  // ── Auto-save helpers ─────────────────────────────────────────────────────
+
+  void _scheduleAutoSave() {
+    _autoSaveTimer?.cancel();
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      if (mounted && _autoSaveStatus.isNotEmpty) {
+        setState(() => _autoSaveStatus = '');
+      }
+      return;
+    }
+    if (mounted && _autoSaveStatus != 'saving') {
+      setState(() => _autoSaveStatus = 'saving');
+    }
+    _autoSaveTimer = Timer(const Duration(seconds: 2), _autoSave);
+  }
+
+  Future<void> _autoSave() async {
+    final title = _titleController.text.trim();
+    if (title.isEmpty || !mounted) return;
+    try {
+      final workspaceId = ref.read(currentWorkspaceProvider).valueOrNull;
+      if (workspaceId == null) return;
+      final description = _descriptionController.text.trim();
+      await ref.read(decisionsRepositoryProvider).autoSaveDraft(
+            id: _draftId,
+            workspaceId: workspaceId,
+            title: title,
+            description: description.isEmpty ? null : description,
+            categoryId: _categoryId,
+            stakes: _stakes,
+            initialConfidence: _confidence,
+            isContinuous: _isContinuous,
+            visibility: _visibility,
+            requiresApproval: _requiresApproval,
+          );
+      if (mounted) {
+        setState(() {
+          _isSavedAsDraft = true;
+          _autoSaveStatus = 'saved';
+        });
+      }
+    } catch (_) {
+      if (mounted && _autoSaveStatus == 'saving') {
+        setState(() => _autoSaveStatus = '');
+      }
+    }
   }
 
   // ── Tag helpers ───────────────────────────────────────────────────────────
@@ -153,15 +230,16 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
   }
 
   void _addTag(Tag tag) {
-    if (!_selectedTags.any((t) => t.id == tag.id)) {
-      setState(() => _selectedTags.add(tag));
-    }
-    _tagInputController.clear();
     setState(() {
+      if (!_selectedTags.any((t) => t.id == tag.id)) {
+        _selectedTags.add(tag);
+      }
       _tagSuggestions = [];
-      _tagDropdownVisible = false;
+      _tagDropdownVisible = true;
     });
+    _tagInputController.clear();
     _tagInputFocus.requestFocus();
+    _loadRecentTags();
   }
 
   Future<void> _createAndAddTag(String name) async {
@@ -339,7 +417,10 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
     );
-    if (picked != null) setState(() => _deadline = picked);
+    if (picked != null) {
+      setState(() => _deadline = picked);
+      _scheduleAutoSave();
+    }
   }
 
   void _clearDeadline() {
@@ -355,6 +436,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    _autoSaveTimer?.cancel();
     setState(() => _isSubmitting = true);
     try {
       final workspaceId = await ref.read(currentWorkspaceProvider.future);
@@ -384,7 +466,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
 
       final id = await ref
           .read(decisionsRepositoryProvider)
-          .createDecision(input);
+          .createDecision(input, existingId: _isSavedAsDraft ? _draftId : null);
 
       // Save selected tags.
       if (_selectedTags.isNotEmpty) {
@@ -485,6 +567,20 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
           child: SvgPicture.asset('assets/branding/icon.svg'),
         ),
         actions: [
+          if (_autoSaveStatus.isNotEmpty)
+            AnimatedOpacity(
+              opacity: 1.0,
+              duration: const Duration(milliseconds: 300),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Text(
+                    _autoSaveStatus == 'saving' ? 'Saving…' : 'Draft saved',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  ),
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: TextButton(
@@ -643,8 +739,10 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                           ),
                         ),
                       ],
-                      onChanged: (value) =>
-                          setState(() => _categoryId = value),
+                      onChanged: (value) {
+                        setState(() => _categoryId = value);
+                        _scheduleAutoSave();
+                      },
                     );
                   },
                 ),
@@ -664,7 +762,10 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                     DropdownMenuItem(
                         value: 'Critical', child: Text('Critical')),
                   ],
-                  onChanged: (value) => setState(() => _stakes = value),
+                  onChanged: (value) {
+                    setState(() => _stakes = value);
+                    _scheduleAutoSave();
+                  },
                 ),
               ],
             ),
@@ -679,26 +780,6 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                       ),
                 ),
                 const SizedBox(height: 8),
-
-                // Selected tag chips
-                if (_selectedTags.isNotEmpty) ...[
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: _selectedTags
-                        .map((tag) => Chip(
-                              label: Text(tag.name),
-                              deleteIcon:
-                                  const Icon(Icons.close, size: 16),
-                              visualDensity: VisualDensity.compact,
-                              onDeleted: () => setState(() =>
-                                  _selectedTags.removeWhere(
-                                      (t) => t.id == tag.id)),
-                            ))
-                        .toList(),
-                  ),
-                  const SizedBox(height: 8),
-                ],
 
                 // Tag text input
                 TextField(
@@ -721,6 +802,26 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                   ),
                   onChanged: _onTagInputChanged,
                   onSubmitted: _onTagSubmitted,
+                ),
+
+                // Selected tag chips — always rendered, teal styling
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: _selectedTags
+                      .map((tag) => Chip(
+                            label: Text(tag.name),
+                            deleteIcon:
+                                const Icon(Icons.close, size: 14),
+                            onDeleted: () =>
+                                setState(() => _selectedTags.remove(tag)),
+                            backgroundColor: const Color(0xFF19CBD6)
+                                .withValues(alpha: 0.12),
+                            side: const BorderSide(
+                                color: Color(0xFF19CBD6)),
+                            visualDensity: VisualDensity.compact,
+                          ))
+                      .toList(),
                 ),
 
                 // Suggestions dropdown
@@ -830,8 +931,10 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                         max: 10,
                         divisions: 9,
                         label: '$_confidence / 10',
-                        onChanged: (value) =>
-                            setState(() => _confidence = value.round()),
+                        onChanged: (value) {
+                          setState(() => _confidence = value.round());
+                          _scheduleAutoSave();
+                        },
                       ),
                     ),
                     SizedBox(
@@ -1120,8 +1223,10 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                         label: Text('Stakeholders Only')),
                   ],
                   selected: {_visibility},
-                  onSelectionChanged: (selection) =>
-                      setState(() => _visibility = selection.first),
+                  onSelectionChanged: (selection) {
+                    setState(() => _visibility = selection.first);
+                    _scheduleAutoSave();
+                  },
                 ),
                 const SizedBox(height: 16),
 
@@ -1149,6 +1254,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                         _deadlineNotificationOffsetDays = null;
                       }
                     });
+                    _scheduleAutoSave();
                   },
                 ),
 
@@ -1166,8 +1272,10 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                         ),
                   ),
                   value: _requiresApproval,
-                  onChanged: (value) =>
-                      setState(() => _requiresApproval = value),
+                  onChanged: (value) {
+                    setState(() => _requiresApproval = value);
+                    _scheduleAutoSave();
+                  },
                 ),
               ],
             ),

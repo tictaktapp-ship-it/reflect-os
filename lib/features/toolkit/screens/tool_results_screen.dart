@@ -1,17 +1,25 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:printing/printing.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
+import 'package:reflect_os/core/supabase/supabase_client.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/toolkit_providers.dart';
 import '../data/models/tool_definition.dart';
 import '../data/models/tool_run.dart';
 import '../data/toolkit_repository.dart';
 import '../engine/calculator_engine.dart';
+import '../services/pdf_document_service.dart';
 
 /// Displays computed results for a tool run.
 ///
@@ -42,6 +50,8 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
       TextEditingController(text: widget.result.narrative);
   bool _attachAudit  = false;
   bool _isInjecting  = false;
+  bool _isDownloading = false;
+  Uint8List? _pdfBytes;
 
   /// Builds the text returned to the caller in picker mode.
   /// Prefers the narrative; falls back to formatted summary outputs.
@@ -108,6 +118,103 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
       }
     } finally {
       if (mounted) setState(() => _isInjecting = false);
+    }
+  }
+
+  // ── PDF download ──────────────────────────────────────────────────────────
+
+  Future<void> _downloadPdf() async {
+    setState(() => _isDownloading = true);
+    try {
+      // Generate PDF bytes (or reuse cached bytes).
+      final decisionId = widget.decisionId ?? widget.run.decisionId;
+      String decisionTitle = 'Decision Analysis';
+      String workspaceName = '';
+      if (decisionId != null) {
+        final detail =
+            await ref.read(decisionDetailProvider(decisionId).future);
+        decisionTitle = detail?.title ?? decisionTitle;
+      }
+      workspaceName =
+          await ref.read(workspaceNameProvider.future) ?? '';
+
+      Uint8List bytes = _pdfBytes ??
+          await PdfDocumentService().generateToolOutputPdf(
+            decisionTitle: decisionTitle,
+            toolName: widget.tool.name,
+            toolOutput: widget.result.narrative,
+            toolData: Map<String, dynamic>.from(widget.result.summaryOutputs),
+            workspaceName: workspaceName,
+          );
+      _pdfBytes = bytes;
+
+      final fileName =
+          'tool_output_${DateTime.now().millisecondsSinceEpoch}.pdf';
+
+      if (kIsWeb) {
+        // On web: upload, get signed URL, open in new tab.
+        final workspaceId =
+            ref.read(currentWorkspaceProvider).valueOrNull;
+        final userId = supabase.auth.currentUser?.id;
+        if (workspaceId != null && userId != null) {
+          final storagePath = decisionId != null
+              ? 'decisions/$decisionId/$fileName'
+              : 'standalone/$fileName';
+
+          // Upload to storage.
+          await supabase.storage
+              .from('generated-documents')
+              .uploadBinary(
+                storagePath,
+                bytes,
+                fileOptions: const FileOptions(
+                  contentType: 'application/pdf',
+                  upsert: true,
+                ),
+              );
+
+          // Insert / update generated_documents row if we have a decision.
+          if (decisionId != null) {
+            try {
+              final docId = await const ToolkitRepository()
+                  .insertGeneratedDocument(
+                workspaceId: workspaceId,
+                userId: userId,
+                decisionId: decisionId,
+              );
+              await const ToolkitRepository().updateDocumentStoragePath(
+                documentId: docId,
+                storageBucket: 'generated-documents',
+                storagePath: storagePath,
+              );
+            } catch (_) {
+              // Non-fatal: DB row tracking is best-effort.
+            }
+          }
+
+          // Create signed URL and open in new tab.
+          final signedUrl = await supabase.storage
+              .from('generated-documents')
+              .createSignedUrl(storagePath, 3600);
+          if (mounted) {
+            await launchUrl(
+              Uri.parse(signedUrl),
+              mode: LaunchMode.externalApplication,
+            );
+          }
+        }
+      } else {
+        // On mobile: share/print sheet.
+        await Printing.sharePdf(bytes: bytes, filename: fileName);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate PDF: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
     }
   }
 
@@ -211,7 +318,28 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
             const SizedBox(height: 20),
           ],
 
-          // Section 6 — Picker mode: attach output back to decision form
+          // Section 6 — Download PDF
+          _SectionHeader(title: 'Export'),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              icon: _isDownloading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.download, size: 16),
+              label: Text(_isDownloading ? 'Generating PDF…' : 'Download PDF'),
+              style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF19CBD6)),
+              onPressed: _isDownloading ? null : _downloadPdf,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Section 7 — Picker mode: attach output back to decision form
           if (pickerMode) ...[
             _SectionHeader(title: 'Attach to Decision'),
             SizedBox(

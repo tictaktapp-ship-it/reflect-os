@@ -143,13 +143,17 @@ class DecisionsRepository {
 
   /// Exception to the no-raw-tables rule: decisions table is written to
   /// directly. There is no RPC for creating decisions in the current schema.
-  Future<String> createDecision(CreateDecisionInput input) async {
+  Future<String> createDecision(
+    CreateDecisionInput input, {
+    String? existingId,
+  }) async {
     final mode = await _getEncryptionMode(input.workspaceId);
     final doEncrypt = _shouldEncrypt(mode);
     final workspaceId = input.workspaceId;
 
     final userId = supabase.auth.currentUser!.id;
     final payload = {
+      if (existingId != null) 'id': existingId,
       ...input.toJson(),
       'created_by_user_id': userId,
       'owner_user_id': userId,
@@ -191,11 +195,17 @@ class DecisionsRepository {
       }
     }
 
-    final response = await supabase
-        .from('decisions')
-        .insert(payload)
-        .select('id')
-        .single();
+    final response = existingId != null
+        ? await supabase
+            .from('decisions')
+            .upsert(payload, onConflict: 'id')
+            .select('id')
+            .single()
+        : await supabase
+            .from('decisions')
+            .insert(payload)
+            .select('id')
+            .single();
 
     final decisionId = response['id'] as String;
 
@@ -213,6 +223,56 @@ class DecisionsRepository {
     ).ignore();
 
     return decisionId;
+  }
+
+  /// Lightweight upsert for auto-save. Does not fire calendar sync or audit
+  /// events. Falls back to plaintext if the encryption edge function is down.
+  Future<void> autoSaveDraft({
+    required String id,
+    required String workspaceId,
+    required String title,
+    String? description,
+    String? categoryId,
+    String? stakes,
+    int? initialConfidence,
+    bool isContinuous = false,
+    String visibility = 'workspace',
+    bool requiresApproval = false,
+  }) async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    final mode = await _getEncryptionMode(workspaceId);
+    final doEncrypt = _shouldEncrypt(mode);
+
+    String? encryptedDesc = (description?.isEmpty ?? true) ? null : description;
+    if (doEncrypt && encryptedDesc != null) {
+      try {
+        final encrypted = await _enc.encryptFields(
+          workspaceId: workspaceId,
+          fields: {'description': encryptedDesc},
+        );
+        encryptedDesc = encrypted['description'] ?? encryptedDesc;
+      } catch (_) {
+        // Fall back to plaintext for auto-save.
+      }
+    }
+
+    await supabase.from('decisions').upsert({
+      'id': id,
+      'workspace_id': workspaceId,
+      'title': title,
+      'state': 'Draft',
+      'created_by_user_id': userId,
+      'owner_user_id': userId,
+      if (encryptedDesc != null) 'description_encrypted': encryptedDesc,
+      if (categoryId != null && categoryId.isNotEmpty) 'category_id': categoryId,
+      if (stakes != null) 'stakes': stakes,
+      if (initialConfidence != null) 'initial_confidence': initialConfidence,
+      'continuous': isContinuous,
+      'visibility_mode': visibility,
+      'requires_approval': requiresApproval,
+    }, onConflict: 'id');
   }
 
   /// Exception to the no-raw-tables rule: no RPC exists for updating decisions.
