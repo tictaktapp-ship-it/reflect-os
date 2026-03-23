@@ -4,6 +4,12 @@
 [functions.assess-risk]
 verify_jwt = false
 
+[functions.generate-debrief-insights]
+verify_jwt = false
+
+[functions.generate-debrief]
+verify_jwt = false
+
 [functions.extract-decision-from-meeting]
 verify_jwt = false
 
