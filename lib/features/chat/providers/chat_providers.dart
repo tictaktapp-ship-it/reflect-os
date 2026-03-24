@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reflect_os/core/providers/auth_state_provider.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
+import 'package:reflect_os/features/chat/data/models/chat_attachment_model.dart';
 import 'package:reflect_os/features/chat/data/models/chat_message_model.dart';
 import 'package:reflect_os/features/chat/data/models/chat_reaction_model.dart';
 import 'package:reflect_os/features/workspace/providers/workspace_providers.dart';
@@ -37,7 +38,7 @@ class ChatMessagesNotifier
     try {
       final rows = await supabase
           .from('chat_messages')
-          .select('*, profiles(display_name, avatar_url)')
+          .select('*, profiles(display_name, avatar_url), chat_attachments(*)')
           .eq('workspace_id', _workspaceId)
           .isFilter('deleted_at', null)
           .order('created_at', ascending: false)
@@ -126,12 +127,27 @@ class ChatMessagesNotifier
     try {
       final rows = await supabase
           .from('chat_messages')
-          .select('*, profiles(display_name, avatar_url)')
+          .select('*, profiles(display_name, avatar_url), chat_attachments(*)')
           .eq('id', msgId)
           .limit(1);
 
       if (rows.isEmpty) return;
-      final msg = ChatMessageModel.fromJson(rows.first);
+      var msg = ChatMessageModel.fromJson(rows.first);
+
+      // Attachment rows may not yet be visible via join; fetch separately.
+      if (msg.hasAttachment && msg.attachments.isEmpty) {
+        try {
+          final attachRows = await supabase
+              .from('chat_attachments')
+              .select()
+              .eq('message_id', msg.id);
+          final attachments = (attachRows as List)
+              .map((a) =>
+                  ChatAttachmentModel.fromJson(a as Map<String, dynamic>))
+              .toList();
+          msg = msg.copyWith(attachments: attachments);
+        } catch (_) {}
+      }
 
       final current = state.valueOrNull ?? [];
       if (mounted) state = AsyncValue.data([...current, msg]);
