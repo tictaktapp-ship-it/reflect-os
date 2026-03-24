@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/connectivity_provider.dart';
+import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
+import 'package:reflect_os/features/chat/providers/chat_providers.dart';
+import 'package:reflect_os/features/chat/widgets/chat_panel_widget.dart';
 import 'package:reflect_os/features/settings/providers/profile_provider.dart';
 
 class AppShell extends ConsumerStatefulWidget {
@@ -17,6 +20,8 @@ class AppShell extends ConsumerStatefulWidget {
 }
 
 class _AppShellState extends ConsumerState<AppShell> {
+  bool _chatOpen = false;
+
   void _onDestinationSelected(int index) {
     widget.navigationShell.goBranch(
       index,
@@ -28,31 +33,131 @@ class _AppShellState extends ConsumerState<AppShell> {
   Widget build(BuildContext context) {
     final isOnline = ref.watch(connectivityProvider).valueOrNull ?? true;
 
-    return Column(
+    final workspaceId =
+        ref.watch(currentWorkspaceProvider).valueOrNull;
+    final workspaceType =
+        ref.watch(currentWorkspaceTypeProvider).valueOrNull;
+    final isTeamWorkspace = workspaceType == 'team';
+    final unreadCount = isTeamWorkspace && workspaceId != null
+        ? ref.watch(chatUnreadCountProvider(workspaceId))
+        : 0;
+
+    return Stack(
       children: [
-        if (!isOnline) const _OfflineBanner(),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth >= 600) {
-                return _WideShell(
-                  navigationShell: widget.navigationShell,
-                  selectedIndex: widget.navigationShell.currentIndex,
-                  onDestinationSelected: _onDestinationSelected,
-                );
-              }
-              return _NarrowShell(
-                navigationShell: widget.navigationShell,
-                selectedIndex: widget.navigationShell.currentIndex,
-                onDestinationSelected: _onDestinationSelected,
-              );
-            },
+        Positioned.fill(
+          child: Column(
+            children: [
+              if (!isOnline) const _OfflineBanner(),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth >= 600) {
+                      return _WideShell(
+                        navigationShell: widget.navigationShell,
+                        selectedIndex:
+                            widget.navigationShell.currentIndex,
+                        onDestinationSelected: _onDestinationSelected,
+                        showChatButton: isTeamWorkspace,
+                        chatUnreadCount: unreadCount,
+                        onChatTap: () =>
+                            setState(() => _chatOpen = !_chatOpen),
+                      );
+                    }
+                    return _NarrowShell(
+                      navigationShell: widget.navigationShell,
+                      selectedIndex:
+                          widget.navigationShell.currentIndex,
+                      onDestinationSelected: _onDestinationSelected,
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ),
+        if (isTeamWorkspace && workspaceId != null) ...[
+          if (_chatOpen)
+            _buildChatPanel(context, workspaceId),
+          Positioned(
+            bottom: 24,
+            right: 24,
+            child: _ChatFab(
+              unreadCount: unreadCount,
+              onPressed: () =>
+                  setState(() => _chatOpen = !_chatOpen),
+            ),
+          ),
+        ],
       ],
     );
   }
+
+  void _closeChat() => setState(() => _chatOpen = false);
+
+  Widget _buildChatPanel(BuildContext context, String workspaceId) {
+    if (MediaQuery.sizeOf(context).width < 600) {
+      return Positioned.fill(
+        child: ChatPanelWidget(
+          workspaceId: workspaceId,
+          onClose: _closeChat,
+        ),
+      );
+    }
+    return Positioned(
+      bottom: 90,
+      right: 24,
+      child: SizedBox(
+        width: 360,
+        height: 520,
+        child: ChatPanelWidget(
+          workspaceId: workspaceId,
+          onClose: _closeChat,
+        ),
+      ),
+    );
+  }
 }
+
+// ── Chat FAB ───────────────────────────────────────────────────────────────────
+
+class _ChatFab extends StatelessWidget {
+  const _ChatFab({required this.unreadCount, required this.onPressed});
+
+  final int unreadCount;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return FloatingActionButton(
+      backgroundColor: const Color(0xFF19CBD6),
+      onPressed: onPressed,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          const Icon(Icons.chat_bubble_outline, color: Colors.white),
+          if (unreadCount > 0)
+            Positioned(
+              top: -4,
+              right: -4,
+              child: CircleAvatar(
+                radius: 8,
+                backgroundColor: const Color(0xFFDC4444),
+                child: Text(
+                  unreadCount > 99 ? '99+' : '$unreadCount',
+                  style: const TextStyle(
+                      fontSize: 9,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Offline banner ─────────────────────────────────────────────────────────────
 
 class _OfflineBanner extends StatelessWidget {
   const _OfflineBanner();
@@ -82,11 +187,17 @@ class _WideShell extends StatelessWidget {
     required this.navigationShell,
     required this.selectedIndex,
     required this.onDestinationSelected,
+    this.showChatButton = false,
+    this.chatUnreadCount = 0,
+    this.onChatTap,
   });
 
   final StatefulNavigationShell navigationShell;
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
+  final bool showChatButton;
+  final int chatUnreadCount;
+  final VoidCallback? onChatTap;
 
   @override
   Widget build(BuildContext context) {
@@ -96,6 +207,9 @@ class _WideShell extends StatelessWidget {
           _NavPane(
             selectedIndex: selectedIndex,
             onDestinationSelected: onDestinationSelected,
+            showChatButton: showChatButton,
+            chatUnreadCount: chatUnreadCount,
+            onChatTap: onChatTap,
           ),
           const VerticalDivider(thickness: 1, width: 1),
           Expanded(child: navigationShell),
@@ -111,10 +225,16 @@ class _NavPane extends StatelessWidget {
   const _NavPane({
     required this.selectedIndex,
     required this.onDestinationSelected,
+    this.showChatButton = false,
+    this.chatUnreadCount = 0,
+    this.onChatTap,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
+  final bool showChatButton;
+  final int chatUnreadCount;
+  final VoidCallback? onChatTap;
 
   static const _items = [
     _NavItem(icon: Icons.home_outlined, selectedIcon: Icons.home, label: 'Home'),
@@ -148,6 +268,13 @@ class _NavPane extends StatelessWidget {
               onTap: () => onDestinationSelected(i),
             );
           }),
+          if (showChatButton) ...[
+            const Divider(height: 1, indent: 12, endIndent: 12),
+            _ChatNavItem(
+              unreadCount: chatUnreadCount,
+              onTap: onChatTap ?? () {},
+            ),
+          ],
           const Spacer(),
           const _NavPaneSettingsItem(),
           const SizedBox(height: 12),
@@ -215,6 +342,51 @@ class _NavPaneItem extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatNavItem extends StatelessWidget {
+  const _ChatNavItem({
+    required this.unreadCount,
+    required this.onTap,
+  });
+
+  final int unreadCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: SizedBox(
+        width: 80,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Badge(
+                isLabelVisible: unreadCount > 0,
+                label: Text(
+                  unreadCount > 99 ? '99+' : '$unreadCount',
+                  style: const TextStyle(fontSize: 9),
+                ),
+                child: const Icon(Icons.chat_bubble_outline, size: 22),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Chat',
+                style: Theme.of(context)
+                    .textTheme
+                    .labelSmall
+                    ?.copyWith(fontSize: 10),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
