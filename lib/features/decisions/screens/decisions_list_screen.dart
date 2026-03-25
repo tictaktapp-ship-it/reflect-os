@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +13,7 @@ import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum _SortOrder { newestFirst, oldestFirst, titleAsc, titleDesc }
 
@@ -873,7 +875,7 @@ class _StateBadge extends StatelessWidget {
 
 // ── Fan deck (collapsed group — physical card spread) ────────────────────────
 
-class _FanDeck extends StatelessWidget {
+class _FanDeck extends StatefulWidget {
   const _FanDeck({
     required this.decisions,
     required this.onTapFront,
@@ -881,74 +883,314 @@ class _FanDeck extends StatelessWidget {
   });
 
   final List<Decision> decisions;
+
+  /// Called with the decision ID when a card is double-tapped to expand.
   final ValueChanged<String> onTapFront;
   final VoidCallback onExpandStack;
 
-  // Front card (index 0) is rightmost; back cards fan to the left.
+  @override
+  State<_FanDeck> createState() => _FanDeckState();
+}
+
+class _FanDeckState extends State<_FanDeck>
+    with SingleTickerProviderStateMixin {
+  // ── Fan layout constants (unchanged) ──────────────────────────────────────
+  // Front card (index 0 in the rotated view) is rightmost; back cards fan left.
   static const _rotations = [0.0, -0.06, -0.12, -0.18, -0.22];
   static const _translateX = [0.0, -14.0, -28.0, -42.0, -54.0];
   static const _translateY = [0.0, 6.0, 12.0, 18.0, 22.0];
   static const _opacities = [1.0, 0.88, 0.72, 0.56, 0.40];
 
-  // Left buffer keeps back cards inside the SizedBox.
   static const double _leftBuffer = 60.0;
   static const double _cardW = 200.0;
   static const double _cardH = 76.0;
   static const double _stackW = _leftBuffer + _cardW + 40.0; // 300px
   static const double _stackH = _cardH + 22.0 + 20.0; // 118px
 
+  // ── Swipe tracking ─────────────────────────────────────────────────────────
+  double _dragStartX = 0;
+  double _dragCurrentX = 0;
+  bool _isDragging = false;
+
+  /// Which decision index is currently on top (front of the fan).
+  int _frontCardIndex = 0;
+
+  // ── Double-tap tracking ───────────────────────────────────────────────────
+  DateTime? _lastTapTime;
+  int _lastTappedIndex = -1;
+
+  // ── Swipe animation ───────────────────────────────────────────────────────
+  late AnimationController _swipeController;
+
+  // ── Hint text persistence ─────────────────────────────────────────────────
+  bool _hasInteracted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _swipeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    SharedPreferences.getInstance().then((prefs) {
+      if (!mounted) return;
+      setState(() {
+        _hasInteracted =
+            prefs.getBool('decisions_fan_interacted') ?? false;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _swipeController.dispose();
+    super.dispose();
+  }
+
+  // ── Card navigation helpers ───────────────────────────────────────────────
+
+  void _advanceCard() {
+    if (widget.decisions.isEmpty) return;
+    _markInteracted();
+    setState(() {
+      _frontCardIndex =
+          (_frontCardIndex + 1) % widget.decisions.length;
+    });
+    _swipeController.forward(from: 0).then((_) => _swipeController.reset());
+  }
+
+  void _retreatCard() {
+    if (widget.decisions.isEmpty) return;
+    _markInteracted();
+    setState(() {
+      _frontCardIndex = (_frontCardIndex - 1 + widget.decisions.length) %
+          widget.decisions.length;
+    });
+    _swipeController.forward(from: 0).then((_) => _swipeController.reset());
+  }
+
+  void _expandCard(int visibleIndex) {
+    _markInteracted();
+    // Map the visible-slot index back to the actual decision.
+    final visible = _visibleDecisions();
+    if (visibleIndex < visible.length) {
+      widget.onTapFront(visible[visibleIndex].id);
+    }
+  }
+
+  void _markInteracted() {
+    if (_hasInteracted) return;
+    setState(() => _hasInteracted = true);
+    SharedPreferences.getInstance()
+        .then((p) => p.setBool('decisions_fan_interacted', true));
+  }
+
+  /// Returns the decisions reordered so that `_frontCardIndex` is first,
+  /// followed by the rest in original order.  We cap at 5 visible cards.
+  List<Decision> _visibleDecisions() {
+    final all = widget.decisions;
+    if (all.isEmpty) return [];
+    final reordered = <Decision>[];
+    for (int i = 0; i < all.length; i++) {
+      reordered.add(all[(_frontCardIndex + i) % all.length]);
+    }
+    return reordered.take(5).toList();
+  }
+
+  // ── Drag-progress helper ──────────────────────────────────────────────────
+
+  double get _dragProgress => _isDragging
+      ? (_dragCurrentX - _dragStartX).clamp(-80.0, 80.0) / 80.0
+      : 0.0;
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    if (decisions.isEmpty) return const SizedBox.shrink();
-    final visible = decisions.take(5).toList();
-    final extra = decisions.length - visible.length;
+    if (widget.decisions.isEmpty) return const SizedBox.shrink();
+
+    final visible = _visibleDecisions();
+    final extra = widget.decisions.length - visible.length;
+    final dp = _dragProgress;
+
+    Widget fanStack = SizedBox(
+      width: _stackW,
+      height: _stackH,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Directional hint arrows
+          if (widget.decisions.length > 1) ...[
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: AnimatedOpacity(
+                  opacity: _isDragging && dp < -0.12 ? 1.0 : 0.3,
+                  duration: const Duration(milliseconds: 150),
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF19CBD6).withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.chevron_left,
+                        color: Color(0xFF19CBD6), size: 18),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: AnimatedOpacity(
+                  opacity: _isDragging && dp > 0.12 ? 1.0 : 0.3,
+                  duration: const Duration(milliseconds: 150),
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF19CBD6).withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.chevron_right,
+                        color: Color(0xFF19CBD6), size: 18),
+                  ),
+                ),
+              ),
+            ),
+          ],
+
+          // Draw back cards first (highest index = furthest behind)
+          for (int i = visible.length - 1; i >= 0; i--)
+            Positioned(
+              left: _leftBuffer + _translateX[i],
+              top: _translateY[i],
+              child: Transform.rotate(
+                angle: _rotations[i],
+                alignment: Alignment.bottomCenter,
+                child: Opacity(
+                  opacity: _opacities[i],
+                  child: _buildCard(context, visible, i, dp),
+                ),
+              ),
+            ),
+
+          // Carousel position dots
+          if (widget.decisions.length > 1)
+            Positioned(
+              bottom: 2,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (int i = 0;
+                      i < widget.decisions.length.clamp(0, 8);
+                      i++)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      width: i == 0 ? 16 : 6, // 0 is always the front slot
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: i == 0
+                            ? const Color(0xFF19CBD6)
+                            : const Color(0xFF19CBD6).withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+
+    // Wrap with gesture + keyboard + mouse cursor
+    fanStack = MouseRegion(
+      cursor: _isDragging
+          ? SystemMouseCursors.grabbing
+          : SystemMouseCursors.grab,
+      child: Focus(
+        autofocus: false,
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent) {
+            if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+              _advanceCard();
+              return KeyEventResult.handled;
+            }
+            if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+              _retreatCard();
+              return KeyEventResult.handled;
+            }
+            if (event.logicalKey == LogicalKeyboardKey.enter ||
+                event.logicalKey == LogicalKeyboardKey.space) {
+              _expandCard(0);
+              return KeyEventResult.handled;
+            }
+          }
+          return KeyEventResult.ignored;
+        },
+        child: GestureDetector(
+          onHorizontalDragStart: (details) {
+            setState(() {
+              _isDragging = true;
+              _dragStartX = details.globalPosition.dx;
+              _dragCurrentX = details.globalPosition.dx;
+            });
+          },
+          onHorizontalDragUpdate: (details) {
+            setState(() => _dragCurrentX = details.globalPosition.dx);
+          },
+          onHorizontalDragEnd: (details) {
+            final dist = _dragCurrentX - _dragStartX;
+            final vel = details.velocity.pixelsPerSecond.dx;
+            if (dist > 80 || vel > 500) {
+              _advanceCard();
+            } else if (dist < -80 || vel < -500) {
+              _retreatCard();
+            }
+            setState(() {
+              _isDragging = false;
+              _dragStartX = 0;
+              _dragCurrentX = 0;
+            });
+          },
+          child: fanStack,
+        ),
+      ),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(
-          width: _stackW,
-          height: _stackH,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // Draw back cards first (highest index = furthest behind)
-              for (int i = visible.length - 1; i >= 0; i--)
-                Positioned(
-                  left: _leftBuffer + _translateX[i],
-                  top: _translateY[i],
-                  child: Transform.rotate(
-                    angle: _rotations[i],
-                    alignment: Alignment.bottomCenter,
-                    child: Opacity(
-                      opacity: _opacities[i],
-                      child: i == 0
-                          ? _CollapsedCard(
-                              decision: visible[i],
-                              fixedWidth: _cardW,
-                              fixedHeight: _cardH,
-                              onTap: () => onTapFront(visible[i].id),
-                            )
-                          : IgnorePointer(
-                              child: _CollapsedCard(
-                                decision: visible[i],
-                                fixedWidth: _cardW,
-                                fixedHeight: _cardH,
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
-            ],
+        fanStack,
+
+        // Hint text (fades away after first interaction)
+        if (!_hasInteracted)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Swipe to browse · Double-tap to open',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                color: context.cs.textTertiary,
+              ),
+            ),
           ),
-        ),
 
         // Pill expand button
         const SizedBox(height: 12),
         Center(
           child: GestureDetector(
-            onTap: onExpandStack,
+            onTap: widget.onExpandStack,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding:
@@ -971,7 +1213,7 @@ class _FanDeck extends StatelessWidget {
                       color: Colors.white, size: 16),
                   const SizedBox(width: 4),
                   Text(
-                    '${decisions.length} decision${decisions.length == 1 ? '' : 's'}',
+                    '${widget.decisions.length} decision${widget.decisions.length == 1 ? '' : 's'}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
@@ -993,6 +1235,68 @@ class _FanDeck extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+
+  // ── Card builder (handles drag transform + double-tap) ────────────────────
+
+  Widget _buildCard(
+    BuildContext context,
+    List<Decision> visible,
+    int slotIndex, // 0 = front
+    double dp,
+  ) {
+    final isFront = slotIndex == 0;
+    final isBehindFront = slotIndex == 1;
+
+    Widget card = _CollapsedCard(
+      decision: visible[slotIndex],
+      fixedWidth: _cardW,
+      fixedHeight: _cardH,
+    );
+
+    // Apply drag visual feedback
+    if (isFront && _isDragging) {
+      card = Transform(
+        transform: Matrix4.identity()
+          ..translateByDouble(dp * 20, 0.0, 0.0, 1.0)
+          ..rotateZ(dp * 0.03),
+        alignment: Alignment.bottomCenter,
+        child: card,
+      );
+    } else if (isBehindFront && _isDragging) {
+      card = Transform.scale(
+        scale: 1.0 + dp.abs() * 0.02,
+        child: card,
+      );
+    }
+
+    // Double-tap detection (manual, to avoid first-tap delay from onDoubleTap)
+    return GestureDetector(
+      onTap: () {
+        final now = DateTime.now();
+        if (_lastTappedIndex == slotIndex &&
+            _lastTapTime != null &&
+            now.difference(_lastTapTime!) <
+                const Duration(milliseconds: 350)) {
+          // Double tap — expand
+          _expandCard(slotIndex);
+          _lastTapTime = null;
+          _lastTappedIndex = -1;
+        } else {
+          // First tap
+          _lastTapTime = now;
+          _lastTappedIndex = slotIndex;
+          // Bring a back card to front
+          if (!isFront) {
+            setState(() {
+              _frontCardIndex =
+                  (_frontCardIndex + slotIndex) % widget.decisions.length;
+            });
+          }
+        }
+      },
+      child: card,
     );
   }
 }
