@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/connectivity_provider.dart';
@@ -211,7 +212,6 @@ class _WideShell extends StatelessWidget {
             chatUnreadCount: chatUnreadCount,
             onChatTap: onChatTap,
           ),
-          const VerticalDivider(thickness: 1, width: 1),
           Expanded(child: navigationShell),
         ],
       ),
@@ -254,10 +254,27 @@ class _NavPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 80,
+    return Container(
+      width: 240,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          right: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+        ),
+      ),
       child: Column(
         children: [
+          // Logo header
+          Container(
+            height: 64,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            alignment: Alignment.centerLeft,
+            child: SvgPicture.asset(
+              'assets/branding/logo-light.svg',
+              height: 32,
+              fit: BoxFit.contain,
+            ),
+          ),
           ..._items.asMap().entries.map((entry) {
             final i = entry.key;
             final item = entry.value;
@@ -268,13 +285,11 @@ class _NavPane extends StatelessWidget {
               onTap: () => onDestinationSelected(i),
             );
           }),
-          if (showChatButton) ...[
-            const Divider(height: 1, indent: 12, endIndent: 12),
+          if (showChatButton)
             _ChatNavItem(
               unreadCount: chatUnreadCount,
               onTap: onChatTap ?? () {},
             ),
-          ],
           const Spacer(),
           const _NavPaneSettingsItem(),
           const SizedBox(height: 12),
@@ -307,41 +322,58 @@ class _NavPaneItem extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
+  static const _teal = Color(0xFF19CBD6);
+  static const _grey = Color(0xFF4F5663);
+
   @override
   Widget build(BuildContext context) {
-    final color = isSelected ? AppColors.accentPrimary : null;
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        width: 80,
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: isSelected
-            ? BoxDecoration(
-                border: Border(
-                  left: BorderSide(
-                      color: AppColors.accentPrimary, width: 3),
-                ),
-                color: AppColors.accentPrimary.withValues(alpha: 0.08),
-              )
-            : null,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isSelected ? item.selectedIcon : item.icon,
-              color: color,
-              size: 22,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              item.label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: color,
-                    fontSize: 10,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Material(
+          color: isSelected
+              ? _teal.withValues(alpha: 0.12)
+              : Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: SizedBox(
+              height: 44,
+              child: Row(
+                children: [
+                  Container(
+                    width: 3,
+                    color: isSelected ? _teal : Colors.transparent,
                   ),
-              textAlign: TextAlign.center,
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 9),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isSelected ? item.selectedIcon : item.icon,
+                            color: isSelected ? _teal : _grey,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            item.label,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: isSelected ? _teal : _grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -357,35 +389,53 @@ class _ChatNavItem extends StatelessWidget {
   final int unreadCount;
   final VoidCallback onTap;
 
+  static const _grey = Color(0xFF4F5663);
+
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: SizedBox(
-        width: 80,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Badge(
-                isLabelVisible: unreadCount > 0,
-                label: Text(
-                  unreadCount > 99 ? '99+' : '$unreadCount',
-                  style: const TextStyle(fontSize: 9),
-                ),
-                child: const Icon(Icons.chat_bubble_outline, size: 22),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: SizedBox(
+              height: 44,
+              child: Row(
+                children: [
+                  Container(width: 3, color: Colors.transparent),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 9),
+                      child: Row(
+                        children: [
+                          Badge(
+                            isLabelVisible: unreadCount > 0,
+                            label: Text(
+                              unreadCount > 99 ? '99+' : '$unreadCount',
+                              style: const TextStyle(fontSize: 9),
+                            ),
+                            child: const Icon(Icons.chat_bubble_outline,
+                                size: 20, color: _grey),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Chat',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              color: _grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Chat',
-                style: Theme.of(context)
-                    .textTheme
-                    .labelSmall
-                    ?.copyWith(fontSize: 10),
-                textAlign: TextAlign.center,
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -396,26 +446,46 @@ class _ChatNavItem extends StatelessWidget {
 class _NavPaneSettingsItem extends StatelessWidget {
   const _NavPaneSettingsItem();
 
+  static const _grey = Color(0xFF4F5663);
+
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => context.push(Routes.settings),
-      child: Container(
-        width: 80,
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.settings_outlined, size: 22),
-            const SizedBox(height: 4),
-            Text(
-              'Settings',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontSize: 10,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => context.push(Routes.settings),
+            child: const SizedBox(
+              height: 44,
+              child: Row(
+                children: [
+                  SizedBox(width: 3),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 9),
+                      child: Row(
+                        children: [
+                          Icon(Icons.settings_outlined, size: 20, color: _grey),
+                          SizedBox(width: 12),
+                          Text(
+                            'Settings',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              color: _grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-              textAlign: TextAlign.center,
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -49,7 +49,7 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize =>
-      Size.fromHeight(64 + (bottom?.preferredSize.height ?? 0));
+      Size.fromHeight(56 + (bottom?.preferredSize.height ?? 0));
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -57,24 +57,20 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
 
     Widget leadingWidget;
     double leadingWidth;
+    bool centreTitle;
 
     if (leading != null) {
       leadingWidget = leading!;
       leadingWidth = canPop ? 140 : 180;
+      centreTitle = true;
     } else if (_isDashboardMode) {
-      // Dashboard: logo only — chip lives in the centre section
-      leadingWidget = Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(width: 16),
-          SvgPicture.asset(
-            'assets/branding/logo-light.svg',
-            height: 36,
-            fit: BoxFit.contain,
-          ),
-        ],
+      // Dashboard mode: workspace selector as leading, search fills title
+      leadingWidget = const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: WorkspaceSwitcherChip(),
       );
-      leadingWidth = 180;
+      leadingWidth = 220;
+      centreTitle = false;
     } else {
       // Sub-screen: optional back arrow + logo
       leadingWidget = Row(
@@ -97,6 +93,7 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
         ],
       );
       leadingWidth = canPop ? 140 : 180;
+      centreTitle = true;
     }
 
     final Widget centre;
@@ -112,21 +109,8 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
         ),
       );
     } else {
-      // Dashboard mode: workspace chip + search bar centred together
-      centre = Row(
-        mainAxisSize: MainAxisSize.max,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const WorkspaceSwitcherChip(),
-          const SizedBox(width: 12),
-          Flexible(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: const _HeaderSearchBar(),
-            ),
-          ),
-        ],
-      );
+      // Dashboard mode: search bar fills the title area
+      centre = const _HeaderSearchBar();
     }
 
     final rightActions = [
@@ -137,19 +121,21 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
 
     return AppBar(
       backgroundColor: Colors.white,
-      elevation: 0,
+      elevation: 1,
+      shadowColor: const Color(0x0A000000),
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
-      toolbarHeight: 64,
+      toolbarHeight: 56,
       automaticallyImplyLeading: false,
       leading: leadingWidget,
       leadingWidth: leadingWidth,
       title: centre,
-      centerTitle: true,
+      centerTitle: centreTitle,
+      titleSpacing: _isDashboardMode ? 8 : NavigationToolbar.kMiddleSpacing,
       actions: rightActions,
       bottom: bottom,
       shape: const Border(
-        bottom: BorderSide(color: Color(0xFFE2E8F0)),
+        bottom: BorderSide(color: Color(0xFFE5E7EB)),
       ),
     );
   }
@@ -343,7 +329,7 @@ class _HeaderSearchBarState extends ConsumerState<_HeaderSearchBar> {
           onChanged: _onChanged,
           decoration: InputDecoration(
             hintText: 'Search decisions, team...',
-            hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
+            hintStyle: const TextStyle(color: Color(0xFF7D8494), fontSize: 14),
             prefixIcon: _loading
                 ? const Padding(
                     padding: EdgeInsets.all(12),
@@ -353,24 +339,23 @@ class _HeaderSearchBarState extends ConsumerState<_HeaderSearchBar> {
                       child: CircularProgressIndicator(strokeWidth: 1.5),
                     ),
                   )
-                : const Icon(Icons.search, color: Colors.black54, size: 20),
+                : const Icon(Icons.search, color: Color(0xFF7D8494), size: 18),
             isDense: true,
-            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(vertical: 8),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide:
-                  const BorderSide(color: AppColors.accentPrimary, width: 1.5),
+              borderSide: const BorderSide(color: Color(0xFF19CBD6), width: 1.5),
             ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: const Color(0xFFF4F5F7),
           ),
         ),
       ),

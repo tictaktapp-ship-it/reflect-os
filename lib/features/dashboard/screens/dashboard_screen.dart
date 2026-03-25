@@ -13,7 +13,6 @@ import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 
 final _dateFmt = DateFormat('d MMM');
-final _refreshedFmt = DateFormat('d MMM yyyy HH:mm');
 
 enum _DateRange { thirtyDays, ninetyDays, allTime }
 
@@ -137,24 +136,82 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           final recentFive = recent.take(5).toList();
 
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             children: [
-              // ── Date range selector ───────────────────────────────────
-              SegmentedButton<_DateRange>(
-                segments: const [
-                  ButtonSegment(
-                      value: _DateRange.thirtyDays, label: Text('30 Days')),
-                  ButtonSegment(
-                      value: _DateRange.ninetyDays, label: Text('90 Days')),
-                  ButtonSegment(
-                      value: _DateRange.allTime, label: Text('All Time')),
+              // ── Timeframe switcher + last refreshed ───────────────────
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE5E7EB),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          for (final (range, label) in [
+                            (_DateRange.thirtyDays, '30 Days'),
+                            (_DateRange.ninetyDays, '90 Days'),
+                            (_DateRange.allTime, 'All Time'),
+                          ])
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () =>
+                                    setState(() => _selectedRange = range),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: _selectedRange == range
+                                        ? const Color(0xFF19CBD6)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: _selectedRange == range
+                                        ? [
+                                            BoxShadow(
+                                              color: const Color(0xFF19CBD6)
+                                                  .withValues(alpha: 0.3),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            )
+                                          ]
+                                        : [],
+                                  ),
+                                  child: Text(
+                                    label,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: _selectedRange == range
+                                          ? FontWeight.w600
+                                          : FontWeight.w500,
+                                      color: _selectedRange == range
+                                          ? Colors.white
+                                          : const Color(0xFF4F5663),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (analytics?.computedAt != null) ...[
+                    const SizedBox(width: 12),
+                    Text(
+                      'Updated ${DateFormat('HH:mm').format(analytics!.computedAt!.toLocal())}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF7D8494),
+                      ),
+                    ),
+                  ],
                 ],
-                selected: {_selectedRange},
-                onSelectionChanged: (s) =>
-                    setState(() => _selectedRange = s.first),
-                showSelectedIcon: false,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               // ── 2×2 Chart Grid ────────────────────────────────────────
               LayoutBuilder(
@@ -168,7 +225,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Expanded(child: _QualityDial(quality: avgQuality)),
-                              const SizedBox(width: 16),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: _HealthDonut(
                                   onTrack: onTrack,
@@ -179,7 +236,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         _StatusBarChart(
                           draft: draft,
                           active: active,
@@ -187,7 +244,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           archived: archived,
                           rangeLabel: _rangeLabel,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         _CalibrationMetricTiles(
                           delta: analytics?.confidenceCalibrationDelta,
                           avgConfidence: analytics?.avgConfidenceGiven,
@@ -199,13 +256,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   return Column(
                     children: [
                       _QualityDial(quality: avgQuality),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       _HealthDonut(
                         onTrack: onTrack,
                         needsAttention: needsAttn,
                         overdue: overdue,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       _StatusBarChart(
                         draft: draft,
                         active: active,
@@ -213,7 +270,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         archived: archived,
                         rangeLabel: _rangeLabel,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       _CalibrationMetricTiles(
                         delta: analytics?.confidenceCalibrationDelta,
                         avgConfidence: analytics?.avgConfidenceGiven,
@@ -224,70 +281,92 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 },
               ),
 
-              // ── Last refreshed ────────────────────────────────────────
-              if (analytics?.computedAt != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8, left: 4),
-                  child: Text(
-                    'Last refreshed: ${_refreshedFmt.format(analytics!.computedAt!.toLocal())}',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.4),
-                        ),
-                  ),
+              // ── Needs Attention panel ─────────────────────────────────
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-
-              // ── Needs Attention ───────────────────────────────────────
-              ExpansionTile(
-                tilePadding: const EdgeInsets.only(left: 4, right: 8),
-                title: Text(
-                  'NEEDS ATTENTION',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
-                      ),
-                ),
-                initiallyExpanded: true,
-                children: [
-                  if (needsAttention.isEmpty)
+                child: Column(
+                  children: [
                     Padding(
-                      padding: const EdgeInsets.only(left: 4, bottom: 8),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'All clear — no decisions need attention.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.4),
-                              ),
-                        ),
-                      ),
-                    )
-                  else
-                    SizedBox(
-                      height: 140,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding:
-                            const EdgeInsets.only(left: 4, right: 4, bottom: 4),
-                        itemCount: needsAttention.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 10),
-                        itemBuilder: (_, index) {
-                          final d = needsAttention[index];
-                          return _NeedsAttentionCard(
-                            decision: d,
-                            dueDate: earliestDue[d.id],
-                          );
-                        },
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 3,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD97D24),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'NEEDS ATTENTION',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFD97D24),
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${needsAttention.length} decisions',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF7D8494),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                ],
+                    const SizedBox(height: 12),
+                    if (needsAttention.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'All clear — no decisions need attention.',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: const Color(0xFF7D8494),
+                                ),
+                          ),
+                        ),
+                      )
+                    else
+                      SizedBox(
+                        height: 110,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.only(
+                              left: 16, right: 16, bottom: 0),
+                          itemCount: needsAttention.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(width: 10),
+                          itemBuilder: (_, index) {
+                            final d = needsAttention[index];
+                            return _NeedsAttentionCard(
+                              decision: d,
+                              dueDate: earliestDue[d.id],
+                            );
+                          },
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
               ),
 
               // ── Recent Decisions ──────────────────────────────────────
@@ -332,65 +411,80 @@ class _QualityDial extends StatelessWidget {
     final hasData = quality != null && quality! > 0;
     final filledFraction = hasData ? q / 100.0 : 0.0;
 
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Decision Quality',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF64748B),
-              ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'DECISION QUALITY',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF7D8494),
+              letterSpacing: 0.5,
             ),
-            const SizedBox(height: 8),
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 240,
-                    height: 150,
-                    child: CustomPaint(
-                      painter: _GaugePainter(
-                        fraction: filledFraction,
-                        hasData: hasData,
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 240,
+                  height: 120,
+                  child: CustomPaint(
+                    painter: _GaugePainter(
+                      fraction: filledFraction,
+                      hasData: hasData,
+                    ),
+                    size: Size.infinite,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: hasData ? (q / 10).toStringAsFixed(1) : '--',
+                        style: TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w700,
+                          color: hasData
+                              ? const Color(0xFF19CBD6)
+                              : const Color(0xFF94A3B8),
+                          fontFamily: 'JetBrainsMono',
+                        ),
                       ),
-                      size: Size.infinite,
-                    ),
+                      if (hasData)
+                        const TextSpan(
+                          text: ' / 10',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF7D8494),
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    hasData ? (q / 10).toStringAsFixed(1) : '--',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.w700,
-                      color: hasData
-                          ? const Color(0xFF19CBD6)
-                          : const Color(0xFF94A3B8),
-                    ),
-                  ),
-                  Text(
-                    hasData ? '/ 10' : '',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF94A3B8),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 4),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -607,7 +701,7 @@ class _StatusBarChart extends StatelessWidget {
           x: x,
           barRods: [
             BarChartRodData(
-              toY: value.toDouble(),
+              toY: math.max(value.toDouble(), maxVal * 0.04),
               color: color,
               width: 22,
               borderRadius: const BorderRadius.vertical(
@@ -616,120 +710,113 @@ class _StatusBarChart extends StatelessWidget {
           ],
         );
 
-    return Card(
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Status Breakdown',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                      letterSpacing: 0.6,
-                    )),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 140,
-              child: BarChart(
-                BarChartData(
-                  maxY: maxVal * 1.25,
-                  barTouchData: BarTouchData(enabled: false),
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (_) => const FlLine(
-                      color: Colors.black12,
-                      strokeWidth: 0.5,
-                    ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'STATUS BREAKDOWN',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF7D8494),
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 120,
+            child: BarChart(
+              BarChartData(
+                maxY: maxVal * 1.25,
+                barTouchData: BarTouchData(enabled: false),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (_) => const FlLine(
+                    color: Color(0xFFE5E7EB),
+                    strokeWidth: 0.5,
                   ),
-                  borderData: FlBorderData(
-                    show: true,
-                    border: Border.all(color: Colors.black12),
-                  ),
-                  titlesData: FlTitlesData(
-                    leftTitles: const AxisTitles(),
-                    rightTitles: const AxisTitles(),
-                    topTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 20,
-                        getTitlesWidget: (value, _) {
-                          final counts = [draft, active, closed, archived];
-                          final i = value.toInt();
-                          if (i < 0 || i >= counts.length) {
-                            return const SizedBox.shrink();
-                          }
-                          return Text(
-                            '${counts[i]}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.85),
-                                ),
-                          );
-                        },
-                      ),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (value, _) {
-                          final labels = ['Draft', 'Active', 'Closed', 'Arch.'];
-                          final i = value.toInt();
-                          if (i < 0 || i >= labels.length) {
-                            return const SizedBox.shrink();
-                          }
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              labels[i],
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
-                                  ?.copyWith(
-                                    fontSize: 10,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.6),
-                                  ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  barGroups: [
-                    bar(0, draft, const Color(0xFF94A3B8)),
-                    bar(1, active, const Color(0xFF19CBD6)),
-                    bar(2, closed, const Color(0xFF2EA073)),
-                    bar(3, archived, const Color(0xFF334155)),
-                  ],
                 ),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  leftTitles: const AxisTitles(),
+                  rightTitles: const AxisTitles(),
+                  topTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 24,
+                      getTitlesWidget: (value, _) {
+                        final counts = [draft, active, closed, archived];
+                        final i = value.toInt();
+                        if (i < 0 || i >= counts.length) {
+                          return const SizedBox.shrink();
+                        }
+                        return Text(
+                          '${counts[i]}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0D1117),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, _) {
+                        final labels = ['Draft', 'Active', 'Closed', 'Arch.'];
+                        final i = value.toInt();
+                        if (i < 0 || i >= labels.length) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            labels[i],
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF4F5663),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                barGroups: [
+                  bar(0, draft, const Color(0xFF94A3B8)),
+                  bar(1, active, const Color(0xFF19CBD6)),
+                  bar(2, closed, const Color(0xFF2EA073)),
+                  bar(3, archived, const Color(0xFF7D8494)),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              rangeLabel,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.4),
-                  ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            rangeLabel,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF7D8494),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -753,99 +840,106 @@ class _HealthDonut extends StatelessWidget {
     final total = (onTrack ?? 0) + (needsAttention ?? 0) + (overdue ?? 0);
     final hasData = total > 0;
 
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Decision Health',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF64748B),
-              ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'DECISION HEALTH',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF7D8494),
+              letterSpacing: 0.5,
             ),
-            const SizedBox(height: 8),
-            Center(
-              child: SizedBox(
-                width: 200,
-                height: 200,
-                child: hasData
-                    ? GradientDonutChart(
-                        size: 200,
-                        strokeWidth: 44,
-                        segments: [
-                          GradientDonutSegment(
-                            value: (onTrack ?? 0).toDouble(),
-                            startColor: const Color(0xFF7EEEE4),
-                            endColor: const Color(0xFF2DD4BF),
-                            label: '${onTrack ?? 0}',
-                          ),
-                          GradientDonutSegment(
-                            value: (needsAttention ?? 0).toDouble(),
-                            startColor: const Color(0xFFFCD34D),
-                            endColor: const Color(0xFFF59E0B),
-                            label: '${needsAttention ?? 0}',
-                          ),
-                          GradientDonutSegment(
-                            value: (overdue ?? 0).toDouble(),
-                            startColor: const Color(0xFFFCA5A5),
-                            endColor: const Color(0xFFF87171),
-                            label: '${overdue ?? 0}',
-                          ),
-                        ],
-                      )
-                    : Center(
-                        child: Text(
-                          'No active\ndecisions',
-                          textAlign: TextAlign.center,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.4),
-                                  ),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: SizedBox(
+              width: 200,
+              height: 200,
+              child: hasData
+                  ? GradientDonutChart(
+                      size: 200,
+                      strokeWidth: 44,
+                      segments: [
+                        GradientDonutSegment(
+                          value: (onTrack ?? 0).toDouble(),
+                          startColor: const Color(0xFF2EA073),
+                          endColor: const Color(0xFF2EA073),
+                          label: '${onTrack ?? 0}',
                         ),
+                        GradientDonutSegment(
+                          value: (needsAttention ?? 0).toDouble(),
+                          startColor: const Color(0xFFD97D24),
+                          endColor: const Color(0xFFD97D24),
+                          label: '${needsAttention ?? 0}',
+                        ),
+                        GradientDonutSegment(
+                          value: (overdue ?? 0).toDouble(),
+                          startColor: const Color(0xFFDC4444),
+                          endColor: const Color(0xFFDC4444),
+                          label: '${overdue ?? 0}',
+                        ),
+                      ],
+                    )
+                  : Center(
+                      child: Text(
+                        'No active\ndecisions',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: const Color(0xFF7D8494),
+                            ),
                       ),
-              ),
+                    ),
             ),
-            const SizedBox(height: 12),
-            if (hasData)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _LegendItem(
-                      color: const Color(0xFF2DD4BF), label: 'On track'),
-                  const SizedBox(width: 16),
-                  _LegendItem(
-                      color: const Color(0xFFF59E0B),
-                      label: 'Needs attention'),
-                  const SizedBox(width: 16),
-                  _LegendItem(
-                      color: const Color(0xFFF87171), label: 'Overdue'),
-                ],
-              ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 12),
+          if (hasData)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _LegendItem(
+                    color: const Color(0xFF2EA073),
+                    label: 'On track',
+                    count: onTrack),
+                const SizedBox(width: 16),
+                _LegendItem(
+                    color: const Color(0xFFD97D24),
+                    label: 'Needs attn',
+                    count: needsAttention),
+                const SizedBox(width: 16),
+                _LegendItem(
+                    color: const Color(0xFFDC4444),
+                    label: 'Overdue',
+                    count: overdue),
+              ],
+            ),
+        ],
       ),
     );
   }
 }
 
 class _LegendItem extends StatelessWidget {
-  const _LegendItem({required this.color, required this.label});
+  const _LegendItem({required this.color, required this.label, this.count});
 
   final Color color;
   final String label;
+  final int? count;
 
   @override
   Widget build(BuildContext context) {
@@ -858,11 +952,21 @@ class _LegendItem extends StatelessWidget {
             decoration:
                 BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 4),
-        Text(label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontSize: 11,
-                  color: const Color(0xFF64748B),
-                )),
+        if (count != null) ...[
+          Text(
+            '$count',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF0D1117),
+            ),
+          ),
+          const SizedBox(width: 2),
+        ],
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: Color(0xFF7D8494)),
+        ),
       ],
     );
   }
@@ -889,9 +993,12 @@ class _CalibrationMetricTiles extends StatelessWidget {
     String calibValue;
     String calibSublabel;
 
+    String calibUnit;
+
     if (d == null) {
       calibColor = const Color(0xFF94A3B8);
       calibValue = '--';
+      calibUnit = '';
       calibSublabel = 'No data yet';
     } else {
       if (d > 1.0) {
@@ -905,15 +1012,17 @@ class _CalibrationMetricTiles extends StatelessWidget {
         calibSublabel = 'Well calibrated';
       }
       final sign = d >= 0 ? '+' : '';
-      calibValue = '$sign${d.toStringAsFixed(1)}%';
+      calibValue = '$sign${d.toStringAsFixed(1)}';
+      calibUnit = '%';
     }
 
-    final confValue = avgConfidence != null
-        ? '${avgConfidence!.toStringAsFixed(1)} / 10'
-        : '--';
-    final outcomeValue = avgOutcomeScore != null
-        ? '${avgOutcomeScore!.toStringAsFixed(1)} / 10'
-        : '--';
+    final confValue =
+        avgConfidence != null ? avgConfidence!.toStringAsFixed(1) : '--';
+    final confUnit = avgConfidence != null ? '/ 10' : '';
+
+    final outcomeValue =
+        avgOutcomeScore != null ? avgOutcomeScore!.toStringAsFixed(1) : '--';
+    final outcomeUnit = avgOutcomeScore != null ? '/ 10' : '';
 
     return IntrinsicHeight(
       child: Row(
@@ -923,6 +1032,7 @@ class _CalibrationMetricTiles extends StatelessWidget {
             child: _MetricTile(
               label: 'Confidence Calibration',
               value: calibValue,
+              unit: calibUnit,
               sublabel: calibSublabel,
               valueColor: calibColor,
             ),
@@ -932,6 +1042,7 @@ class _CalibrationMetricTiles extends StatelessWidget {
             child: _MetricTile(
               label: 'Avg. Confidence Given',
               value: confValue,
+              unit: confUnit,
               sublabel: 'across all decisions',
               valueColor: const Color(0xFF19CBD6),
             ),
@@ -941,6 +1052,7 @@ class _CalibrationMetricTiles extends StatelessWidget {
             child: _MetricTile(
               label: 'Avg. Outcome Score',
               value: outcomeValue,
+              unit: outcomeUnit,
               sublabel: 'from completed reviews',
               valueColor: const Color(0xFF2EA073),
             ),
@@ -955,68 +1067,79 @@ class _MetricTile extends StatelessWidget {
   const _MetricTile({
     required this.label,
     required this.value,
+    this.unit = '',
     required this.sublabel,
     required this.valueColor,
   });
 
   final String label;
   final String value;
+  final String unit;
   final String sublabel;
   final Color valueColor;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF64748B),
-              ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF7D8494),
+              letterSpacing: 0.5,
             ),
-            const SizedBox(height: 8),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: valueColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: valueColor, width: 1.5),
-              ),
-              child: Text(
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
                 value,
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: 28,
                   fontWeight: FontWeight.w700,
                   color: valueColor,
+                  fontFamily: 'JetBrainsMono',
                 ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              sublabel,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFF94A3B8),
-              ),
-            ),
-          ],
-        ),
+              if (unit.isNotEmpty) ...[
+                const SizedBox(width: 4),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    unit,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF7D8494),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            sublabel,
+            style: const TextStyle(fontSize: 11, color: Color(0xFF7D8494)),
+          ),
+        ],
       ),
     );
   }
@@ -1052,7 +1175,7 @@ class _NeedsAttentionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 200,
+      width: 160,
       child: Card(
         clipBehavior: Clip.hardEdge,
         child: InkWell(
@@ -1065,8 +1188,12 @@ class _NeedsAttentionCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     decision.title,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    maxLines: 3,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0D1117),
+                    ),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -1075,32 +1202,28 @@ class _NeedsAttentionCard extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: _bgFor(decision.state),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         decision.state,
-                        style: Theme.of(context)
-                            .textTheme
-                            .labelSmall
-                            ?.copyWith(
-                              color: _fgFor(decision.state),
-                              fontWeight: FontWeight.w600,
-                            ),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: _fgFor(decision.state),
+                        ),
                       ),
                     ),
                     if (dueDate != null) ...[
                       const Spacer(),
                       Text(
-                        'Due ${_dateFmt.format(dueDate!)}',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.6),
-                            ),
+                        _dateFmt.format(dueDate!),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF7D8494),
+                        ),
                       ),
                     ],
                   ],
