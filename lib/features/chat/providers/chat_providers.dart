@@ -36,16 +36,46 @@ class ChatMessagesNotifier
 
   Future<void> _load() async {
     try {
-      final rows = await supabase
+      // Step 1: fetch messages + attachments.
+      // No direct FK exists from chat_messages.sender_user_id to profiles.user_id,
+      // so profiles must be fetched in a separate query.
+      final rawRows = await supabase
           .from('chat_messages')
-          .select('*, profiles(display_name, avatar_url), chat_attachments(*)')
+          .select('*, chat_attachments(*)')
           .eq('workspace_id', _workspaceId)
           .isFilter('deleted_at', null)
           .order('created_at', ascending: false)
           .limit(50);
 
-      final messages = (rows as List)
-          .map((r) => ChatMessageModel.fromJson(r as Map<String, dynamic>))
+      final rows = rawRows as List;
+
+      // Step 2: fetch sender profiles.
+      final senderIds = rows
+          .map((m) => (m as Map<String, dynamic>)['sender_user_id'] as String)
+          .toSet()
+          .toList();
+
+      final profileMap = <String, Map<String, dynamic>>{};
+      if (senderIds.isNotEmpty) {
+        final profiles = await supabase
+            .from('profiles')
+            .select('user_id, display_name, avatar_url')
+            .inFilter('user_id', senderIds);
+        for (final p in profiles as List) {
+          final profile = p as Map<String, dynamic>;
+          profileMap[profile['user_id'] as String] = profile;
+        }
+      }
+
+      // Step 3: merge profiles into message rows.
+      final enriched = rows.map((m) {
+        final map = Map<String, dynamic>.from(m as Map<String, dynamic>);
+        map['profiles'] = profileMap[map['sender_user_id'] as String];
+        return map;
+      }).toList();
+
+      final messages = enriched
+          .map((r) => ChatMessageModel.fromJson(r))
           .toList()
           .reversed
           .toList();
@@ -125,14 +155,31 @@ class ChatMessagesNotifier
     if (msgId == null) return;
 
     try {
+      // Step 1: fetch message + attachments (no profiles join — no direct FK).
       final rows = await supabase
           .from('chat_messages')
-          .select('*, profiles(display_name, avatar_url), chat_attachments(*)')
+          .select('*, chat_attachments(*)')
           .eq('id', msgId)
           .limit(1);
 
-      if (rows.isEmpty) return;
-      var msg = ChatMessageModel.fromJson(rows.first);
+      if ((rows as List).isEmpty) return;
+
+      final msgMap = Map<String, dynamic>.from(rows.first);
+
+      // Step 2: fetch sender profile separately.
+      final senderId = msgMap['sender_user_id'] as String?;
+      if (senderId != null) {
+        try {
+          final profile = await supabase
+              .from('profiles')
+              .select('user_id, display_name, avatar_url')
+              .eq('user_id', senderId)
+              .maybeSingle();
+          msgMap['profiles'] = profile;
+        } catch (_) {}
+      }
+
+      var msg = ChatMessageModel.fromJson(msgMap);
 
       // Attachment rows may not yet be visible via join; fetch separately.
       if (msg.hasAttachment && msg.attachments.isEmpty) {
