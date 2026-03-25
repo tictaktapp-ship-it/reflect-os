@@ -363,13 +363,6 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.accentPrimary,
-        foregroundColor: Colors.white,
-        onPressed: () => context.push(Routes.decisionsCreate),
-        icon: const Icon(Icons.add),
-        label: const Text('New Decision'),
-      ),
       body: decisionsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(

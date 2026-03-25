@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:reflect_os/widgets/reflect_logo.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/auth_state_provider.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
@@ -49,7 +50,7 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize =>
-      Size.fromHeight(56 + (bottom?.preferredSize.height ?? 0));
+      Size.fromHeight(60 + (bottom?.preferredSize.height ?? 0));
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -84,11 +85,7 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
             ),
           Padding(
             padding: EdgeInsets.only(left: canPop ? 0 : 16),
-            child: SvgPicture.asset(
-              'assets/branding/logo-light.svg',
-              height: 36,
-              fit: BoxFit.contain,
-            ),
+            child: const ReflectLogo(iconSize: 28),
           ),
         ],
       );
@@ -126,7 +123,7 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
       shadowColor: const Color(0x0A000000),
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
-      toolbarHeight: 56,
+      toolbarHeight: 60,
       automaticallyImplyLeading: false,
       leading: leadingWidget,
       leadingWidth: leadingWidth,

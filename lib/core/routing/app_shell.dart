@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/connectivity_provider.dart';
@@ -10,6 +9,7 @@ import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/chat/providers/chat_providers.dart';
 import 'package:reflect_os/features/chat/widgets/chat_panel_widget.dart';
 import 'package:reflect_os/features/settings/providers/profile_provider.dart';
+import 'package:reflect_os/widgets/reflect_logo.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({required this.navigationShell, super.key});
@@ -76,13 +76,24 @@ class _AppShellState extends ConsumerState<AppShell> {
             ],
           ),
         ),
+        // New Decision FAB — shown on the Decisions tab (index 1)
+        if (widget.navigationShell.currentIndex == 1)
+          Positioned(
+            bottom: isTeamWorkspace ? 88 : 20,
+            right: 20,
+            child: _NewDecisionFab(
+              onTap: () => context.push(Routes.decisionsCreate),
+            ),
+          ),
+        // Chat FAB — team workspaces only
         if (isTeamWorkspace && workspaceId != null) ...[
           if (_chatOpen)
             _buildChatPanel(context, workspaceId),
           Positioned(
-            bottom: 24,
-            right: 24,
+            bottom: 20,
+            right: 20,
             child: _ChatFab(
+              isOpen: _chatOpen,
               unreadCount: unreadCount,
               onPressed: () =>
                   setState(() => _chatOpen = !_chatOpen),
@@ -122,37 +133,145 @@ class _AppShellState extends ConsumerState<AppShell> {
 // ── Chat FAB ───────────────────────────────────────────────────────────────────
 
 class _ChatFab extends StatelessWidget {
-  const _ChatFab({required this.unreadCount, required this.onPressed});
+  const _ChatFab({
+    required this.isOpen,
+    required this.unreadCount,
+    required this.onPressed,
+  });
 
+  final bool isOpen;
   final int unreadCount;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return FloatingActionButton(
-      backgroundColor: const Color(0xFF19CBD6),
-      onPressed: onPressed,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          const Icon(Icons.chat_bubble_outline, color: Colors.white),
-          if (unreadCount > 0)
-            Positioned(
-              top: -4,
-              right: -4,
-              child: CircleAvatar(
-                radius: 8,
-                backgroundColor: const Color(0xFFDC4444),
-                child: Text(
-                  unreadCount > 99 ? '99+' : '$unreadCount',
-                  style: const TextStyle(
-                      fontSize: 9,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold),
+    return Material(
+      elevation: 4,
+      shadowColor: const Color(0xFF19CBD6).withValues(alpha: 0.3),
+      borderRadius: BorderRadius.circular(28),
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(28),
+        onTap: onPressed,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isOpen
+                  ? const [Color(0xFF10A4AF), Color(0xFF0D8A94)]
+                  : const [Color(0xFF19CBD6), Color(0xFF10A4AF)],
+            ),
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF19CBD6).withValues(alpha: 0.35),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  isOpen
+                      ? Icons.close_rounded
+                      : Icons.chat_bubble_rounded,
+                  key: ValueKey(isOpen),
+                  color: Colors.white,
+                  size: 22,
                 ),
               ),
+              if (!isOpen && unreadCount > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFDC4444),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        unreadCount > 9 ? '9+' : '$unreadCount',
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── New Decision FAB ───────────────────────────────────────────────────────────
+
+class _NewDecisionFab extends StatelessWidget {
+  const _NewDecisionFab({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.cs;
+    return Material(
+      elevation: 3,
+      shadowColor: Colors.black.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(24),
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: onTap,
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            color: cs.backgroundSecondary,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: const Color(0xFF19CBD6).withValues(alpha: 0.4),
             ),
-        ],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.add_rounded,
+                  color: Color(0xFF19CBD6), size: 18),
+              const SizedBox(width: 6),
+              Text(
+                'New Decision',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: cs.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -270,11 +389,7 @@ class _NavPane extends StatelessWidget {
             height: 64,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             alignment: Alignment.centerLeft,
-            child: SvgPicture.asset(
-              'assets/branding/logo-light.svg',
-              height: 32,
-              fit: BoxFit.contain,
-            ),
+            child: const ReflectLogo(iconSize: 30),
           ),
           ..._items.asMap().entries.map((entry) {
             final i = entry.key;
