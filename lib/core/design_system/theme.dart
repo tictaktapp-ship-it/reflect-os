@@ -78,6 +78,16 @@ final class AppTheme {
         backgroundColor: AppColors.backgroundElevated,
         contentTextStyle: TextStyle(color: AppColors.textPrimary),
       ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.backgroundSurface,
+        foregroundColor: AppColors.textPrimary,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.backgroundSurface,
+        surfaceTintColor: Colors.transparent,
+      ),
     );
   }
 

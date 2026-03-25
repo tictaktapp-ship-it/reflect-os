@@ -588,7 +588,7 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      color: const Color(0xFFF0FAFA),
+      color: context.cs.backgroundElevated,
       child: Row(
         children: [
           const Icon(Icons.reply, size: 16, color: Color(0xFF19CBD6)),

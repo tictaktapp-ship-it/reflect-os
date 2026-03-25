@@ -129,7 +129,7 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
                 context.push(Routes.decisionsMeetingCapture);
               },
             ),
-            const Divider(color: Color(0xFFE2E8F0), height: 1),
+            Divider(color: context.cs.borderDefault, height: 1),
             _ActionRow(
               icon: Icons.sort_outlined,
               label: 'Sort decisions',
@@ -138,7 +138,7 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
                 _showTuneSheet(all, sorted);
               },
             ),
-            const Divider(color: Color(0xFFE2E8F0), height: 1),
+            Divider(color: context.cs.borderDefault, height: 1),
             _ActionRow(
               icon: Icons.filter_list_outlined,
               label: 'Filter decisions',
@@ -147,7 +147,7 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
                 _showTuneSheet(all, sorted);
               },
             ),
-            const Divider(color: Color(0xFFE2E8F0), height: 1),
+            Divider(color: context.cs.borderDefault, height: 1),
             _ActionRow(
               icon: Icons.download_outlined,
               label: 'Export',
@@ -156,7 +156,7 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
                 _showTuneSheet(all, sorted);
               },
             ),
-            const Divider(color: Color(0xFFE2E8F0), height: 1),
+            Divider(color: context.cs.borderDefault, height: 1),
             _ActionRow(
               icon: Icons.notifications_outlined,
               label: 'Notifications',
@@ -178,7 +178,7 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: context.cs.backgroundSecondary,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
@@ -476,10 +476,10 @@ class _DecisionGroupState extends State<_DecisionGroup> {
                   const SizedBox(width: 8),
                   Text(
                     widget.state.toUpperCase(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF64748B),
+                      color: context.cs.textSecondary,
                       letterSpacing: 1.2,
                     ),
                   ),
@@ -584,19 +584,20 @@ class _DecisionCard extends StatelessWidget {
     final hasConfidence = d.initialConfidence != null;
     final hasCategory = d.categoryName?.isNotEmpty == true;
 
+    final cs = context.cs;
     return SizedBox(
       width: 200,
       height: 140,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cs.backgroundSecondary,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-          boxShadow: const [
+          border: Border.all(color: cs.borderSubtle, width: 1),
+          boxShadow: [
             BoxShadow(
               blurRadius: 8,
-              offset: Offset(2, 4),
-              color: Color(0x26000000),
+              offset: const Offset(2, 4),
+              color: Colors.black.withValues(alpha: 0.15),
             ),
           ],
         ),
@@ -632,10 +633,10 @@ class _DecisionCard extends StatelessWidget {
                   // ── Row 2: title ────────────────────────────────────────────
                   Text(
                     d.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1E293B),
+                      color: cs.textPrimary,
                     ),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
@@ -644,8 +645,7 @@ class _DecisionCard extends StatelessWidget {
                   const Spacer(),
 
                   // ── Divider ─────────────────────────────────────────────────
-                  const Divider(
-                      height: 1, thickness: 1, color: Color(0xFFE2E8F0)),
+                  Divider(height: 1, thickness: 1, color: cs.borderSubtle),
                   const SizedBox(height: 4),
 
                   // ── Row 3: confidence + category ────────────────────────────
@@ -665,9 +665,9 @@ class _DecisionCard extends StatelessWidget {
                         Flexible(
                           child: Text(
                             d.categoryName!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 9,
-                              color: Color(0xFF94A3B8),
+                              color: cs.textTertiary,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
