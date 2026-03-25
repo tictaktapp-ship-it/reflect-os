@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/routing/routes.dart';
+import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/core/utils/csv_downloader.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
@@ -431,6 +432,39 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
   }
 }
 
+// ── Card detail models ────────────────────────────────────────────────────────
+
+class _ReviewCheckpointSummary {
+  const _ReviewCheckpointSummary({
+    required this.checkpointType,
+    required this.dueAt,
+    required this.status,
+  });
+
+  final String checkpointType;
+  final DateTime dueAt;
+  final String status;
+
+  factory _ReviewCheckpointSummary.fromJson(Map<String, dynamic> json) =>
+      _ReviewCheckpointSummary(
+        checkpointType: json['checkpoint_type'] as String,
+        dueAt: DateTime.parse(json['due_at'] as String),
+        status: json['status'] as String,
+      );
+}
+
+class _DecisionCardDetail {
+  const _DecisionCardDetail({
+    required this.tags,
+    required this.checkpoints,
+    required this.coachAdjustmentSum,
+  });
+
+  final List<String> tags;
+  final List<_ReviewCheckpointSummary> checkpoints;
+  final int coachAdjustmentSum;
+}
+
 // ── Decision group (collapsible deck-of-cards) ────────────────────────────────
 
 class _DecisionGroup extends StatefulWidget {
@@ -448,13 +482,87 @@ class _DecisionGroup extends StatefulWidget {
   State<_DecisionGroup> createState() => _DecisionGroupState();
 }
 
+enum _GroupView { fan, spread, detail }
+
 class _DecisionGroupState extends State<_DecisionGroup> {
-  late bool _expanded;
+  late _GroupView _view;
+  String? _activeDetailId;
+  final Map<String, _DecisionCardDetail?> _detailCache = {};
 
   @override
   void initState() {
     super.initState();
-    _expanded = widget.initiallyExpanded;
+    _view = widget.initiallyExpanded ? _GroupView.spread : _GroupView.fan;
+  }
+
+  void _openDetail(String decisionId) {
+    setState(() {
+      _view = _GroupView.detail;
+      _activeDetailId = decisionId;
+    });
+    _fetchDetailIfNeeded(decisionId);
+  }
+
+  Future<void> _fetchDetailIfNeeded(String decisionId) async {
+    if (_detailCache.containsKey(decisionId)) return;
+    setState(() => _detailCache[decisionId] = null); // null = loading
+
+    try {
+      final results = await Future.wait([
+        supabase
+            .from('decision_tags')
+            .select('tags(name)')
+            .eq('decision_id', decisionId)
+            .isFilter('deleted_at', null),
+        supabase
+            .from('review_checkpoints')
+            .select('checkpoint_type, due_at, status')
+            .eq('decision_id', decisionId)
+            .isFilter('deleted_at', null)
+            .order('due_at', ascending: true)
+            .limit(3),
+        supabase
+            .from('coach_notes')
+            .select('coach_confidence_adjustment')
+            .eq('decision_id', decisionId)
+            .isFilter('deleted_at', null)
+            .not('coach_confidence_adjustment', 'is', null),
+      ]);
+
+      if (!mounted) return;
+
+      final tagRows = results[0] as List<dynamic>;
+      final checkpointRows = results[1] as List<dynamic>;
+      final coachRows = results[2] as List<dynamic>;
+
+      setState(() {
+        _detailCache[decisionId] = _DecisionCardDetail(
+          tags: tagRows
+              .map((r) {
+                final t = r['tags'];
+                return t is Map ? t['name'] as String? : null;
+              })
+              .whereType<String>()
+              .toList(),
+          checkpoints: checkpointRows
+              .map((r) =>
+                  _ReviewCheckpointSummary.fromJson(r as Map<String, dynamic>))
+              .toList(),
+          coachAdjustmentSum: coachRows
+              .map((r) => (r['coach_confidence_adjustment'] as num).toInt())
+              .fold(0, (a, b) => a + b),
+        );
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _detailCache[decisionId] = const _DecisionCardDetail(
+          tags: [],
+          checkpoints: [],
+          coachAdjustmentSum: 0,
+        );
+      });
+    }
   }
 
   @override
@@ -467,7 +575,10 @@ class _DecisionGroupState extends State<_DecisionGroup> {
           // ── Group header ────────────────────────────────────────────────────
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => setState(() => _expanded = !_expanded),
+            onTap: () => setState(() {
+              _view =
+                  _view == _GroupView.fan ? _GroupView.spread : _GroupView.fan;
+            }),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
@@ -502,7 +613,7 @@ class _DecisionGroupState extends State<_DecisionGroup> {
                   ),
                   const Spacer(),
                   AnimatedRotation(
-                    turns: _expanded ? 0.5 : 0.0,
+                    turns: _view != _GroupView.fan ? 0.5 : 0.0,
                     duration: const Duration(milliseconds: 200),
                     child: const Icon(
                       Icons.keyboard_arrow_down,
@@ -521,15 +632,39 @@ class _DecisionGroupState extends State<_DecisionGroup> {
             alignment: Alignment.topLeft,
             child: Padding(
               padding: const EdgeInsets.only(left: 16, top: 12, bottom: 16),
-              child: _expanded
-                  ? Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: widget.decisions
-                          .map((d) => _DecisionCard(decision: d))
-                          .toList(),
-                    )
-                  : _FanDeck(decisions: widget.decisions),
+              child: switch (_view) {
+                _GroupView.fan => _FanDeck(
+                    decisions: widget.decisions,
+                    onTapFront: _openDetail,
+                    onExpandStack: () =>
+                        setState(() => _view = _GroupView.spread),
+                  ),
+                _GroupView.spread => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final d in widget.decisions)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _CollapsedCard(
+                            decision: d,
+                            onTap: () => _openDetail(d.id),
+                          ),
+                        ),
+                    ],
+                  ),
+                _GroupView.detail => () {
+                    final decision = widget.decisions.firstWhere(
+                      (d) => d.id == _activeDetailId,
+                      orElse: () => widget.decisions.first,
+                    );
+                    return _ExpandedCard(
+                      decision: decision,
+                      detail: _detailCache[_activeDetailId ?? ''],
+                      onCollapse: () =>
+                          setState(() => _view = _GroupView.spread),
+                    );
+                  }(),
+              },
             ),
           ),
         ],
@@ -563,14 +698,22 @@ class _StateGroupDot extends StatelessWidget {
   }
 }
 
-// ── Decision card (portrait, fixed 200×140px) ────────────────────────────────
+// ── Collapsed card (~80px horizontal, used in fan deck + spread list) ─────────
 
-class _DecisionCard extends StatelessWidget {
-  const _DecisionCard({required this.decision});
+class _CollapsedCard extends StatelessWidget {
+  const _CollapsedCard({
+    required this.decision,
+    this.onTap,
+    this.fixedWidth,
+    this.fixedHeight,
+  });
 
   final Decision decision;
+  final VoidCallback? onTap;
+  final double? fixedWidth;
+  final double? fixedHeight;
 
-  static Color _healthColor(String? h) => switch (h) {
+  static Color _healthColour(String? h) => switch (h) {
         'on_track' => const Color(0xFF2EA073),
         'needs_attention' => const Color(0xFFD97D24),
         'overdue' => const Color(0xFFDC4444),
@@ -579,146 +722,150 @@ class _DecisionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final d = decision;
-    final health = d.healthState;
-    final hasConfidence = d.initialConfidence != null;
-    final hasCategory = d.categoryName?.isNotEmpty == true;
-
     final cs = context.cs;
-    return SizedBox(
-      width: 200,
-      height: 140,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: cs.backgroundSecondary,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: cs.borderSubtle, width: 1),
-          boxShadow: [
-            BoxShadow(
-              blurRadius: 8,
-              offset: const Offset(2, 4),
-              color: Colors.black.withValues(alpha: 0.15),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => context.push('/decisions/detail/${d.id}'),
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Row 1: health dot + state badge ────────────────────────
-                  Row(
-                    children: [
-                      if (health != null)
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: _healthColor(health),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      const Spacer(),
-                      _StateBadge(state: d.state),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
+    final d = decision;
 
-                  // ── Row 2: title ────────────────────────────────────────────
-                  Text(
-                    d.title,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: cs.textPrimary,
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  const Spacer(),
-
-                  // ── Divider ─────────────────────────────────────────────────
-                  Divider(height: 1, thickness: 1, color: cs.borderSubtle),
-                  const SizedBox(height: 4),
-
-                  // ── Row 3: confidence + category ────────────────────────────
-                  Row(
-                    children: [
-                      if (hasConfidence)
-                        Text(
-                          '${d.initialConfidence}/10',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF19CBD6),
-                          ),
-                        ),
-                      const Spacer(),
-                      if (hasCategory)
-                        Flexible(
-                          child: Text(
-                            d.categoryName!,
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: cs.textTertiary,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
+    Widget card = Container(
+      width: fixedWidth,
+      height: fixedHeight,
+      constraints:
+          fixedHeight == null ? const BoxConstraints(minHeight: 72) : null,
+      decoration: BoxDecoration(
+        color: cs.backgroundSecondary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.borderDefault),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          // Health indicator dot
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _healthColour(d.healthState),
             ),
           ),
-        ),
+          const SizedBox(width: 10),
+          // Title + state badge
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  d.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: cs.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                _StateBadge(state: d.state),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Confidence chip
+          if (d.initialConfidence != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF19CBD6).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${d.initialConfidence}/10',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF19CBD6),
+                ),
+              ),
+            ),
+        ],
       ),
     );
+
+    if (onTap != null) {
+      card = GestureDetector(onTap: onTap, child: card);
+    }
+    return card;
   }
 }
+
+// ── State badge (pill with dot) ───────────────────────────────────────────────
 
 class _StateBadge extends StatelessWidget {
   const _StateBadge({required this.state});
   final String state;
 
-  Color _bg(String s) => switch (s.toLowerCase()) {
-        'active' => AppColors.accentPrimary.withValues(alpha: 0.12),
-        'draft' => AppColors.textMuted.withValues(alpha: 0.12),
-        'closed' => AppColors.success.withValues(alpha: 0.15),
-        'archived' => AppColors.textMuted.withValues(alpha: 0.10),
-        _ => AppColors.textMuted.withValues(alpha: 0.12),
-      };
-
-  Color _fg(String s) => switch (s.toLowerCase()) {
-        'active' => AppColors.accentPrimary,
-        'draft' => AppColors.textSecondary,
-        'closed' => AppColors.success,
-        'archived' => AppColors.textMuted,
-        _ => AppColors.textSecondary,
-      };
-
   @override
   Widget build(BuildContext context) {
+    final cs = context.cs;
+    final Color bg;
+    final Color dot;
+    final Color fg;
+
+    switch (state.toLowerCase()) {
+      case 'active':
+        bg = const Color(0xFF19CBD6).withValues(alpha: 0.1);
+        dot = const Color(0xFF19CBD6);
+        fg = const Color(0xFF19CBD6);
+      case 'draft':
+        bg = cs.backgroundElevated;
+        dot = const Color(0xFF94A3B8);
+        fg = cs.textSecondary;
+      case 'closed':
+        bg = const Color(0xFF2EA073).withValues(alpha: 0.1);
+        dot = const Color(0xFF2EA073);
+        fg = const Color(0xFF2EA073);
+      case 'archived':
+        bg = cs.backgroundElevated;
+        dot = const Color(0xFF7D8494);
+        fg = cs.textTertiary;
+      default:
+        bg = cs.backgroundElevated;
+        dot = const Color(0xFF94A3B8);
+        fg = cs.textSecondary;
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: _bg(state),
-        borderRadius: BorderRadius.circular(8),
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        state,
-        style: TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.w600,
-          color: _fg(state),
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: dot),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            state,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: fg,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -727,22 +874,28 @@ class _StateBadge extends StatelessWidget {
 // ── Fan deck (collapsed group — physical card spread) ────────────────────────
 
 class _FanDeck extends StatelessWidget {
-  const _FanDeck({required this.decisions});
+  const _FanDeck({
+    required this.decisions,
+    required this.onTapFront,
+    required this.onExpandStack,
+  });
+
   final List<Decision> decisions;
+  final ValueChanged<String> onTapFront;
+  final VoidCallback onExpandStack;
 
   // Front card (index 0) is rightmost; back cards fan to the left.
-  // translateX is negative so back cards shift left of the front card.
   static const _rotations = [0.0, -0.06, -0.12, -0.18, -0.22];
   static const _translateX = [0.0, -14.0, -28.0, -42.0, -54.0];
   static const _translateY = [0.0, 6.0, 12.0, 18.0, 22.0];
   static const _opacities = [1.0, 0.88, 0.72, 0.56, 0.40];
 
-  // Left buffer = max |translateX| so back cards stay within the SizedBox.
+  // Left buffer keeps back cards inside the SizedBox.
   static const double _leftBuffer = 60.0;
   static const double _cardW = 200.0;
-  static const double _cardH = 140.0;
+  static const double _cardH = 76.0;
   static const double _stackW = _leftBuffer + _cardW + 40.0; // 300px
-  static const double _stackH = _cardH + 22.0 + 20.0;       // 182px
+  static const double _stackH = _cardH + 22.0 + 20.0; // 118px
 
   @override
   Widget build(BuildContext context) {
@@ -771,9 +924,18 @@ class _FanDeck extends StatelessWidget {
                     child: Opacity(
                       opacity: _opacities[i],
                       child: i == 0
-                          ? _DecisionCard(decision: visible[i])
+                          ? _CollapsedCard(
+                              decision: visible[i],
+                              fixedWidth: _cardW,
+                              fixedHeight: _cardH,
+                              onTap: () => onTapFront(visible[i].id),
+                            )
                           : IgnorePointer(
-                              child: _DecisionCard(decision: visible[i]),
+                              child: _CollapsedCard(
+                                decision: visible[i],
+                                fixedWidth: _cardW,
+                                fixedHeight: _cardH,
+                              ),
                             ),
                     ),
                   ),
@@ -781,6 +943,47 @@ class _FanDeck extends StatelessWidget {
             ],
           ),
         ),
+
+        // Pill expand button
+        const SizedBox(height: 12),
+        Center(
+          child: GestureDetector(
+            onTap: onExpandStack,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF19CBD6),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF19CBD6).withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.expand_more,
+                      color: Colors.white, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${decisions.length} decision${decisions.length == 1 ? '' : 's'}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
         if (extra > 0)
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 4),
@@ -790,6 +993,278 @@ class _FanDeck extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+// ── Expanded card (full detail) ───────────────────────────────────────────────
+
+class _ExpandedCard extends StatelessWidget {
+  const _ExpandedCard({
+    required this.decision,
+    required this.detail,
+    required this.onCollapse,
+  });
+
+  final Decision decision;
+
+  /// `null` means the detail is still loading.
+  final _DecisionCardDetail? detail;
+  final VoidCallback onCollapse;
+
+  static int _effectiveConfidence(Decision d, int coachAdjust) {
+    final base = d.initialConfidence ?? 5;
+    return (base + coachAdjust).clamp(1, 10);
+  }
+
+  static String _confidenceLabel(int score) {
+    if (score >= 8) return 'highly confident';
+    if (score >= 6) return 'moderately confident';
+    if (score >= 4) return 'cautiously confident';
+    return 'low confidence';
+  }
+
+  static String _formatDate(DateTime dt) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
+  }
+
+  static String _checkpointTypeLabel(String type) => switch (type) {
+        '30_day' => '30-day',
+        '90_day' => '90-day',
+        '180_day' => '180-day',
+        '6_month' => '6-month',
+        '12_month' => '12-month',
+        '24_month' => '24-month',
+        'monthly_continuous' => 'Monthly',
+        'custom' => 'Custom',
+        _ => type.replaceAll('_', ' '),
+      };
+
+  static String _checkpointStatusLabel(_ReviewCheckpointSummary cp) {
+    if (cp.status == 'Completed') return 'On track';
+    if (cp.status == 'Snoozed') return 'Snoozed';
+    if (cp.status == 'Skipped') return 'Skipped';
+    if (cp.status == 'Cancelled') return 'Cancelled';
+    // Scheduled — check due date
+    final diff = cp.dueAt.difference(DateTime.now()).inDays;
+    if (diff < 0) return 'Overdue';
+    if (diff < 7) return 'Due soon';
+    return 'Pending review';
+  }
+
+  static Color _checkpointColour(String status) => switch (status) {
+        'Completed' => const Color(0xFF2EA073),
+        'Snoozed' => const Color(0xFFD97D24),
+        'Skipped' || 'Cancelled' => const Color(0xFF7D8494),
+        _ => const Color(0xFF19CBD6), // Scheduled
+      };
+
+  static const TextStyle _sectionHeader = TextStyle(
+    fontSize: 10,
+    fontWeight: FontWeight.w600,
+    color: Color(0xFF7D8494),
+    letterSpacing: 0.8,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.cs;
+    final d = decision;
+    final loadedDetail = detail;
+    final coachAdjust = loadedDetail?.coachAdjustmentSum ?? 0;
+    final effectiveConf = _effectiveConfidence(d, coachAdjust);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.backgroundSecondary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.borderDefault),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Header ─────────────────────────────────────────────────────────
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      d.title,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: cs.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Made ${_formatDate(d.createdAt)}',
+                      style: TextStyle(fontSize: 12, color: cs.textTertiary),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              _StateBadge(state: d.state),
+            ],
+          ),
+
+          // ── Divider ────────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Divider(color: cs.borderSubtle, height: 1),
+          ),
+
+          // ── Loading indicator ──────────────────────────────────────────────
+          if (loadedDetail == null)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF19CBD6),
+                  ),
+                ),
+              ),
+            )
+          else ...[
+            // ── Confidence ─────────────────────────────────────────────────
+            const Text('CONFIDENCE AT TIME OF DECISION',
+                style: _sectionHeader),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: effectiveConf / 10,
+                minHeight: 6,
+                backgroundColor: cs.backgroundElevated,
+                valueColor:
+                    const AlwaysStoppedAnimation(Color(0xFF19CBD6)),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${effectiveConf * 10}% — ${_confidenceLabel(effectiveConf)}',
+              style: TextStyle(fontSize: 12, color: cs.textSecondary),
+            ),
+
+            // ── Tags ───────────────────────────────────────────────────────
+            if (loadedDetail.tags.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text('RISK FACTORS IDENTIFIED', style: _sectionHeader),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final tag in loadedDetail.tags)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: cs.borderDefault),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        tag,
+                        style: TextStyle(
+                            fontSize: 12, color: cs.textSecondary),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+
+            // ── Checkpoints ────────────────────────────────────────────────
+            if (loadedDetail.checkpoints.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Divider(color: cs.borderSubtle, height: 1),
+              ),
+              const Text('OUTCOME CHECKPOINTS', style: _sectionHeader),
+              const SizedBox(height: 8),
+              for (final cp in loadedDetail.checkpoints)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: cs.backgroundElevated,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _checkpointColour(cp.status),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '${_checkpointTypeLabel(cp.checkpointType)} — ${_checkpointStatusLabel(cp)}',
+                          style: TextStyle(
+                              fontSize: 13, color: cs.textPrimary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ],
+
+          // ── Action row ────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () =>
+                        context.push('/decisions/detail/${d.id}'),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF19CBD6)),
+                      foregroundColor: const Color(0xFF19CBD6),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    child: const Text('View decision'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(Icons.keyboard_arrow_up,
+                      color: cs.textTertiary),
+                  onPressed: onCollapse,
+                  tooltip: 'Collapse',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
