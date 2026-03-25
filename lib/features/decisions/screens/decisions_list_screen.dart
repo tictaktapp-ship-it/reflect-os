@@ -700,7 +700,7 @@ class _StateGroupDot extends StatelessWidget {
   }
 }
 
-// ── Collapsed card (~80px horizontal, used in fan deck + spread list) ─────────
+// ── Collapsed card (fan deck + spread list) ───────────────────────────────────
 
 class _CollapsedCard extends StatelessWidget {
   const _CollapsedCard({
@@ -722,16 +722,34 @@ class _CollapsedCard extends StatelessWidget {
         _ => const Color(0xFF94A3B8),
       };
 
+  static String _formatDate(DateTime dt) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
+  }
+
+  static String _confidenceLabel(int score) {
+    if (score >= 8) return 'highly confident';
+    if (score >= 6) return 'moderately confident';
+    if (score >= 4) return 'cautiously confident';
+    return 'low confidence';
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
     final d = decision;
+    final confidence = d.initialConfidence ?? 5;
 
     Widget card = Container(
       width: fixedWidth,
       height: fixedHeight,
-      constraints:
-          fixedHeight == null ? const BoxConstraints(minHeight: 72) : null,
+      clipBehavior: Clip.hardEdge,
+      constraints: fixedHeight == null
+          ? const BoxConstraints(minHeight: 120)
+          : null,
       decoration: BoxDecoration(
         color: cs.backgroundSecondary,
         borderRadius: BorderRadius.circular(12),
@@ -744,59 +762,88 @@ class _CollapsedCard extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Health indicator dot
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _healthColour(d.healthState),
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Title + state badge
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  d.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: cs.textPrimary,
+          // ── Header: health dot + title + date + state badge ────────────
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _healthColour(d.healthState),
                   ),
                 ),
-                const SizedBox(height: 3),
-                _StateBadge(state: d.state),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Confidence chip
-          if (d.initialConfidence != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF19CBD6).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(
-                '${d.initialConfidence}/10',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF19CBD6),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      d.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: cs.textPrimary,
+                        height: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Made ${_formatDate(d.createdAt)}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: cs.textTertiary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(width: 8),
+              _StateBadge(state: d.state),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+          Divider(color: cs.borderSubtle, height: 1),
+          const SizedBox(height: 10),
+
+          // ── Confidence bar ──────────────────────────────────────────────
+          Text(
+            'CONFIDENCE AT TIME OF DECISION',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: cs.textTertiary,
+              letterSpacing: 0.6,
             ),
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: confidence / 10.0,
+              minHeight: 6,
+              backgroundColor: cs.backgroundElevated,
+              valueColor:
+                  const AlwaysStoppedAnimation(Color(0xFF19CBD6)),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${confidence * 10}% — ${_confidenceLabel(confidence)}',
+            style: TextStyle(fontSize: 11, color: cs.textSecondary),
+          ),
         ],
       ),
     );
@@ -894,18 +941,19 @@ class _FanDeck extends StatefulWidget {
 
 class _FanDeckState extends State<_FanDeck>
     with SingleTickerProviderStateMixin {
-  // ── Fan layout constants (unchanged) ──────────────────────────────────────
-  // Front card (index 0 in the rotated view) is rightmost; back cards fan left.
+  // ── Fan layout constants ──────────────────────────────────────────────────
+  // Front card (index 0) is rightmost; back cards fan to the left.
+  // _rotations and _opacities are also used by gesture/drag logic — do not change.
   static const _rotations = [0.0, -0.06, -0.12, -0.18, -0.22];
-  static const _translateX = [0.0, -14.0, -28.0, -42.0, -54.0];
-  static const _translateY = [0.0, 6.0, 12.0, 18.0, 22.0];
+  static const _translateX = [0.0, -10.0, -20.0, -30.0, -40.0];
+  static const _translateY = [0.0, 4.0, 8.0, 12.0, 16.0];
   static const _opacities = [1.0, 0.88, 0.72, 0.56, 0.40];
 
-  static const double _leftBuffer = 60.0;
-  static const double _cardW = 200.0;
-  static const double _cardH = 76.0;
-  static const double _stackW = _leftBuffer + _cardW + 40.0; // 300px
-  static const double _stackH = _cardH + 22.0 + 20.0; // 118px
+  // Left buffer keeps back cards (max -40px) inside the SizedBox.
+  static const double _leftBuffer = 50.0;
+  // Card height is fixed; card width is computed from available space in build().
+  static const double _cardH = 200.0;
+  static const double _stackH = _cardH + 48.0; // 248px — 48px fan-peek headroom
 
   // ── Swipe tracking ─────────────────────────────────────────────────────────
   double _dragStartX = 0;
@@ -1009,187 +1057,193 @@ class _FanDeckState extends State<_FanDeck>
   Widget build(BuildContext context) {
     if (widget.decisions.isEmpty) return const SizedBox.shrink();
 
-    final visible = _visibleDecisions();
-    final extra = widget.decisions.length - visible.length;
-    final dp = _dragProgress;
+    return LayoutBuilder(builder: (context, constraints) {
+      // Responsive card width: 360px on wide screens, fills space on mobile.
+      final cardW = constraints.maxWidth >= 440.0
+          ? 360.0
+          : (constraints.maxWidth - _leftBuffer - 20.0).clamp(200.0, 360.0);
+      final stackW = _leftBuffer + cardW + 20.0;
 
-    Widget fanStack = SizedBox(
-      width: _stackW,
-      height: _stackH,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Directional hint arrows
-          if (widget.decisions.length > 1) ...[
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: AnimatedOpacity(
-                  opacity: _isDragging && dp < -0.12 ? 1.0 : 0.3,
-                  duration: const Duration(milliseconds: 150),
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF19CBD6).withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.chevron_left,
-                        color: Color(0xFF19CBD6), size: 18),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: AnimatedOpacity(
-                  opacity: _isDragging && dp > 0.12 ? 1.0 : 0.3,
-                  duration: const Duration(milliseconds: 150),
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF19CBD6).withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.chevron_right,
-                        color: Color(0xFF19CBD6), size: 18),
-                  ),
-                ),
-              ),
-            ),
-          ],
+      final visible = _visibleDecisions();
+      final extra = widget.decisions.length - visible.length;
+      final dp = _dragProgress;
 
-          // Draw back cards first (highest index = furthest behind)
-          for (int i = visible.length - 1; i >= 0; i--)
-            Positioned(
-              left: _leftBuffer + _translateX[i],
-              top: _translateY[i],
-              child: Transform.rotate(
-                angle: _rotations[i],
-                alignment: Alignment.bottomCenter,
-                child: Opacity(
-                  opacity: _opacities[i],
-                  child: _buildCard(context, visible, i, dp),
-                ),
-              ),
-            ),
-
-          // Carousel position dots
-          if (widget.decisions.length > 1)
-            Positioned(
-              bottom: 2,
-              left: 0,
-              right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  for (int i = 0;
-                      i < widget.decisions.length.clamp(0, 8);
-                      i++)
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      width: i == 0 ? 16 : 6, // 0 is always the front slot
-                      height: 6,
+      Widget fanStack = SizedBox(
+        width: stackW,
+        height: _stackH,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Directional hint arrows
+            if (widget.decisions.length > 1) ...[
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: AnimatedOpacity(
+                    opacity: _isDragging && dp < -0.12 ? 1.0 : 0.3,
+                    duration: const Duration(milliseconds: 150),
+                    child: Container(
+                      width: 28,
+                      height: 28,
                       decoration: BoxDecoration(
-                        color: i == 0
-                            ? const Color(0xFF19CBD6)
-                            : const Color(0xFF19CBD6).withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(3),
+                        color: const Color(0xFF19CBD6).withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
                       ),
+                      child: const Icon(Icons.chevron_left,
+                          color: Color(0xFF19CBD6), size: 18),
                     ),
-                ],
+                  ),
+                ),
               ),
-            ),
-        ],
-      ),
-    );
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: AnimatedOpacity(
+                    opacity: _isDragging && dp > 0.12 ? 1.0 : 0.3,
+                    duration: const Duration(milliseconds: 150),
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF19CBD6).withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.chevron_right,
+                          color: Color(0xFF19CBD6), size: 18),
+                    ),
+                  ),
+                ),
+              ),
+            ],
 
-    // Wrap with gesture + keyboard + mouse cursor
-    fanStack = MouseRegion(
-      cursor: _isDragging
-          ? SystemMouseCursors.grabbing
-          : SystemMouseCursors.grab,
-      child: Focus(
-        autofocus: false,
-        onKeyEvent: (node, event) {
-          if (event is KeyDownEvent) {
-            if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-              _advanceCard();
-              return KeyEventResult.handled;
-            }
-            if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-              _retreatCard();
-              return KeyEventResult.handled;
-            }
-            if (event.logicalKey == LogicalKeyboardKey.enter ||
-                event.logicalKey == LogicalKeyboardKey.space) {
-              _expandCard(0);
-              return KeyEventResult.handled;
-            }
-          }
-          return KeyEventResult.ignored;
-        },
-        child: GestureDetector(
-          onHorizontalDragStart: (details) {
-            setState(() {
-              _isDragging = true;
-              _dragStartX = details.globalPosition.dx;
-              _dragCurrentX = details.globalPosition.dx;
-            });
-          },
-          onHorizontalDragUpdate: (details) {
-            setState(() => _dragCurrentX = details.globalPosition.dx);
-          },
-          onHorizontalDragEnd: (details) {
-            final dist = _dragCurrentX - _dragStartX;
-            final vel = details.velocity.pixelsPerSecond.dx;
-            if (dist > 80 || vel > 500) {
-              _advanceCard();
-            } else if (dist < -80 || vel < -500) {
-              _retreatCard();
-            }
-            setState(() {
-              _isDragging = false;
-              _dragStartX = 0;
-              _dragCurrentX = 0;
-            });
-          },
-          child: fanStack,
+            // Draw back cards first (highest index = furthest behind)
+            for (int i = visible.length - 1; i >= 0; i--)
+              Positioned(
+                left: _leftBuffer + _translateX[i],
+                top: _translateY[i],
+                child: Transform.rotate(
+                  angle: _rotations[i],
+                  alignment: Alignment.bottomCenter,
+                  child: Opacity(
+                    opacity: _opacities[i],
+                    child: _buildCard(context, visible, i, dp, cardW),
+                  ),
+                ),
+              ),
+
+            // Carousel position dots
+            if (widget.decisions.length > 1)
+              Positioned(
+                bottom: 2,
+                left: 0,
+                right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (int i = 0;
+                        i < widget.decisions.length.clamp(0, 8);
+                        i++)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        width: i == 0 ? 16 : 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: i == 0
+                              ? const Color(0xFF19CBD6)
+                              : const Color(0xFF19CBD6)
+                                  .withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+          ],
         ),
-      ),
-    );
+      );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        fanStack,
+      // Wrap with gesture + keyboard + mouse cursor (logic unchanged)
+      fanStack = MouseRegion(
+        cursor: _isDragging
+            ? SystemMouseCursors.grabbing
+            : SystemMouseCursors.grab,
+        child: Focus(
+          autofocus: false,
+          onKeyEvent: (node, event) {
+            if (event is KeyDownEvent) {
+              if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                _advanceCard();
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                _retreatCard();
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.enter ||
+                  event.logicalKey == LogicalKeyboardKey.space) {
+                _expandCard(0);
+                return KeyEventResult.handled;
+              }
+            }
+            return KeyEventResult.ignored;
+          },
+          child: GestureDetector(
+            onHorizontalDragStart: (details) {
+              setState(() {
+                _isDragging = true;
+                _dragStartX = details.globalPosition.dx;
+                _dragCurrentX = details.globalPosition.dx;
+              });
+            },
+            onHorizontalDragUpdate: (details) {
+              setState(() => _dragCurrentX = details.globalPosition.dx);
+            },
+            onHorizontalDragEnd: (details) {
+              final dist = _dragCurrentX - _dragStartX;
+              final vel = details.velocity.pixelsPerSecond.dx;
+              if (dist > 80 || vel > 500) {
+                _advanceCard();
+              } else if (dist < -80 || vel < -500) {
+                _retreatCard();
+              }
+              setState(() {
+                _isDragging = false;
+                _dragStartX = 0;
+                _dragCurrentX = 0;
+              });
+            },
+            child: fanStack,
+          ),
+        ),
+      );
 
-        // Hint text (fades away after first interaction)
-        if (!_hasInteracted)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              'Swipe to browse · Double-tap to open',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                color: context.cs.textTertiary,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          fanStack,
+
+          // Hint text (fades away after first interaction)
+          if (!_hasInteracted)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Swipe to browse · Double-tap to open',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: context.cs.textTertiary,
+                ),
               ),
             ),
-          ),
 
-        // Pill expand button
-        const SizedBox(height: 12),
-        Center(
-          child: GestureDetector(
+          // Pill expand button — left-aligned with the stack
+          const SizedBox(height: 12),
+          GestureDetector(
             onTap: widget.onExpandStack,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
@@ -1224,18 +1278,19 @@ class _FanDeckState extends State<_FanDeck>
               ),
             ),
           ),
-        ),
 
-        if (extra > 0)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, left: 4),
-            child: Text(
-              '+$extra more',
-              style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+          if (extra > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '+$extra more',
+                style: const TextStyle(
+                    fontSize: 11, color: Color(0xFF94A3B8)),
+              ),
             ),
-          ),
-      ],
-    );
+        ],
+      );
+    });
   }
 
   // ── Card builder (handles drag transform + double-tap) ────────────────────
@@ -1245,13 +1300,14 @@ class _FanDeckState extends State<_FanDeck>
     List<Decision> visible,
     int slotIndex, // 0 = front
     double dp,
+    double cardW,
   ) {
     final isFront = slotIndex == 0;
     final isBehindFront = slotIndex == 1;
 
     Widget card = _CollapsedCard(
       decision: visible[slotIndex],
-      fixedWidth: _cardW,
+      fixedWidth: cardW,
       fixedHeight: _cardH,
     );
 
