@@ -176,16 +176,20 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
           // Insert / update generated_documents row if we have a decision.
           if (decisionId != null) {
             try {
-              final docId = await const ToolkitRepository()
-                  .insertGeneratedDocument(
+              final repo = const ToolkitRepository();
+              final docId = await repo.insertGeneratedDocument(
                 workspaceId: workspaceId,
                 userId: userId,
                 decisionId: decisionId,
               );
-              await const ToolkitRepository().updateDocumentStoragePath(
+              await repo.updateDocumentStoragePath(
                 documentId: docId,
                 storageBucket: 'generated-documents',
                 storagePath: storagePath,
+              );
+              await repo.linkGeneratedDocumentToRun(
+                toolRunId: widget.run.id,
+                documentId: docId,
               );
             } catch (_) {
               // Non-fatal: DB row tracking is best-effort.

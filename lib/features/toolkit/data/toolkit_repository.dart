@@ -142,6 +142,17 @@ class ToolkitRepository {
     return row['id'] as String;
   }
 
+  /// Sets tool_runs.generated_document_id so the run knows which doc it produced.
+  Future<void> linkGeneratedDocumentToRun({
+    required String toolRunId,
+    required String documentId,
+  }) async {
+    await supabase
+        .from('tool_runs')
+        .update({'generated_document_id': documentId})
+        .eq('id', toolRunId);
+  }
+
   /// Updates the storage location and marks status as Ready.
   Future<void> updateDocumentStoragePath({
     required String documentId,

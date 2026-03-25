@@ -320,7 +320,7 @@ class ChatMessagesNotifier
 
   @override
   void dispose() {
-    _channel?.unsubscribe();
+    if (_channel != null) supabase.removeChannel(_channel!);
     super.dispose();
   }
 }
@@ -382,7 +382,10 @@ class ChatPresenceNotifier extends StateNotifier<Set<String>> {
   RealtimeChannel? _channel;
 
   void _subscribe() {
-    final ch = supabase.channel('chat_presence:$_workspaceId');
+    final ch = supabase.channel(
+      'chat_presence:$_workspaceId',
+      opts: RealtimeChannelConfig(key: _currentUserId),
+    );
     _channel = ch
         .onPresenceSync((_) => _updatePresence())
         .onPresenceJoin((_) => _updatePresence())
@@ -398,9 +401,9 @@ class ChatPresenceNotifier extends StateNotifier<Set<String>> {
   }
 
   void _updatePresence() {
-    final presenceList = _channel?.presenceState();
-    if (presenceList == null) return;
-    final onlineIds = presenceList
+    final presenceState = _channel?.presenceState();
+    if (presenceState == null) return;
+    final onlineIds = presenceState
         .expand((s) => s.presences)
         .map((p) => p.payload['user_id'] as String?)
         .whereType<String>()
@@ -410,7 +413,7 @@ class ChatPresenceNotifier extends StateNotifier<Set<String>> {
 
   @override
   void dispose() {
-    _channel?.unsubscribe();
+    if (_channel != null) supabase.removeChannel(_channel!);
     super.dispose();
   }
 }
