@@ -254,12 +254,13 @@ class _NavPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.cs;
     return Container(
       width: 240,
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: cs.backgroundSecondary,
         border: Border(
-          right: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+          right: BorderSide(color: cs.borderDefault, width: 1),
         ),
       ),
       child: Column(
@@ -322,11 +323,11 @@ class _NavPaneItem extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
-  static const _teal = Color(0xFF19CBD6);
-  static const _grey = Color(0xFF4F5663);
+  static const _teal = AppColorScheme.accent;
 
   @override
   Widget build(BuildContext context) {
+    final grey = context.cs.textSecondary;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: ClipRRect(
@@ -352,7 +353,7 @@ class _NavPaneItem extends StatelessWidget {
                         children: [
                           Icon(
                             isSelected ? item.selectedIcon : item.icon,
-                            color: isSelected ? _teal : _grey,
+                            color: isSelected ? _teal : grey,
                             size: 20,
                           ),
                           const SizedBox(width: 12),
@@ -363,7 +364,7 @@ class _NavPaneItem extends StatelessWidget {
                               fontWeight: isSelected
                                   ? FontWeight.w600
                                   : FontWeight.w400,
-                              color: isSelected ? _teal : _grey,
+                              color: isSelected ? _teal : grey,
                             ),
                           ),
                         ],
@@ -389,10 +390,9 @@ class _ChatNavItem extends StatelessWidget {
   final int unreadCount;
   final VoidCallback onTap;
 
-  static const _grey = Color(0xFF4F5663);
-
   @override
   Widget build(BuildContext context) {
+    final grey = context.cs.textSecondary;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: ClipRRect(
@@ -417,16 +417,16 @@ class _ChatNavItem extends StatelessWidget {
                               unreadCount > 99 ? '99+' : '$unreadCount',
                               style: const TextStyle(fontSize: 9),
                             ),
-                            child: const Icon(Icons.chat_bubble_outline,
-                                size: 20, color: _grey),
+                            child: Icon(Icons.chat_bubble_outline,
+                                size: 20, color: grey),
                           ),
                           const SizedBox(width: 12),
-                          const Text(
+                          Text(
                             'Chat',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w400,
-                              color: _grey,
+                              color: grey,
                             ),
                           ),
                         ],
@@ -446,10 +446,9 @@ class _ChatNavItem extends StatelessWidget {
 class _NavPaneSettingsItem extends StatelessWidget {
   const _NavPaneSettingsItem();
 
-  static const _grey = Color(0xFF4F5663);
-
   @override
   Widget build(BuildContext context) {
+    final grey = context.cs.textSecondary;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: ClipRRect(
@@ -458,24 +457,24 @@ class _NavPaneSettingsItem extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: () => context.push(Routes.settings),
-            child: const SizedBox(
+            child: SizedBox(
               height: 44,
               child: Row(
                 children: [
-                  SizedBox(width: 3),
+                  const SizedBox(width: 3),
                   Expanded(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 9),
+                      padding: const EdgeInsets.symmetric(horizontal: 9),
                       child: Row(
                         children: [
-                          Icon(Icons.settings_outlined, size: 20, color: _grey),
-                          SizedBox(width: 12),
+                          Icon(Icons.settings_outlined, size: 20, color: grey),
+                          const SizedBox(width: 12),
                           Text(
                             'Settings',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w400,
-                              color: _grey,
+                              color: grey,
                             ),
                           ),
                         ],

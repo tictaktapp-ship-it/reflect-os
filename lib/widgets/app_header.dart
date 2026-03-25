@@ -78,7 +78,7 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
         children: [
           if (canPop)
             IconButton(
-              icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A2E)),
+              icon: Icon(Icons.arrow_back, color: context.cs.textPrimary),
               onPressed: () => Navigator.of(context).pop(),
               padding: const EdgeInsets.only(left: 8),
             ),
@@ -102,10 +102,10 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
     } else if (title != null) {
       centre = Text(
         title!,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF1A1A2E),
+          color: context.cs.textPrimary,
         ),
       );
     } else {
@@ -119,8 +119,9 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
       const SizedBox(width: 8),
     ];
 
+    final cs = context.cs;
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: cs.backgroundSecondary,
       elevation: 1,
       shadowColor: const Color(0x0A000000),
       scrolledUnderElevation: 0,
@@ -134,8 +135,8 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
       titleSpacing: _isDashboardMode ? 8 : NavigationToolbar.kMiddleSpacing,
       actions: rightActions,
       bottom: bottom,
-      shape: const Border(
-        bottom: BorderSide(color: Color(0xFFE5E7EB)),
+      shape: Border(
+        bottom: BorderSide(color: cs.borderDefault),
       ),
     );
   }
@@ -319,6 +320,7 @@ class _HeaderSearchBarState extends ConsumerState<_HeaderSearchBar> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.cs;
     return CompositedTransformTarget(
       link: _layerLink,
       child: ConstrainedBox(
@@ -329,7 +331,7 @@ class _HeaderSearchBarState extends ConsumerState<_HeaderSearchBar> {
           onChanged: _onChanged,
           decoration: InputDecoration(
             hintText: 'Search decisions, team...',
-            hintStyle: const TextStyle(color: Color(0xFF7D8494), fontSize: 14),
+            hintStyle: TextStyle(color: cs.textTertiary, fontSize: 14),
             prefixIcon: _loading
                 ? const Padding(
                     padding: EdgeInsets.all(12),
@@ -339,23 +341,24 @@ class _HeaderSearchBarState extends ConsumerState<_HeaderSearchBar> {
                       child: CircularProgressIndicator(strokeWidth: 1.5),
                     ),
                   )
-                : const Icon(Icons.search, color: Color(0xFF7D8494), size: 18),
+                : Icon(Icons.search, color: cs.textTertiary, size: 18),
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(vertical: 8),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              borderSide: BorderSide(color: cs.borderDefault),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              borderSide: BorderSide(color: cs.borderDefault),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF19CBD6), width: 1.5),
+              borderSide: const BorderSide(
+                  color: AppColorScheme.accent, width: 1.5),
             ),
             filled: true,
-            fillColor: const Color(0xFFF4F5F7),
+            fillColor: cs.backgroundElevated,
           ),
         ),
       ),
@@ -404,56 +407,65 @@ class _SearchOverlayPanel extends StatelessWidget {
             targetAnchor: Alignment.bottomCenter,
             followerAnchor: Alignment.topCenter,
             offset: const Offset(0, 6),
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                width: 380,
-                constraints: const BoxConstraints(maxHeight: 440),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x1A000000),
-                      blurRadius: 16,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (decisions.isNotEmpty) ...[
-                          _GroupHeader(
-                              label: 'Decisions', count: decisions.length),
-                          const Divider(height: 1, indent: 16, endIndent: 16),
-                          ...decisions.map((d) => _DecisionTile(
-                                decision: d,
-                                onTap: () => onDecisionTap(d.id),
-                              )),
-                        ],
-                        if (decisions.isNotEmpty && members.isNotEmpty)
-                          const SizedBox(height: 4),
-                        if (members.isNotEmpty) ...[
-                          _GroupHeader(
-                              label: 'Team Members', count: members.length),
-                          const Divider(height: 1, indent: 16, endIndent: 16),
-                          ...members.map((m) => _MemberTile(
-                                member: m,
-                                onTap: onTeamTap,
-                              )),
-                        ],
+            child: Builder(
+              builder: (context) {
+                final cs = context.cs;
+                return Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: 380,
+                    constraints: const BoxConstraints(maxHeight: 440),
+                    decoration: BoxDecoration(
+                      color: cs.backgroundSecondary,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: cs.borderDefault),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x1A000000),
+                          blurRadius: 16,
+                          offset: Offset(0, 4),
+                        ),
                       ],
                     ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (decisions.isNotEmpty) ...[
+                              _GroupHeader(
+                                  label: 'Decisions',
+                                  count: decisions.length),
+                              const Divider(
+                                  height: 1, indent: 16, endIndent: 16),
+                              ...decisions.map((d) => _DecisionTile(
+                                    decision: d,
+                                    onTap: () => onDecisionTap(d.id),
+                                  )),
+                            ],
+                            if (decisions.isNotEmpty && members.isNotEmpty)
+                              const SizedBox(height: 4),
+                            if (members.isNotEmpty) ...[
+                              _GroupHeader(
+                                  label: 'Team Members',
+                                  count: members.length),
+                              const Divider(
+                                  height: 1, indent: 16, endIndent: 16),
+                              ...members.map((m) => _MemberTile(
+                                    member: m,
+                                    onTap: onTeamTap,
+                                  )),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
         ),
@@ -472,16 +484,17 @@ class _GroupHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.cs;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Row(
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF64748B),
+              color: cs.textTertiary,
               letterSpacing: 0.4,
             ),
           ),
@@ -489,15 +502,15 @@ class _GroupHeader extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
-              color: const Color(0xFFE2E8F0),
+              color: cs.backgroundElevated,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               '$count',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF64748B),
+                color: cs.textTertiary,
               ),
             ),
           ),
@@ -520,10 +533,11 @@ class _DecisionTile extends StatelessWidget {
         _ => const Color(0x22606060),
       };
 
-  Color _stateFg(String state) => switch (state.toLowerCase()) {
+  Color _stateFg(String state, BuildContext context) =>
+      switch (state.toLowerCase()) {
         'active' => AppColors.accentPrimary,
         'closed' => AppColors.success,
-        _ => const Color(0xFF64748B),
+        _ => context.cs.textTertiary,
       };
 
   @override
@@ -534,16 +548,16 @@ class _DecisionTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           children: [
-            const Icon(Icons.description_outlined,
-                size: 16, color: Color(0xFF94A3B8)),
+            Icon(Icons.description_outlined,
+                size: 16, color: context.cs.textTertiary),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 decision.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 13, color: Color(0xFF1A1A2E)),
+                style: TextStyle(
+                    fontSize: 13, color: context.cs.textPrimary),
               ),
             ),
             const SizedBox(width: 8),
@@ -559,7 +573,7 @@ class _DecisionTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
-                  color: _stateFg(decision.state),
+                  color: _stateFg(decision.state, context),
                 ),
               ),
             ),
@@ -612,14 +626,14 @@ class _MemberTile extends StatelessWidget {
                 name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 13, color: Color(0xFF1A1A2E)),
+                style: TextStyle(
+                    fontSize: 13, color: context.cs.textPrimary),
               ),
             ),
             Text(
               member.role,
-              style: const TextStyle(
-                  fontSize: 11, color: Color(0xFF94A3B8)),
+              style: TextStyle(
+                  fontSize: 11, color: context.cs.textTertiary),
             ),
           ],
         ),
@@ -679,7 +693,6 @@ void _showUserProfileSheet(
     BuildContext context, WidgetRef ref, String? displayName, String email) {
   showModalBottomSheet<void>(
     context: context,
-    backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
@@ -720,10 +733,10 @@ class _UserProfileSheetBody extends ConsumerWidget {
             Center(
               child: Text(
                 displayName?.isNotEmpty == true ? displayName! : email,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A1A2E),
+                  color: context.cs.textPrimary,
                 ),
               ),
             ),
@@ -732,9 +745,9 @@ class _UserProfileSheetBody extends ConsumerWidget {
             Center(
               child: Text(
                 email,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
-                  color: Color(0xFF64748B),
+                  color: context.cs.textSecondary,
                 ),
               ),
             ),

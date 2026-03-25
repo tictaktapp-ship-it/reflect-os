@@ -145,7 +145,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE5E7EB),
+                        color: context.cs.backgroundElevated,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
@@ -165,13 +165,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                       const EdgeInsets.symmetric(vertical: 8),
                                   decoration: BoxDecoration(
                                     color: _selectedRange == range
-                                        ? const Color(0xFF19CBD6)
+                                        ? AppColorScheme.accent
                                         : Colors.transparent,
                                     borderRadius: BorderRadius.circular(8),
                                     boxShadow: _selectedRange == range
                                         ? [
                                             BoxShadow(
-                                              color: const Color(0xFF19CBD6)
+                                              color: AppColorScheme.accent
                                                   .withValues(alpha: 0.3),
                                               blurRadius: 4,
                                               offset: const Offset(0, 2),
@@ -189,7 +189,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                           : FontWeight.w500,
                                       color: _selectedRange == range
                                           ? Colors.white
-                                          : const Color(0xFF4F5663),
+                                          : context.cs.textSecondary,
                                     ),
                                   ),
                                 ),
@@ -203,9 +203,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     const SizedBox(width: 12),
                     Text(
                       'Updated ${DateFormat('HH:mm').format(analytics!.computedAt!.toLocal())}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: Color(0xFF7D8494),
+                        color: context.cs.textTertiary,
                       ),
                     ),
                   ],
@@ -285,9 +285,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               Container(
                 margin: const EdgeInsets.only(top: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.cs.backgroundSecondary,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                  border: Border.all(color: context.cs.borderDefault),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.04),
@@ -323,9 +323,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           const Spacer(),
                           Text(
                             '${needsAttention.length} decisions',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF7D8494),
+                              color: context.cs.textTertiary,
                             ),
                           ),
                         ],
@@ -340,7 +340,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           child: Text(
                             'All clear — no decisions need attention.',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: const Color(0xFF7D8494),
+                                  color: context.cs.textTertiary,
                                 ),
                           ),
                         ),
@@ -411,11 +411,12 @@ class _QualityDial extends StatelessWidget {
     final hasData = quality != null && quality! > 0;
     final filledFraction = hasData ? q / 100.0 : 0.0;
 
+    final cs = context.cs;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.backgroundSecondary,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: cs.borderDefault),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -428,12 +429,12 @@ class _QualityDial extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'DECISION QUALITY',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF7D8494),
+              color: cs.textTertiary,
               letterSpacing: 0.5,
             ),
           ),
@@ -449,6 +450,7 @@ class _QualityDial extends StatelessWidget {
                     painter: _GaugePainter(
                       fraction: filledFraction,
                       hasData: hasData,
+                      trackColor: cs.borderDefault,
                     ),
                     size: Size.infinite,
                   ),
@@ -463,17 +465,17 @@ class _QualityDial extends StatelessWidget {
                           fontSize: 36,
                           fontWeight: FontWeight.w700,
                           color: hasData
-                              ? const Color(0xFF19CBD6)
-                              : const Color(0xFF94A3B8),
+                              ? AppColorScheme.accent
+                              : cs.textTertiary,
                           fontFamily: 'JetBrainsMono',
                         ),
                       ),
                       if (hasData)
-                        const TextSpan(
+                        TextSpan(
                           text: ' / 10',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Color(0xFF7D8494),
+                            color: cs.textTertiary,
                             fontWeight: FontWeight.w400,
                           ),
                         ),
@@ -491,10 +493,15 @@ class _QualityDial extends StatelessWidget {
 }
 
 class _GaugePainter extends CustomPainter {
-  const _GaugePainter({required this.fraction, required this.hasData});
+  const _GaugePainter({
+    required this.fraction,
+    required this.hasData,
+    required this.trackColor,
+  });
 
   final double fraction;
   final bool hasData;
+  final Color trackColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -513,7 +520,7 @@ class _GaugePainter extends CustomPainter {
       math.pi,
       false,
       Paint()
-        ..color = const Color(0xFFE2E8F0)
+        ..color = trackColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
         ..strokeCap = StrokeCap.butt,
@@ -544,7 +551,9 @@ class _GaugePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GaugePainter old) =>
-      old.fraction != fraction || old.hasData != hasData;
+      old.fraction != fraction ||
+      old.hasData != hasData ||
+      old.trackColor != trackColor;
 }
 
 // ── Gradient Donut Chart ──────────────────────────────────────────────────────
@@ -569,11 +578,13 @@ class GradientDonutChart extends StatelessWidget {
     required this.segments,
     required this.size,
     required this.strokeWidth,
+    this.separatorColor = Colors.white,
   });
 
   final List<GradientDonutSegment> segments;
   final double size;
   final double strokeWidth;
+  final Color separatorColor;
 
   @override
   Widget build(BuildContext context) {
@@ -584,6 +595,7 @@ class GradientDonutChart extends StatelessWidget {
         painter: _DonutPainter(
           segments: segments,
           strokeWidth: strokeWidth,
+          separatorColor: separatorColor,
         ),
         size: Size(size, size),
       ),
@@ -592,10 +604,15 @@ class GradientDonutChart extends StatelessWidget {
 }
 
 class _DonutPainter extends CustomPainter {
-  const _DonutPainter({required this.segments, required this.strokeWidth});
+  const _DonutPainter({
+    required this.segments,
+    required this.strokeWidth,
+    required this.separatorColor,
+  });
 
   final List<GradientDonutSegment> segments;
   final double strokeWidth;
+  final Color separatorColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -614,7 +631,7 @@ class _DonutPainter extends CustomPainter {
       ..strokeCap = StrokeCap.butt;
 
     final separatorPaint = Paint()
-      ..color = Colors.white
+      ..color = separatorColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
 
@@ -710,11 +727,12 @@ class _StatusBarChart extends StatelessWidget {
           ],
         );
 
+    final cs = context.cs;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.backgroundSecondary,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: cs.borderDefault),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -727,12 +745,12 @@ class _StatusBarChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'STATUS BREAKDOWN',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF7D8494),
+              color: cs.textTertiary,
               letterSpacing: 0.5,
             ),
           ),
@@ -746,8 +764,8 @@ class _StatusBarChart extends StatelessWidget {
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  getDrawingHorizontalLine: (_) => const FlLine(
-                    color: Color(0xFFE5E7EB),
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: cs.borderDefault,
                     strokeWidth: 0.5,
                   ),
                 ),
@@ -767,10 +785,10 @@ class _StatusBarChart extends StatelessWidget {
                         }
                         return Text(
                           '${counts[i]}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF0D1117),
+                            color: cs.textPrimary,
                           ),
                         );
                       },
@@ -789,9 +807,9 @@ class _StatusBarChart extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
                             labels[i],
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF4F5663),
+                              color: cs.textSecondary,
                             ),
                           ),
                         );
@@ -800,10 +818,10 @@ class _StatusBarChart extends StatelessWidget {
                   ),
                 ),
                 barGroups: [
-                  bar(0, draft, const Color(0xFF94A3B8)),
-                  bar(1, active, const Color(0xFF19CBD6)),
-                  bar(2, closed, const Color(0xFF2EA073)),
-                  bar(3, archived, const Color(0xFF7D8494)),
+                  bar(0, draft, cs.textTertiary),
+                  bar(1, active, AppColorScheme.accent),
+                  bar(2, closed, AppColorScheme.success),
+                  bar(3, archived, cs.textSecondary),
                 ],
               ),
             ),
@@ -811,9 +829,9 @@ class _StatusBarChart extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             rangeLabel,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: Color(0xFF7D8494),
+              color: cs.textTertiary,
             ),
           ),
         ],
@@ -840,11 +858,12 @@ class _HealthDonut extends StatelessWidget {
     final total = (onTrack ?? 0) + (needsAttention ?? 0) + (overdue ?? 0);
     final hasData = total > 0;
 
+    final cs = context.cs;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.backgroundSecondary,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: cs.borderDefault),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -857,12 +876,12 @@ class _HealthDonut extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'DECISION HEALTH',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF7D8494),
+              color: cs.textTertiary,
               letterSpacing: 0.5,
             ),
           ),
@@ -875,23 +894,24 @@ class _HealthDonut extends StatelessWidget {
                   ? GradientDonutChart(
                       size: 200,
                       strokeWidth: 44,
+                      separatorColor: cs.backgroundSecondary,
                       segments: [
                         GradientDonutSegment(
                           value: (onTrack ?? 0).toDouble(),
-                          startColor: const Color(0xFF2EA073),
-                          endColor: const Color(0xFF2EA073),
+                          startColor: AppColorScheme.success,
+                          endColor: AppColorScheme.success,
                           label: '${onTrack ?? 0}',
                         ),
                         GradientDonutSegment(
                           value: (needsAttention ?? 0).toDouble(),
-                          startColor: const Color(0xFFD97D24),
-                          endColor: const Color(0xFFD97D24),
+                          startColor: AppColorScheme.warning,
+                          endColor: AppColorScheme.warning,
                           label: '${needsAttention ?? 0}',
                         ),
                         GradientDonutSegment(
                           value: (overdue ?? 0).toDouble(),
-                          startColor: const Color(0xFFDC4444),
-                          endColor: const Color(0xFFDC4444),
+                          startColor: AppColorScheme.destructive,
+                          endColor: AppColorScheme.destructive,
                           label: '${overdue ?? 0}',
                         ),
                       ],
@@ -901,7 +921,7 @@ class _HealthDonut extends StatelessWidget {
                         'No active\ndecisions',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: const Color(0xFF7D8494),
+                              color: cs.textTertiary,
                             ),
                       ),
                     ),
@@ -955,17 +975,17 @@ class _LegendItem extends StatelessWidget {
         if (count != null) ...[
           Text(
             '$count',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0D1117),
+              color: context.cs.textPrimary,
             ),
           ),
           const SizedBox(width: 2),
         ],
         Text(
           label,
-          style: const TextStyle(fontSize: 11, color: Color(0xFF7D8494)),
+          style: TextStyle(fontSize: 11, color: context.cs.textTertiary),
         ),
       ],
     );
@@ -996,19 +1016,19 @@ class _CalibrationMetricTiles extends StatelessWidget {
     String calibUnit;
 
     if (d == null) {
-      calibColor = const Color(0xFF94A3B8);
+      calibColor = context.cs.textTertiary;
       calibValue = '--';
       calibUnit = '';
       calibSublabel = 'No data yet';
     } else {
       if (d > 1.0) {
-        calibColor = const Color(0xFFD97D24);
+        calibColor = AppColorScheme.warning;
         calibSublabel = 'Overconfident';
       } else if (d < -1.0) {
-        calibColor = const Color(0xFF19CBD6);
+        calibColor = AppColorScheme.accent;
         calibSublabel = 'Underconfident';
       } else {
-        calibColor = const Color(0xFF2EA073);
+        calibColor = AppColorScheme.success;
         calibSublabel = 'Well calibrated';
       }
       final sign = d >= 0 ? '+' : '';
@@ -1044,7 +1064,7 @@ class _CalibrationMetricTiles extends StatelessWidget {
               value: confValue,
               unit: confUnit,
               sublabel: 'across all decisions',
-              valueColor: const Color(0xFF19CBD6),
+              valueColor: AppColorScheme.accent,
             ),
           ),
           const SizedBox(width: 12),
@@ -1054,7 +1074,7 @@ class _CalibrationMetricTiles extends StatelessWidget {
               value: outcomeValue,
               unit: outcomeUnit,
               sublabel: 'from completed reviews',
-              valueColor: const Color(0xFF2EA073),
+              valueColor: AppColorScheme.success,
             ),
           ),
         ],
@@ -1080,11 +1100,12 @@ class _MetricTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.cs;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.backgroundSecondary,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: cs.borderDefault),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -1099,10 +1120,10 @@ class _MetricTile extends StatelessWidget {
         children: [
           Text(
             label.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF7D8494),
+              color: cs.textTertiary,
               letterSpacing: 0.5,
             ),
           ),
@@ -1125,9 +1146,9 @@ class _MetricTile extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Text(
                     unit,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF7D8494),
+                      color: cs.textTertiary,
                     ),
                   ),
                 ),
@@ -1137,7 +1158,7 @@ class _MetricTile extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             sublabel,
-            style: const TextStyle(fontSize: 11, color: Color(0xFF7D8494)),
+            style: TextStyle(fontSize: 11, color: cs.textTertiary),
           ),
         ],
       ),
@@ -1188,10 +1209,10 @@ class _NeedsAttentionCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     decision.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0D1117),
+                      color: context.cs.textPrimary,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -1220,9 +1241,9 @@ class _NeedsAttentionCard extends StatelessWidget {
                       const Spacer(),
                       Text(
                         _dateFmt.format(dueDate!),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: Color(0xFF7D8494),
+                          color: context.cs.textTertiary,
                         ),
                       ),
                     ],

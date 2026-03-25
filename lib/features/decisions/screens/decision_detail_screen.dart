@@ -696,12 +696,15 @@ class _FilingCabinetTabBar extends StatelessWidget {
 
   static const _selectedHeight = 52.0;
   static const _unselectedHeight = 44.0;
-  static const _borderColor = Color(0xFFE5E7EB);
-  static const _selectedTopColor = Color(0xFF19CBD6);
-  static const _unselectedBg = Color(0xFFF3F4F6);
+  static const _selectedTopColor = AppColorScheme.accent;
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.cs;
+    final borderColor = cs.borderDefault;
+    final unselectedBg = cs.backgroundElevated;
+    final selectedBg = cs.backgroundSecondary;
+
     final tabWidgets = List.generate(tabs.length, (i) {
       final selected = i == selectedIndex;
       final tab = tabs[i];
@@ -709,7 +712,7 @@ class _FilingCabinetTabBar extends StatelessWidget {
       Widget label = selected
           ? Icon(tab.icon, size: narrow ? 18 : 15, color: _selectedTopColor)
           : Icon(tab.icon,
-              size: narrow ? 18 : 15, color: const Color(0xFF6B7280));
+              size: narrow ? 18 : 15, color: cs.textTertiary);
 
       if (!narrow) {
         label = Row(
@@ -723,9 +726,7 @@ class _FilingCabinetTabBar extends StatelessWidget {
                 fontSize: 12,
                 fontWeight:
                     selected ? FontWeight.w600 : FontWeight.w500,
-                color: selected
-                    ? _selectedTopColor
-                    : const Color(0xFF6B7280),
+                color: selected ? _selectedTopColor : cs.textTertiary,
               ),
             ),
           ],
@@ -741,17 +742,17 @@ class _FilingCabinetTabBar extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: narrow ? 8 : 12),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? Colors.white : _unselectedBg,
+            color: selected ? selectedBg : unselectedBg,
             border: Border(
               top: BorderSide(
-                color: selected ? _selectedTopColor : _borderColor,
+                color: selected ? _selectedTopColor : borderColor,
                 width: selected ? 2.0 : 1.0,
               ),
-              left: const BorderSide(color: _borderColor),
-              right: const BorderSide(color: _borderColor),
-              // Selected tab's white bottom "covers" the outer bottom border.
+              left: BorderSide(color: borderColor),
+              right: BorderSide(color: borderColor),
+              // Selected tab's bg bottom "covers" the outer bottom border.
               bottom: BorderSide(
-                color: selected ? Colors.white : _borderColor,
+                color: selected ? selectedBg : borderColor,
               ),
             ),
             borderRadius: const BorderRadius.only(
@@ -778,9 +779,9 @@ class _FilingCabinetTabBar extends StatelessWidget {
           );
 
     return Container(
-      decoration: const BoxDecoration(
-        color: _unselectedBg,
-        border: Border(bottom: BorderSide(color: _borderColor)),
+      decoration: BoxDecoration(
+        color: unselectedBg,
+        border: Border(bottom: BorderSide(color: borderColor)),
       ),
       child: row,
     );

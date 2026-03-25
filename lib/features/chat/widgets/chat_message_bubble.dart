@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/chat/data/models/chat_attachment_model.dart';
 import 'package:reflect_os/features/chat/data/models/chat_message_model.dart';
@@ -172,17 +173,18 @@ class ChatMessageBubble extends StatelessWidget {
               entry.value.any((r) => r.userId == currentUserId);
           return GestureDetector(
             onTap: () => onReact(entry.key),
-            child: Container(
+            child: Builder(
+              builder: (context) => Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: iReacted
-                    ? const Color(0xFF19CBD6).withValues(alpha: 0.15)
-                    : const Color(0xFFF3F4F6),
+                    ? AppColorScheme.accent.withValues(alpha: 0.15)
+                    : context.cs.backgroundElevated,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: iReacted
-                      ? const Color(0xFF19CBD6)
+                      ? AppColorScheme.accent
                       : Colors.transparent,
                 ),
               ),
@@ -197,22 +199,24 @@ class ChatMessageBubble extends StatelessWidget {
                 ],
               ),
             ),
+            ),
           );
         }).toList(),
       ),
     );
   }
 
-  Widget _buildStatusIcon() {
+  Widget _buildStatusIcon([BuildContext? ctx]) {
     switch (deliveryStatus) {
       case MessageDeliveryStatus.sent:
-        return const Icon(Icons.check, size: 12, color: Color(0xFF9CA3AF));
+        return Icon(Icons.check, size: 12,
+            color: ctx != null ? ctx.cs.textTertiary : const Color(0xFF9CA3AF));
       case MessageDeliveryStatus.delivered:
-        return const Icon(Icons.done_all,
-            size: 12, color: Color(0xFF9CA3AF));
+        return Icon(Icons.done_all, size: 12,
+            color: ctx != null ? ctx.cs.textTertiary : const Color(0xFF9CA3AF));
       case MessageDeliveryStatus.read:
         return const Icon(Icons.done_all,
-            size: 12, color: Color(0xFF19CBD6));
+            size: 12, color: AppColorScheme.accent);
     }
   }
 
@@ -308,10 +312,11 @@ class _MyBubble extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(timeStr,
-                    style: const TextStyle(
-                        fontSize: 10, color: Color(0xFF9CA3AF))),
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: context.cs.textTertiary)),
                 const SizedBox(width: 4),
-                b._buildStatusIcon(),
+                b._buildStatusIcon(context),
               ],
             ),
           ],
@@ -355,8 +360,8 @@ class _TheirBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(name,
-                style: const TextStyle(
-                    fontSize: 11, color: Color(0xFF6B7280))),
+                style: TextStyle(
+                    fontSize: 11, color: context.cs.textTertiary)),
             const SizedBox(height: 2),
             b._buildReplyPreview(context),
             if (b.message.content != null || b.message.attachments.isEmpty)
@@ -364,9 +369,9 @@ class _TheirBubble extends StatelessWidget {
                 constraints: const BoxConstraints(maxWidth: 240),
                 padding: const EdgeInsets.symmetric(
                     horizontal: 12, vertical: 8),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  color: context.cs.backgroundElevated,
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.zero,
                     topRight: Radius.circular(16),
                     bottomLeft: Radius.circular(16),
@@ -378,12 +383,14 @@ class _TheirBubble extends StatelessWidget {
                   children: [
                     if (b.message.content != null)
                       Text(b.message.content!,
-                          style: const TextStyle(fontSize: 14)),
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: context.cs.textPrimary)),
                     if (b.message.editedAt != null)
-                      const Text('(edited)',
+                      Text('(edited)',
                           style: TextStyle(
                               fontSize: 10,
-                              color: Color(0xFF9CA3AF),
+                              color: context.cs.textTertiary,
                               fontStyle: FontStyle.italic)),
                   ],
                 ),
@@ -391,8 +398,9 @@ class _TheirBubble extends StatelessWidget {
             b._buildAttachments(context),
             b._buildReactions(context),
             Text(timeStr,
-                style: const TextStyle(
-                    fontSize: 10, color: Color(0xFF9CA3AF))),
+                style: TextStyle(
+                    fontSize: 10,
+                    color: context.cs.textTertiary)),
           ],
         ),
       ],
@@ -419,12 +427,14 @@ class _DeletedBubble extends StatelessWidget {
     return Align(
       alignment:
           isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: const Text(
-        'Message deleted',
-        style: TextStyle(
-          fontSize: 12,
-          color: Color(0xFF9CA3AF),
-          fontStyle: FontStyle.italic,
+      child: Builder(
+        builder: (context) => Text(
+          'Message deleted',
+          style: TextStyle(
+            fontSize: 12,
+            color: context.cs.textTertiary,
+            fontStyle: FontStyle.italic,
+          ),
         ),
       ),
     );
@@ -474,16 +484,17 @@ class _AttachmentDisplayState extends State<_AttachmentDisplay> {
   }
 
   Widget _buildImage(BuildContext context) {
+    final placeholderBg = context.cs.backgroundElevated;
     if (_signedUrl == null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: Container(
           width: 220,
           height: 160,
-          color: const Color(0xFFF3F4F6),
+          color: placeholderBg,
           child: const Center(
             child: CircularProgressIndicator(
-                strokeWidth: 2, color: Color(0xFF19CBD6)),
+                strokeWidth: 2, color: AppColorScheme.accent),
           ),
         ),
       );
@@ -502,19 +513,19 @@ class _AttachmentDisplayState extends State<_AttachmentDisplay> {
               : Container(
                   width: 220,
                   height: 160,
-                  color: const Color(0xFFF3F4F6),
+                  color: placeholderBg,
                   child: const Center(
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Color(0xFF19CBD6)),
+                        strokeWidth: 2, color: AppColorScheme.accent),
                   ),
                 ),
           errorBuilder: (ctx, error, stackTrace) => Container(
             width: 220,
             height: 160,
-            color: const Color(0xFFF3F4F6),
-            child: const Center(
+            color: placeholderBg,
+            child: Center(
               child: Icon(Icons.broken_image_outlined,
-                  color: Color(0xFF9CA3AF)),
+                  color: context.cs.textTertiary),
             ),
           ),
         ),
@@ -559,18 +570,18 @@ class _AttachmentDisplayState extends State<_AttachmentDisplay> {
         decoration: BoxDecoration(
           color: widget.isMine
               ? Colors.white.withValues(alpha: 0.15)
-              : const Color(0xFFE8F4F5),
+              : context.cs.backgroundElevated,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: widget.isMine
                 ? Colors.white.withValues(alpha: 0.3)
-                : const Color(0xFF19CBD6).withValues(alpha: 0.3),
+                : AppColorScheme.accent.withValues(alpha: 0.3),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _fileTypeIcon(widget.attachment.mimeType),
+            _fileTypeIcon(widget.attachment.mimeType, context.cs.textSecondary),
             const SizedBox(width: 10),
             Flexible(
               child: Column(
@@ -586,7 +597,7 @@ class _AttachmentDisplayState extends State<_AttachmentDisplay> {
                       fontWeight: FontWeight.w500,
                       color: widget.isMine
                           ? Colors.white
-                          : const Color(0xFF1E293B),
+                          : context.cs.textPrimary,
                     ),
                   ),
                   Text(
@@ -595,7 +606,7 @@ class _AttachmentDisplayState extends State<_AttachmentDisplay> {
                       fontSize: 11,
                       color: widget.isMine
                           ? Colors.white.withValues(alpha: 0.7)
-                          : const Color(0xFF6B7280),
+                          : context.cs.textSecondary,
                     ),
                   ),
                 ],
@@ -607,7 +618,7 @@ class _AttachmentDisplayState extends State<_AttachmentDisplay> {
               size: 18,
               color: widget.isMine
                   ? Colors.white.withValues(alpha: 0.7)
-                  : const Color(0xFF19CBD6),
+                  : AppColorScheme.accent,
             ),
           ],
         ),
@@ -615,7 +626,7 @@ class _AttachmentDisplayState extends State<_AttachmentDisplay> {
     );
   }
 
-  static Widget _fileTypeIcon(String mimeType) {
+  static Widget _fileTypeIcon(String mimeType, Color neutralColor) {
     if (mimeType == 'application/pdf') {
       return const Icon(Icons.picture_as_pdf,
           color: Color(0xFFDC4444), size: 28);
@@ -634,13 +645,10 @@ class _AttachmentDisplayState extends State<_AttachmentDisplay> {
       return const Icon(Icons.slideshow,
           color: Color(0xFFD04423), size: 28);
     } else if (mimeType.startsWith('video/')) {
-      return const Icon(Icons.video_file,
-          color: Color(0xFF6B7280), size: 28);
+      return Icon(Icons.video_file, color: neutralColor, size: 28);
     } else if (mimeType.startsWith('audio/')) {
-      return const Icon(Icons.audio_file,
-          color: Color(0xFF6B7280), size: 28);
+      return Icon(Icons.audio_file, color: neutralColor, size: 28);
     }
-    return const Icon(Icons.insert_drive_file,
-        color: Color(0xFF6B7280), size: 28);
+    return Icon(Icons.insert_drive_file, color: neutralColor, size: 28);
   }
 }

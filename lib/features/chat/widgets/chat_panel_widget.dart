@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
@@ -386,10 +387,10 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cs.backgroundSecondary,
           borderRadius: BorderRadius.circular(16),
           border:
-              Border.all(color: const Color(0xFF19CBD6), width: 1.5),
+              Border.all(color: AppColorScheme.accent, width: 1.5),
           boxShadow: const [
             BoxShadow(
               color: Color(0x26000000),
@@ -471,11 +472,12 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
       ),
       data: (messages) {
         if (messages.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'No messages yet.\nSay hello to your team!',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
+              style: TextStyle(
+                  color: context.cs.textTertiary, fontSize: 13),
             ),
           );
         }
@@ -557,19 +559,19 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
   }
 
   Widget _buildDateSeparator(DateTime date) {
+    final cs = context.cs;
     return Center(
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 8),
         padding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          color: const Color(0xFFF3F4F6),
+          color: cs.backgroundElevated,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
           _dateFmt.format(date),
-          style: const TextStyle(
-              fontSize: 11, color: Color(0xFF6B7280)),
+          style: TextStyle(fontSize: 11, color: cs.textTertiary),
         ),
       ),
     );
@@ -605,8 +607,8 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
               _editingMessageId = null;
               _textController.clear();
             }),
-            child: const Icon(Icons.close,
-                size: 16, color: Color(0xFF6B7280)),
+            child: Icon(Icons.close,
+                size: 16, color: context.cs.textSecondary),
           ),
         ],
       ),
@@ -619,10 +621,9 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF3F4F6),
-        border:
-            Border(top: BorderSide(color: Color(0xFFE5E7EB))),
+      decoration: BoxDecoration(
+        color: context.cs.backgroundElevated,
+        border: Border(top: BorderSide(color: context.cs.borderDefault)),
       ),
       child: Row(
         children: [
@@ -642,8 +643,8 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
                 ),
                 Text(
                   _formatFileSize(attachment.bytes.length),
-                  style: const TextStyle(
-                      fontSize: 11, color: Color(0xFF6B7280)),
+                  style: TextStyle(
+                      fontSize: 11, color: context.cs.textTertiary),
                 ),
               ],
             ),
@@ -655,13 +656,13 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 value: _uploadProgress,
-                color: const Color(0xFF19CBD6),
+                color: AppColorScheme.accent,
               ),
             )
           else
             IconButton(
-              icon: const Icon(Icons.close,
-                  size: 18, color: Color(0xFF6B7280)),
+              icon: Icon(Icons.close,
+                  size: 18, color: context.cs.textSecondary),
               onPressed: () =>
                   setState(() => _pendingAttachment = null),
             ),
@@ -672,6 +673,7 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
 
   Widget _buildAttachmentThumbnail(_PendingAttachment attachment) {
     final mime = attachment.mimeType;
+    final neutralColor = context.cs.textSecondary;
     if (mime.startsWith('image/')) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(4),
@@ -695,14 +697,11 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
       return const Icon(Icons.slideshow,
           color: Color(0xFFD04423), size: 32);
     } else if (mime.startsWith('video/')) {
-      return const Icon(Icons.video_file,
-          color: Color(0xFF6B7280), size: 32);
+      return Icon(Icons.video_file, color: neutralColor, size: 32);
     } else if (mime.startsWith('audio/')) {
-      return const Icon(Icons.audio_file,
-          color: Color(0xFF6B7280), size: 32);
+      return Icon(Icons.audio_file, color: neutralColor, size: 32);
     }
-    return const Icon(Icons.insert_drive_file,
-        color: Color(0xFF6B7280), size: 32);
+    return Icon(Icons.insert_drive_file, color: neutralColor, size: 32);
   }
 
   Widget _buildInputRow(BuildContext context) {
@@ -714,16 +713,15 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
 
     return Container(
       constraints: const BoxConstraints(minHeight: 72),
-      decoration: const BoxDecoration(
-        border:
-            Border(top: BorderSide(color: Color(0xFFE5E7EB))),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: context.cs.borderDefault)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.attach_file,
-                color: Color(0xFF6B7280)),
+            icon: Icon(Icons.attach_file,
+                color: context.cs.textTertiary),
             tooltip: 'Attach file',
             onPressed: _isUploading ? null : _pickAttachment,
           ),
@@ -753,22 +751,19 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
               textInputAction: TextInputAction.newline,
               decoration: InputDecoration(
                 hintText: hintText,
-                hintStyle: const TextStyle(
-                    fontSize: 13, color: Color(0xFF9CA3AF)),
+                hintStyle: TextStyle(
+                    fontSize: 13, color: context.cs.textTertiary),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide:
-                      const BorderSide(color: Color(0xFFE5E7EB)),
+                  borderSide: BorderSide(color: context.cs.borderDefault),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide:
-                      const BorderSide(color: Color(0xFFE5E7EB)),
+                  borderSide: BorderSide(color: context.cs.borderDefault),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide:
-                      const BorderSide(color: Color(0xFF19CBD6)),
+                  borderSide: const BorderSide(color: AppColorScheme.accent),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 10),
