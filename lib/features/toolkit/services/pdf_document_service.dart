@@ -32,6 +32,7 @@ Future<Uint8List> generatePdfBackground(Map<String, dynamic> args) =>
       projectionColumns: _castList(args['projectionColumns'] as List),
       currencyCode:      args['currencyCode'] as String,
       workspaceName:     args['workspaceName'] as String,
+      logoSvgString:     args['logoSvgString'] as String? ?? '',
     );
 
 List<Map<String, dynamic>> _castList(List raw) =>
@@ -51,6 +52,7 @@ class PdfDocumentService {
     required List<Map<String, dynamic>> projectionColumns,
     required String currencyCode,
     required String workspaceName,
+    String logoSvgString = '',
   }) async {
     final pdf   = pw.Document();
     final now   = DateTime.now();
@@ -62,13 +64,14 @@ class PdfDocumentService {
       toolName:      toolName,
       workspaceName: workspaceName,
       dateLabel:     label,
+      logoSvgString: logoSvgString,
     ));
 
     // ── 2–5. Multi-page content ───────────────────────────────────────────────
     pdf.addPage(pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
       margin:     const pw.EdgeInsets.fromLTRB(48, 40, 48, 48),
-      header: (ctx) => _pageHeader(ctx, decisionTitle, label),
+      header: (ctx) => _pageHeader(ctx, decisionTitle, label, logoSvgString),
       footer: (ctx) => _pageFooter(ctx, label),
       build: (ctx) => [
         // ── Section 2: Summary metrics ─────────────────────────────────────
@@ -133,6 +136,7 @@ class PdfDocumentService {
     required String toolName,
     required String workspaceName,
     required String dateLabel,
+    required String logoSvgString,
   }) {
     return pw.Page(
       pageFormat: PdfPageFormat.a4,
@@ -156,33 +160,43 @@ class PdfDocumentService {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 // Brand mark
-                pw.Container(
-                  width: 52,
-                  height: 52,
-                  decoration: pw.BoxDecoration(
-                    color: _teal,
-                    borderRadius: pw.BorderRadius.circular(10),
+                if (logoSvgString.isNotEmpty)
+                  pw.SvgImage(svg: logoSvgString, width: 40, height: 40)
+                else
+                  pw.Container(
+                    width: 40, height: 40,
+                    decoration: pw.BoxDecoration(
+                      color: _teal,
+                      borderRadius: pw.BorderRadius.circular(8),
+                    ),
+                    child: pw.Center(
+                      child: pw.Text('R',
+                        style: pw.TextStyle(
+                          color: _white, fontSize: 22,
+                          fontWeight: pw.FontWeight.bold)),
+                    ),
                   ),
-                  child: pw.Center(
-                    child: pw.Text(
-                      'R',
+                pw.SizedBox(height: 8),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'REFLECT',
                       style: pw.TextStyle(
-                        color: _white,
-                        fontSize: 28,
+                        color: _darkBg,
+                        fontSize: 18,
                         fontWeight: pw.FontWeight.bold,
                       ),
                     ),
-                  ),
-                ),
-                pw.SizedBox(height: 6),
-                pw.Text(
-                  'REFLECT OS',
-                  style: pw.TextStyle(
-                    color: _teal,
-                    fontSize: 10,
-                    letterSpacing: 2.5,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
+                    pw.Text(
+                      'DECISION INTELLIGENCE OS',
+                      style: pw.TextStyle(
+                        color: _teal,
+                        fontSize: 7,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ],
                 ),
                 pw.SizedBox(height: 72),
 
@@ -270,7 +284,8 @@ class PdfDocumentService {
 
   // ── Page header / footer ────────────────────────────────────────────────────
 
-  pw.Widget _pageHeader(pw.Context ctx, String title, String dateLabel) {
+  pw.Widget _pageHeader(
+      pw.Context ctx, String title, String dateLabel, String logoSvgString) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
@@ -279,10 +294,18 @@ class PdfDocumentService {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('REFLECT OS',
-                style: pw.TextStyle(
-                    color: _teal, fontSize: 9, letterSpacing: 1.5,
-                    fontWeight: pw.FontWeight.bold)),
+            pw.Row(
+              children: [
+                if (logoSvgString.isNotEmpty) ...[
+                  pw.SvgImage(svg: logoSvgString, width: 16, height: 16),
+                  pw.SizedBox(width: 5),
+                ],
+                pw.Text('REFLECT OS',
+                    style: pw.TextStyle(
+                        color: _teal, fontSize: 9, letterSpacing: 1.5,
+                        fontWeight: pw.FontWeight.bold)),
+              ],
+            ),
             pw.Text(
               title.length > 60 ? '${title.substring(0, 57)}…' : title,
               style: pw.TextStyle(color: _textMuted, fontSize: 9),

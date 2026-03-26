@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, compute;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:printing/printing.dart';
@@ -14,6 +16,8 @@ import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/core/utils/pdf_downloader.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+import 'package:reflect_os/features/evidence/providers/evidence_provider.dart';
+import 'package:reflect_os/features/risk/providers/risk_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -58,6 +62,7 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
   bool _isSaving       = false;
   bool _isSharingChat  = false;
   Uint8List? _pdfBytes;
+  String? _storagePath;          // path used when uploading to generated-documents
   String? _attachedDecisionId;
   String? _generatedDocumentId;
 
@@ -146,6 +151,13 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
       workspaceName =
           await ref.read(workspaceNameProvider.future) ?? '';
 
+      // Load brand SVG on main isolate before spawning compute().
+      String logoSvgString = '';
+      try {
+        final svgData = await rootBundle.load('assets/branding/icon.svg');
+        logoSvgString = utf8.decode(svgData.buffer.asUint8List());
+      } catch (_) {}
+
       Uint8List bytes = _pdfBytes ??
           await compute(generatePdfBackground, {
             'decisionTitle':     decisionTitle,
@@ -158,6 +170,7 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
             'projectionColumns': widget.tool.annualProjectionColumns,
             'currencyCode':      widget.run.currencyCode,
             'workspaceName':     workspaceName,
+            'logoSvgString':     logoSvgString,
           });
       _pdfBytes = bytes;
 
@@ -170,9 +183,10 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
             ref.read(currentWorkspaceProvider).valueOrNull;
         final userId = supabase.auth.currentUser?.id;
         if (workspaceId != null && userId != null) {
+          // User-scoped path so storage ownership is clear.
           final storagePath = decisionId != null
-              ? 'decisions/$decisionId/$fileName'
-              : 'standalone/$fileName';
+              ? '$userId/decisions/$decisionId/$fileName'
+              : '$userId/standalone/$fileName';
 
           // Upload to storage.
           await supabase.storage
@@ -185,6 +199,9 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
                   upsert: true,
                 ),
               );
+
+          // Track the storage path for use in evidence attachment.
+          if (mounted) setState(() => _storagePath = storagePath);
 
           // Insert / update generated_documents row if we have a decision.
           if (decisionId != null) {
@@ -239,6 +256,8 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
   // ── Attach to decision ────────────────────────────────────────────────────
 
   Future<void> _attachToDecision(String decisionId) async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
     try {
       // Link the run to the decision (no-op if already linked).
       await supabase
@@ -254,15 +273,141 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
             .eq('id', _generatedDocumentId!);
       }
 
+      // Insert evidence_items row if the PDF was uploaded to storage.
+      if (_storagePath != null && _pdfBytes != null) {
+        final pdfTitle = widget.tool.pdfTitle;
+        final filename = '${pdfTitle}_'
+            '${DateFormat('yyyyMMdd').format(widget.run.createdAt)}.pdf';
+        await supabase.from('evidence_items').insert({
+          'decision_id':       decisionId,
+          'type':              'file',
+          'label':             '$pdfTitle — Toolkit Output',
+          'storage_bucket':    'generated-documents',
+          'storage_path':      _storagePath!,
+          'original_filename': filename,
+          'mime_type':         'application/pdf',
+          'file_size_bytes':   _pdfBytes!.length,
+          'created_by_user_id': userId,
+        });
+        ref.invalidate(evidenceProvider(decisionId));
+      }
+
+      // ── Fix 4: Risk Matrix tool → feed risk assessment ──────────────────────
+      if (widget.tool.key == 'risk_matrix_v2') {
+        final outputs = widget.run.outputsJsonb;
+        final inputs  = widget.run.inputsJsonb;
+        final risks   = inputs['risks'] as List? ?? [];
+
+        final criticalCount = (outputs['critical_count'] as num?)?.toInt() ?? 0;
+        final highCount     = (outputs['high_count'] as num?)?.toInt() ?? 0;
+        final overallLevel  = criticalCount > 0
+            ? 'critical'
+            : highCount > 0 ? 'high' : 'medium';
+        const impactMap = {
+          'critical': -3,
+          'high':     -2,
+          'medium':   -1,
+          'low':       0,
+        };
+        final confidenceImpact = impactMap[overallLevel] ?? 0;
+
+        final existing = await supabase
+            .from('risk_assessments')
+            .select('id')
+            .eq('decision_id', decisionId)
+            .isFilter('deleted_at', null)
+            .maybeSingle();
+
+        final now = DateTime.now().toUtc().toIso8601String();
+        final payload = {
+          'methodology':         'toolkit_risk_matrix',
+          'manual_risks_jsonb':  {'risks': risks},
+          'overall_risk_level':  overallLevel,
+          'confidence_impact':   confidenceImpact,
+          'output_jsonb':        outputs,
+          'approved_at':         now,
+          'approved_by_user_id': userId,
+          'status':              'approved',
+          'provider':            'toolkit',
+          'model':               'risk_matrix_v2',
+          'updated_at':          now,
+        };
+
+        if (existing != null) {
+          await supabase
+              .from('risk_assessments')
+              .update(payload)
+              .eq('id', existing['id'] as String);
+        } else {
+          await supabase.from('risk_assessments').insert({
+            ...payload,
+            'decision_id':          decisionId,
+            'requested_by_user_id': userId,
+          });
+        }
+
+        ref.invalidate(riskAssessmentProvider(decisionId));
+        ref.invalidate(approvedRiskAssessmentProvider(decisionId));
+        ref.invalidate(riskConfidenceAdjustmentProvider(decisionId));
+
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text(
+                  'Risk data imported to decision. Confidence score updated.'),
+              backgroundColor: Color(0xFFD97D24),
+            ));
+          }
+        });
+      }
+
+      // ── Fix 4: Scenario Builder → prefill projected outcome ─────────────────
+      if (widget.tool.key == 'scenario_builder_v2') {
+        final outputs = widget.run.outputsJsonb;
+        final decisionRow = await supabase
+            .from('decisions')
+            .select('projected_outcome_encrypted')
+            .eq('id', decisionId)
+            .single();
+
+        if (decisionRow['projected_outcome_encrypted'] == null) {
+          final ev      = outputs['expected_value_yr1'];
+          final evTotal = outputs['expected_value_total'];
+          if (ev != null) {
+            await supabase.from('decisions').update({
+              'projected_outcome_encrypted':
+                  'Probability-weighted EV: ${_fmtCurrency((ev as num).toDouble())} '
+                  '(Year 1) / ${_fmtCurrency((evTotal as num?)?.toDouble() ?? 0)} (total). '
+                  'Generated from Scenario Builder toolkit.',
+            }).eq('id', decisionId);
+          }
+        }
+      }
+
       if (!mounted) return;
       setState(() => _attachedDecisionId = decisionId);
 
-      // Invalidate provider so the decision detail reloads.
+      // Invalidate decision-related providers.
       ref.invalidate(decisionToolRunsProvider(decisionId));
 
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Toolkit output attached to decision'),
-        backgroundColor: Color(0xFF2EA073),
+      final detailPath =
+          Routes.decisionsDetail.replaceFirst(':id', decisionId);
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Row(children: [
+          Icon(Icons.check_circle, color: Colors.white, size: 16),
+          SizedBox(width: 8),
+          Expanded(child: Text('Attached to decision. View in Evidence tab.')),
+        ]),
+        backgroundColor: const Color(0xFF2EA073),
+        action: SnackBarAction(
+          label: 'View',
+          textColor: Colors.white,
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            context.push('$detailPath?tab=3');
+          },
+        ),
       ));
     } catch (e) {
       if (mounted) {
