@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/chat/providers/chat_providers.dart';
 import 'package:reflect_os/features/team/data/models/workspace_membership.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 Future<void> showOnlineMembersSheet(
   BuildContext context, {
@@ -13,8 +14,8 @@ Future<void> showOnlineMembersSheet(
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    shape: RoundedRectangleBorder(
+      borderRadius: AppRadius.sheetTop,
     ),
     builder: (_) => _OnlineMembersSheet(
       workspaceId: workspaceId,
@@ -54,7 +55,7 @@ class _OnlineMembersSheet extends StatelessWidget {
               height: 4,
               decoration: BoxDecoration(
                 color: AppColors.borderSubtle,
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: AppRadius.xsBR,
               ),
             ),
             Padding(

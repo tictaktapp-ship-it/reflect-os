@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/decisions/data/models/decision_lens_data.dart';
 import 'package:reflect_os/features/decisions/widgets/decision_lens/trigger_utils.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class ScoreBreakdown extends StatelessWidget {
   const ScoreBreakdown({
@@ -54,7 +55,7 @@ class ScoreBreakdown extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: AppRadius.xsBR,
                   child: LinearProgressIndicator(
                     value: c.value,
                     minHeight: 6,

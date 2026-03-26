@@ -12,6 +12,7 @@ import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/dashboard/providers/dashboard_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 final _dateFmt = DateFormat('d MMM');
 
@@ -147,7 +148,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
                         color: context.cs.backgroundElevated,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: AppRadius.mdBR,
                       ),
                       child: Row(
                         children: [
@@ -168,7 +169,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                     color: _selectedRange == range
                                         ? AppColorScheme.accent
                                         : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: AppRadius.smBR,
                                     boxShadow: _selectedRange == range
                                         ? [
                                             BoxShadow(
@@ -287,7 +288,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 margin: const EdgeInsets.only(top: 12),
                 decoration: BoxDecoration(
                   color: context.cs.backgroundSecondary,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: AppRadius.mdBR,
                   border: Border.all(color: context.cs.borderDefault),
                   boxShadow: [
                     BoxShadow(
@@ -308,7 +309,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             height: 16,
                             decoration: BoxDecoration(
                               color: const Color(0xFFD97D24),
-                              borderRadius: BorderRadius.circular(2),
+                              borderRadius: AppRadius.xsBR,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -418,7 +419,7 @@ class _QualityDial extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: cs.backgroundSecondary,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
         border: Border.all(color: cs.borderDefault),
         boxShadow: [
           BoxShadow(
@@ -725,7 +726,7 @@ class _StatusBarChart extends StatelessWidget {
               color: color,
               width: 22,
               borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(6)),
+                  top: Radius.circular(AppRadius.sm)),
             ),
           ],
         );
@@ -734,7 +735,7 @@ class _StatusBarChart extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: cs.backgroundSecondary,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
         border: Border.all(color: cs.borderDefault),
         boxShadow: [
           BoxShadow(
@@ -865,7 +866,7 @@ class _HealthDonut extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: cs.backgroundSecondary,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
         border: Border.all(color: cs.borderDefault),
         boxShadow: [
           BoxShadow(
@@ -1107,7 +1108,7 @@ class _MetricTile extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: cs.backgroundSecondary,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
         border: Border.all(color: cs.borderDefault),
         boxShadow: [
           BoxShadow(
@@ -1229,7 +1230,7 @@ class _NeedsAttentionCard extends StatelessWidget {
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: _bgFor(decision.state),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: AppRadius.mdBR,
                       ),
                       child: Text(
                         decision.state,
@@ -1309,7 +1310,7 @@ class _RecentDecisionTile extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: _backgroundFor(decision.state),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: AppRadius.mdBR,
                 ),
                 child: Text(
                   decision.state,
@@ -1338,7 +1339,7 @@ class _ToolkitCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: cs.backgroundSecondary,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
         border: Border.all(color: cs.borderDefault),
         boxShadow: [
           BoxShadow(
@@ -1428,7 +1429,7 @@ class _ToolChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: const Color(0xFF19CBD6).withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: AppRadius.smBR,
           border: Border.all(
               color: const Color(0xFF19CBD6).withValues(alpha: 0.25)),
         ),

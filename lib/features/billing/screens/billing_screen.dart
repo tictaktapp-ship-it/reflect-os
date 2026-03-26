@@ -11,6 +11,7 @@ import 'package:reflect_os/features/billing/data/models/subscription.dart';
 import 'package:reflect_os/features/billing/providers/billing_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 // ── Price IDs (injected at build time) ────────────────────────────────────────
 
@@ -250,7 +251,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: AppColors.success.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: AppRadius.xsBR,
                           ),
                           child: Text(
                             'Save ~17%',
@@ -289,7 +290,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                 Card(
                   color: theme.colorScheme.surface,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: AppRadius.mdBR,
                     side: const BorderSide(
                         color: AppColors.accentPrimary, width: 2),
                   ),
@@ -314,7 +315,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                               decoration: BoxDecoration(
                                 color: AppColors.accentPrimary
                                     .withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: AppRadius.smBR,
                               ),
                               child: Text(
                                 'Popular',
@@ -426,7 +427,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                               horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: AppRadius.smBR,
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -552,7 +553,7 @@ class _ActivePlanCard extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppColors.warning.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: AppRadius.smBR,
                   border: Border.all(
                       color: AppColors.warning.withValues(alpha: 0.4)),
                 ),
@@ -619,7 +620,7 @@ class _PricingCard extends StatelessWidget {
     return Card(
       color: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -696,7 +697,7 @@ class _TierBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.accentPrimary.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
       ),
       child: Text(
         tier,
@@ -745,7 +746,7 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: _bg,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
       ),
       child: Text(
         _label,

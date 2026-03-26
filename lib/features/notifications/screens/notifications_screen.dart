@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/notifications/data/models/notification_item.dart';
 import 'package:reflect_os/features/notifications/providers/notifications_provider.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
@@ -117,7 +118,7 @@ class _NotificationTile extends StatelessWidget {
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
           color: AppColors.destructive.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.mdBR,
         ),
         child: const Icon(Icons.cancel_outlined, color: AppColors.destructive),
       ),
@@ -162,7 +163,7 @@ class _NotificationTile extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: colors.background,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: AppRadius.mdBR,
                 ),
                 child: Text(
                   item.status,

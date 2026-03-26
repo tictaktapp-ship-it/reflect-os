@@ -7,6 +7,7 @@ import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/workspace/data/models/workspace_model.dart';
 import 'package:reflect_os/features/workspace/providers/workspace_providers.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 // Helper to get current workspace model
 final _currentWorkspaceModelProvider = FutureProvider<WorkspaceModel?>((ref) async {
@@ -44,7 +45,7 @@ void showWorkspaceSwitcherSheet(BuildContext context, WidgetRef ref) {
           width: 360,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: AppRadius.xlBR,
             border: Border.all(color: const Color(0xFF19CBD6), width: 1.5),
             boxShadow: const [
               BoxShadow(
@@ -126,7 +127,7 @@ class WorkspaceSwitcherChip extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: AppColors.accentPrimary.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: AppRadius.pillBR,
           border: Border.all(color: AppColors.accentPrimary, width: 1.5),
         ),
         child: Row(

@@ -7,6 +7,7 @@ import 'package:reflect_os/features/risk/providers/risk_provider.dart';
 import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -367,7 +368,7 @@ class _DisabledAICard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
@@ -417,7 +418,7 @@ class _MethodCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.hardEdge,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
         side: BorderSide(
           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
         ),
@@ -866,7 +867,7 @@ class _ReviewStep extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: AppRadius.mdBR,
             border: Border.all(color: color.withValues(alpha: 0.4)),
           ),
           child: Row(
@@ -1032,7 +1033,7 @@ class _ApproveStep extends StatelessWidget {
           Card(
             color: color.withValues(alpha: 0.06),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadius.mdBR,
               side: BorderSide(color: color.withValues(alpha: 0.3)),
             ),
             child: Padding(
@@ -1160,7 +1161,7 @@ class _SeverityChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.smBR,
       ),
       child: Text(
         severity.toUpperCase(),
@@ -1185,7 +1186,7 @@ class _MetaPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: AppRadius.smBR,
       ),
       child: Text(
         label,

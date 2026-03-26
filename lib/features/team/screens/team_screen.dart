@@ -12,6 +12,7 @@ import 'package:reflect_os/features/team/data/models/workspace_membership.dart';
 import 'package:reflect_os/features/team/providers/team_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class TeamScreen extends ConsumerStatefulWidget {
   const TeamScreen({super.key});
@@ -255,7 +256,7 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
                                   decoration: BoxDecoration(
                                     color: AppColors.accentPrimary
                                         .withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: AppRadius.smBR,
                                   ),
                                   child: Text(
                                     'you',
@@ -617,7 +618,7 @@ class _MemberTile extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: roleColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: AppRadius.mdBR,
                 ),
                 child: Text(
                   isCurrentUser ? '${member.role} (you)' : member.role,

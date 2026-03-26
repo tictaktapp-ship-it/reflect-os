@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/decisions/data/models/decision_lens_data.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class InfluenceNodeCard extends StatelessWidget {
   const InfluenceNodeCard({required this.node, super.key});
@@ -33,8 +34,8 @@ class InfluenceNodeCard extends StatelessWidget {
           left: BorderSide(color: _accentColor, width: 3),
         ),
         borderRadius: const BorderRadius.only(
-          topRight: Radius.circular(6),
-          bottomRight: Radius.circular(6),
+          topRight: Radius.circular(AppRadius.sm),
+          bottomRight: Radius.circular(AppRadius.sm),
         ),
       ),
       child: ListTile(

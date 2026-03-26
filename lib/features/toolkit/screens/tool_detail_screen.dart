@@ -8,6 +8,7 @@ import '../data/models/tool_definition.dart';
 import '../data/models/tool_preset.dart';
 import '../data/toolkit_repository.dart';
 import '../engine/calculator_engine.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 /// Tool input form — V2. Dynamically renders sections from input_schema_jsonb,
 /// runs the calculator engine locally, then persists via the two-call RPC flow.
@@ -271,7 +272,7 @@ class _ToolDetailScreenState extends ConsumerState<ToolDetailScreen> {
           decoration: BoxDecoration(
             color: context.cs.backgroundSecondary,
             borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(16)),
+                AppRadius.sheetTop,
             border: Border.all(
                 color: const Color(0xFF19CBD6).withValues(alpha: 0.3)),
           ),
@@ -284,7 +285,7 @@ class _ToolDetailScreenState extends ConsumerState<ToolDetailScreen> {
                 height: 4,
                 decoration: BoxDecoration(
                   color: context.cs.borderDefault,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: AppRadius.xsBR,
                 ),
               ),
               // Header
@@ -297,7 +298,7 @@ class _ToolDetailScreenState extends ConsumerState<ToolDetailScreen> {
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: const Color(0xFFD97D24).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: AppRadius.xlBR,
                         border: Border.all(
                             color: const Color(0xFFD97D24)
                                 .withValues(alpha: 0.3)),
@@ -1074,13 +1075,13 @@ void _showFieldHelpDialog(
   showDialog<void>(
     context: context,
     builder: (_) => Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBR),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 380),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: context.cs.backgroundSecondary,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.mdBR,
           border: Border.all(
               color: const Color(0xFF19CBD6).withValues(alpha: 0.3)),
         ),
@@ -1147,7 +1148,7 @@ void _showFieldHelpDialog(
                     horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: const Color(0xFF19CBD6).withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: AppRadius.smBR,
                 ),
                 child: Row(
                   children: [

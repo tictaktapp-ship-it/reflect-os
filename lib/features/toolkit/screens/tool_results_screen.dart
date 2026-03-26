@@ -22,6 +22,7 @@ import '../data/models/tool_run.dart';
 import '../data/toolkit_repository.dart';
 import '../engine/calculator_engine.dart';
 import '../services/pdf_document_service.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 /// Displays computed results for a tool run.
 ///
@@ -760,7 +761,7 @@ class _ToolChart extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(width: 12, height: 3,
-                decoration: BoxDecoration(color: e.color, borderRadius: BorderRadius.circular(2))),
+                decoration: BoxDecoration(color: e.color, borderRadius: AppRadius.xsBR)),
             const SizedBox(width: 4),
             Text(e.label, style: TextStyle(fontSize: 10,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
@@ -952,9 +953,9 @@ class _ToolChart extends StatelessWidget {
       maxY = math.max(maxY, mc + opp);
       return BarChartGroupData(x: e.key, barRods: [
         BarChartRodData(toY: mc, color: cs.error.withValues(alpha: 0.8),
-            width: 6, borderRadius: BorderRadius.circular(3)),
+            width: 6, borderRadius: AppRadius.xsBR),
         BarChartRodData(toY: opp, color: cs.primary.withValues(alpha: 0.5),
-            width: 6, borderRadius: BorderRadius.circular(3)),
+            width: 6, borderRadius: AppRadius.xsBR),
       ]);
     }).toList();
 
@@ -1113,7 +1114,7 @@ class _ToolChart extends StatelessWidget {
                           height: 22,
                           decoration: BoxDecoration(
                             color: cs.primary.withValues(alpha: 0.7),
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: AppRadius.xsBR,
                           ),
                         ),
                       ),
@@ -1177,7 +1178,7 @@ class _ToolChart extends StatelessWidget {
                           height: 22,
                           decoration: BoxDecoration(
                             color: riskColor(level).withValues(alpha: 0.7),
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: AppRadius.xsBR,
                           ),
                           alignment: Alignment.centerLeft,
                           padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -1210,9 +1211,9 @@ class _ToolChart extends StatelessWidget {
       maxY = math.max(maxY, cost);
       return BarChartGroupData(x: e.key, groupVertically: false, barRods: [
         BarChartRodData(toY: cost, color: cs.error.withValues(alpha: 0.8),
-            width: 12, borderRadius: BorderRadius.circular(4)),
+            width: 12, borderRadius: AppRadius.xsBR),
         BarChartRodData(toY: inv, color: cs.primary.withValues(alpha: 0.7),
-            width: 12, borderRadius: BorderRadius.circular(4)),
+            width: 12, borderRadius: AppRadius.xsBR),
       ], barsSpace: 4);
     }).toList();
 
@@ -1380,9 +1381,9 @@ class _ToolChart extends StatelessWidget {
       final sup = _n(r['support']);
       return BarChartGroupData(x: e.key, barRods: [
         BarChartRodData(toY: inf, color: cs.primary.withValues(alpha: 0.8),
-            width: 10, borderRadius: BorderRadius.circular(4)),
+            width: 10, borderRadius: AppRadius.xsBR),
         BarChartRodData(toY: sup, color: cs.secondary.withValues(alpha: 0.8),
-            width: 10, borderRadius: BorderRadius.circular(4)),
+            width: 10, borderRadius: AppRadius.xsBR),
       ], barsSpace: 4);
     }).toList();
 
@@ -1444,7 +1445,7 @@ class _ToolChart extends StatelessWidget {
               : cs.error.withValues(alpha: 0.8);
       return BarChartGroupData(x: e.key, barRods: [
         BarChartRodData(toY: progress, color: color, width: 20,
-            borderRadius: BorderRadius.circular(4)),
+            borderRadius: AppRadius.xsBR),
       ]);
     }).toList();
 
@@ -1501,7 +1502,7 @@ class _ToolChart extends StatelessWidget {
       return BarChartGroupData(x: e.key, barRods: [
         BarChartRodData(toY: vals[e.key],
             color: colors[e.key % colors.length].withValues(alpha: 0.8),
-            width: 40, borderRadius: BorderRadius.circular(4)),
+            width: 40, borderRadius: AppRadius.xsBR),
       ]);
     }).toList();
 
@@ -1737,7 +1738,7 @@ class _ResultsActionBar extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: cs.backgroundSecondary,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
         border: Border.all(color: cs.borderDefault),
       ),
       child: Column(
@@ -1848,11 +1849,11 @@ class _DecisionPickerDropdown extends ConsumerWidget {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.smBR,
           borderSide: BorderSide(color: context.cs.borderDefault),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.smBR,
           borderSide: BorderSide(color: context.cs.borderDefault),
         ),
         isDense: true,
@@ -1875,7 +1876,7 @@ class _DecisionPickerDropdown extends ConsumerWidget {
                     horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: const Color(0xFF19CBD6).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: AppRadius.smBR,
                 ),
                 child: Text(
                   d.state,

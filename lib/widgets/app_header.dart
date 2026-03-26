@@ -16,6 +16,7 @@ import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
 import 'package:reflect_os/features/settings/providers/profile_provider.dart';
 import 'package:reflect_os/features/team/data/models/workspace_membership.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 /// Brand app bar used by every screen in Reflect OS.
 ///
@@ -342,15 +343,15 @@ class _HeaderSearchBarState extends ConsumerState<_HeaderSearchBar> {
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(vertical: 8),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: AppRadius.smBR,
               borderSide: BorderSide(color: cs.borderDefault),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: AppRadius.smBR,
               borderSide: BorderSide(color: cs.borderDefault),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: AppRadius.smBR,
               borderSide: const BorderSide(
                   color: AppColorScheme.accent, width: 1.5),
             ),
@@ -414,7 +415,7 @@ class _SearchOverlayPanel extends StatelessWidget {
                     constraints: const BoxConstraints(maxHeight: 440),
                     decoration: BoxDecoration(
                       color: cs.backgroundSecondary,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: AppRadius.smBR,
                       border: Border.all(color: cs.borderDefault),
                       boxShadow: const [
                         BoxShadow(
@@ -425,7 +426,7 @@ class _SearchOverlayPanel extends StatelessWidget {
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: AppRadius.smBR,
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Column(
@@ -500,7 +501,7 @@ class _GroupHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
               color: cs.backgroundElevated,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: AppRadius.mdBR,
             ),
             child: Text(
               '$count',
@@ -563,7 +564,7 @@ class _DecisionTile extends StatelessWidget {
                   const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
                 color: _stateBg(decision.state),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: AppRadius.mdBR,
               ),
               child: Text(
                 decision.state,
@@ -718,7 +719,7 @@ void _showUserProfileDialog(BuildContext context) {
     barrierDismissible: true,
     builder: (ctx) => Dialog(
       backgroundColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.lgBR),
       child: _ProfileDialogContent(
         onClose: () => Navigator.of(ctx).pop(),
       ),
@@ -867,7 +868,7 @@ class _ProfileDialogContentState extends ConsumerState<_ProfileDialogContent> {
       constraints: const BoxConstraints(maxWidth: 400),
       decoration: BoxDecoration(
         color: cs.backgroundSecondary,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.lgBR,
         border: Border.all(color: const Color(0xFF19CBD6), width: 1.5),
       ),
       child: Column(

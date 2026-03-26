@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/sharing/data/models/share_link.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class PublicDecisionView extends StatefulWidget {
   const PublicDecisionView({required this.token, super.key});
@@ -318,7 +319,7 @@ class _StateBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
       ),
       child: Text(
         state,

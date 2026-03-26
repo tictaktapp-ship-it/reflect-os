@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import '../data/models/tool_definition.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class ToolCard extends StatelessWidget {
   const ToolCard({
@@ -97,7 +98,7 @@ class _CategoryChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: AppColors.accentPrimary.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
       ),
       child: Text(
         category,

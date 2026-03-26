@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 /// Brand-consistent dialog shell used by every dialog in the app.
 ///
@@ -32,13 +33,13 @@ class DialogShell extends StatelessWidget {
     return Dialog(
       backgroundColor: cs.backgroundSecondary,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.xlBR,
         side: const BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       child: Container(
         decoration: BoxDecoration(
           color: cs.backgroundSecondary,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.xlBR,
           boxShadow: const [
             BoxShadow(blurRadius: 20, color: Colors.black12),
           ],

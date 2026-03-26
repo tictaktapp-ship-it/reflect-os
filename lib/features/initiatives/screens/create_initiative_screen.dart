@@ -5,6 +5,7 @@ import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:reflect_os/features/initiatives/providers/initiatives_provider.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class CreateInitiativeScreen extends ConsumerStatefulWidget {
   const CreateInitiativeScreen({super.key});
@@ -76,8 +77,8 @@ class _CreateInitiativeScreenState
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.sheetTop,
       ),
       builder: (_) => _DecisionPickerSheet(
         allDecisions: allDecisions,
@@ -267,7 +268,7 @@ class _DecisionPickerSheetState extends State<_DecisionPickerSheet> {
                     .colorScheme
                     .onSurface
                     .withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: AppRadius.xsBR,
               ),
             ),
           ),
@@ -301,7 +302,7 @@ class _DecisionPickerSheetState extends State<_DecisionPickerSheet> {
                 prefixIcon: const Icon(Icons.search, size: 20),
                 isDense: true,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: AppRadius.smBR,
                 ),
               ),
             ),
@@ -334,7 +335,7 @@ class _DecisionPickerSheetState extends State<_DecisionPickerSheet> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 14, vertical: 12),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: AppRadius.smBR,
                             border: Border.all(
                               color: isSelected
                                   ? AppColors.accentPrimary

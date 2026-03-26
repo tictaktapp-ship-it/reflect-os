@@ -14,6 +14,7 @@ import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 
 class CoachDashboardScreen extends ConsumerStatefulWidget {
@@ -299,8 +300,8 @@ class _CoachDashboardScreenState extends ConsumerState<CoachDashboardScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.sheetTop,
         side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (sheetCtx) => DraggableScrollableSheet(
@@ -321,8 +322,8 @@ class _CoachDashboardScreenState extends ConsumerState<CoachDashboardScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.sheetTop,
         side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (sheetCtx) => DraggableScrollableSheet(
@@ -571,7 +572,7 @@ class _ClientListCard extends ConsumerWidget {
           : null,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -622,7 +623,7 @@ class _ClientListCard extends ConsumerWidget {
                                 horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(
                               color: AppColors.warning.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: AppRadius.smBR,
                             ),
                             child: Text(
                               '$openActionItems',
@@ -703,7 +704,7 @@ class _CoachListCard extends ConsumerWidget {
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -755,7 +756,7 @@ class _CoachListCard extends ConsumerWidget {
                                 horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(
                               color: AppColors.warning.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: AppRadius.smBR,
                             ),
                             child: Text(
                               '$openActionItems',
@@ -1624,7 +1625,7 @@ class _DecisionNoteCard extends ConsumerWidget {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 3),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
         onTap: () => _showNotesSheet(context, ref),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -1710,8 +1711,8 @@ class _DecisionNoteCard extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.sheetTop,
         side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (ctx) => DraggableScrollableSheet(
@@ -2553,7 +2554,7 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.smBR,
       ),
       child: Text(
         status,
@@ -2581,7 +2582,7 @@ class _StateChip extends StatelessWidget {
             .colorScheme
             .onSurface
             .withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: AppRadius.smBR,
       ),
       child: Text(
         state,

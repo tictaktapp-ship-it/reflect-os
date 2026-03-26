@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/decisions/data/models/audit_event.dart';
 import 'package:reflect_os/features/settings/providers/settings_provider.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 final _dateFmt = DateFormat('d MMM yyyy');
 final _timeFmt = DateFormat('HH:mm');
@@ -191,7 +192,7 @@ class _EventRowWidget extends StatelessWidget {
                             horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
                           color: AppColors.accentPrimary.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: AppRadius.xsBR,
                         ),
                         child: Text(
                           transition,

@@ -20,6 +20,7 @@ import 'package:reflect_os/features/tags/providers/tags_provider.dart';
 import 'package:reflect_os/features/templates/data/models/decision_template.dart';
 import 'package:reflect_os/features/templates/screens/templates_screen.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class CreateDecisionScreen extends ConsumerStatefulWidget {
   const CreateDecisionScreen({
@@ -612,7 +613,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                   color: Colors.teal.withValues(alpha: 0.1),
                   margin: const EdgeInsets.only(bottom: 12),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: AppRadius.smBR,
                     side: BorderSide(
                         color: Colors.teal.withValues(alpha: 0.3)),
                   ),
@@ -668,7 +669,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 10),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                              borderRadius: AppRadius.smBR),
                         ),
                       )
                     else
@@ -832,7 +833,7 @@ class _CreateDecisionScreenState extends ConsumerState<CreateDecisionScreen> {
                     margin: const EdgeInsets.only(top: 2),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: AppRadius.smBR,
                       border: Border.all(
                           color: const Color(0xFFE2E8F0)),
                       boxShadow: [

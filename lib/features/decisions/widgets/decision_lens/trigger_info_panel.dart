@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:reflect_os/features/decisions/data/models/decision_lens_data.dart';
 import 'package:reflect_os/features/decisions/widgets/decision_lens/trigger_utils.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 /// Animated panel that slides open below the arc when a trigger is tapped.
 /// Pass [trigger] == null to collapse. Never overlaps the arc — uses
@@ -31,7 +32,7 @@ class TriggerInfoPanel extends StatelessWidget {
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: cs.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: AppRadius.mdBR,
                 border: Border.all(color: cs.outlineVariant),
               ),
               child: Column(
@@ -45,7 +46,7 @@ class TriggerInfoPanel extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: triggerColor(t.triggerType)
                               .withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(5),
+                          borderRadius: AppRadius.smBR,
                         ),
                         child: Text(
                           triggerLabel(t.triggerType),

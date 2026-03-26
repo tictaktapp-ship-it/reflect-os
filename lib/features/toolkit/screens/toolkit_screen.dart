@@ -6,6 +6,7 @@ import 'package:reflect_os/core/routing/routes.dart';
 import '../data/models/tool_definition.dart';
 import '../providers/toolkit_providers.dart';
 import '../widgets/tool_card.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 /// Browse all available Tool Kit tools, optionally scoped to a decision.
 ///
@@ -120,7 +121,7 @@ class _ToolkitScreenState extends ConsumerState<ToolkitScreen> {
                 contentPadding:
                     const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: AppRadius.smBR,
                   borderSide:
                       const BorderSide(color: AppColors.borderSubtle),
                 ),

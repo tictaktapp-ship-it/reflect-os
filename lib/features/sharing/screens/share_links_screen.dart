@@ -7,6 +7,7 @@ import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/sharing/data/models/share_link.dart';
 import 'package:reflect_os/features/sharing/providers/sharing_provider.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class ShareLinksScreen extends ConsumerStatefulWidget {
   const ShareLinksScreen({required this.decisionId, super.key});
@@ -154,7 +155,7 @@ class _ShareLinksScreenState extends ConsumerState<ShareLinksScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: AppRadius.smBR,
               ),
               child: SelectableText(
                 url,
@@ -285,7 +286,7 @@ class _ShareLinkCard extends StatelessWidget {
                     color: isActive
                         ? AppColors.success.withValues(alpha: 0.15)
                         : AppColors.destructive.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: AppRadius.mdBR,
                   ),
                   child: Text(
                     isActive ? 'Active' : 'Revoked',

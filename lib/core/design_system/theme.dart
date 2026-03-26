@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 import 'tokens.dart';
 
 final class AppTheme {
@@ -31,61 +32,82 @@ final class AppTheme {
         labelStyle: const TextStyle(color: AppColors.textSecondary),
         hintStyle: const TextStyle(color: AppColors.textMuted),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.mdBR,
           borderSide: const BorderSide(color: AppColors.borderSubtle),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.mdBR,
           borderSide: const BorderSide(color: AppColors.borderSubtle),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.mdBR,
           borderSide: const BorderSide(color: AppColors.accentPrimary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.mdBR,
           borderSide: const BorderSide(color: AppColors.destructive),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.mdBR,
           borderSide: const BorderSide(color: AppColors.destructive, width: 2),
         ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.accentPrimary,
           foregroundColor: AppColors.textPrimary,
           minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBR),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBR),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.accentHover,
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBR),
         ),
       ),
       cardTheme: CardThemeData(
         color: AppColors.backgroundSurface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.lgBR,
           side: const BorderSide(color: AppColors.borderSubtle),
         ),
       ),
-      snackBarTheme: const SnackBarThemeData(
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.xlBR),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.backgroundSurface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(AppRadius.xxl),
+            topRight: Radius.circular(AppRadius.xxl),
+          ),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.smBR),
+      ),
+      snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.backgroundElevated,
-        contentTextStyle: TextStyle(color: AppColors.textPrimary),
+        contentTextStyle: const TextStyle(color: AppColors.textPrimary),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBR),
+        behavior: SnackBarBehavior.floating,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.backgroundSurface,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
-        surfaceTintColor: Colors.transparent,
-      ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: AppColors.backgroundSurface,
         surfaceTintColor: Colors.transparent,
       ),
     );
@@ -118,9 +140,25 @@ final class AppTheme {
         color: Colors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.lgBR,
           side: const BorderSide(color: Color(0xFFE0E0E4)),
         ),
+      ),
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.xlBR),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(AppRadius.xxl),
+            topRight: Radius.circular(AppRadius.xxl),
+          ),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.smBR),
       ),
       navigationBarTheme: const NavigationBarThemeData(
         indicatorColor: AppColors.accentPrimary,
@@ -133,48 +171,53 @@ final class AppTheme {
         filled: true,
         fillColor: const Color(0xFFF0F0F2),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.mdBR,
           borderSide: const BorderSide(color: Color(0xFFD0D0D4)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.mdBR,
           borderSide: const BorderSide(color: Color(0xFFD0D0D4)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.mdBR,
           borderSide: const BorderSide(color: AppColors.accentPrimary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.mdBR,
           borderSide: const BorderSide(color: AppColors.destructive),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.mdBR,
           borderSide: const BorderSide(color: AppColors.destructive, width: 2),
         ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.accentPrimary,
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBR),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBR),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.accentPrimary,
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBR),
         ),
       ),
-      snackBarTheme: const SnackBarThemeData(
-        backgroundColor: Color(0xFF2A2A3E),
-        contentTextStyle: TextStyle(color: Colors.white),
-      ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: const Color(0xFF2A2A3E),
+        contentTextStyle: const TextStyle(color: Colors.white),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBR),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }

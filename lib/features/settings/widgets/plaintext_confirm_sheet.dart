@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import '../data/models/encryption_settings.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 /// Modal bottom sheet for confirming the switch to plaintext mode.
 ///
@@ -49,7 +50,7 @@ class _PlaintextConfirmSheetState extends State<PlaintextConfirmSheet> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppColors.warning.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: AppRadius.smBR,
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,

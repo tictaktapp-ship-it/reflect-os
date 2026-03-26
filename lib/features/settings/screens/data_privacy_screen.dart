@@ -9,6 +9,7 @@ import 'package:reflect_os/core/utils/csv_downloader.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:reflect_os/features/settings/data/models/gdpr_request.dart';
 import 'package:reflect_os/features/settings/providers/settings_provider.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class DataPrivacyScreen extends ConsumerStatefulWidget {
   const DataPrivacyScreen({super.key});
@@ -362,7 +363,7 @@ class _DataPrivacyScreenState extends ConsumerState<DataPrivacyScreen> {
             color: AppColors.destructive.withValues(alpha: 0.04),
             margin: const EdgeInsets.only(bottom: 12),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadius.mdBR,
               side: BorderSide(
                   color: AppColors.destructive.withValues(alpha: 0.2)),
             ),
@@ -535,7 +536,7 @@ class _TypeBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: AppRadius.xsBR,
       ),
       child: Text(
         _label(type),
@@ -559,7 +560,7 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: AppRadius.xsBR,
       ),
       child: Text(
         status,

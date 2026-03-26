@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -183,7 +184,7 @@ class _DecisionTile extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: _backgroundFor(decision.state),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: AppRadius.mdBR,
                 ),
                 child: Text(
                   decision.state,

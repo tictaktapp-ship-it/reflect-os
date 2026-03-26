@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/features/settings/providers/settings_provider.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 // ── Preset colour swatches ─────────────────────────────────────────────────────
 
@@ -525,7 +526,7 @@ class _BrandingPreview extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.smBR,
         border: Border.all(
           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
         ),
@@ -545,7 +546,7 @@ class _BrandingPreview extends StatelessWidget {
             decoration: BoxDecoration(
               color: primaryColor,
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(8)),
+                  const BorderRadius.vertical(top: Radius.circular(AppRadius.sm)),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
@@ -553,7 +554,7 @@ class _BrandingPreview extends StatelessWidget {
                 // Logo placeholder / actual logo
                 if (logoUrl.isNotEmpty)
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: AppRadius.xsBR,
                     child: Image.network(
                       logoUrl,
                       height: 32,
@@ -634,7 +635,7 @@ class _BrandingPreview extends StatelessWidget {
             decoration: BoxDecoration(
               color: secondaryColor,
               borderRadius:
-                  const BorderRadius.vertical(bottom: Radius.circular(8)),
+                  const BorderRadius.vertical(bottom: Radius.circular(AppRadius.sm)),
             ),
           ),
         ],
@@ -654,7 +655,7 @@ class _LogoPlaceholder extends StatelessWidget {
       height: 32,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: AppRadius.xsBR,
       ),
       child: Icon(Icons.business_outlined, size: 18, color: color),
     );
@@ -673,7 +674,7 @@ class _MockLine extends StatelessWidget {
       width: width,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: AppRadius.xsBR,
       ),
     );
   }

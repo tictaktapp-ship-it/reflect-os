@@ -15,6 +15,7 @@ import 'package:reflect_os/features/decisions/providers/decisions_provider.dart'
 import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 enum _SortOrder { newestFirst, oldestFirst, titleAsc, titleDesc }
 
@@ -183,8 +184,8 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: context.cs.backgroundSecondary,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.sheetTop,
         side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (ctx) => StatefulBuilder(
@@ -596,7 +597,7 @@ class _DecisionGroupState extends State<_DecisionGroup> {
                         horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: const Color(0xFF19CBD6),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: AppRadius.mdBR,
                     ),
                     child: Text(
                       '${widget.decisions.length}',
@@ -746,7 +747,7 @@ class _CollapsedCard extends StatelessWidget {
           : null,
       decoration: BoxDecoration(
         color: cs.backgroundSecondary,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
         border: Border.all(color: cs.borderDefault),
         boxShadow: [
           BoxShadow(
@@ -824,7 +825,7 @@ class _CollapsedCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: AppRadius.xsBR,
             child: LinearProgressIndicator(
               value: confidence / 10.0,
               minHeight: 6,
@@ -889,7 +890,7 @@ class _StateBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: AppRadius.smBR,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1173,7 +1174,7 @@ class _FanDeckState extends State<_FanDeck> with TickerProviderStateMixin {
                               color: tintFraction > 0
                                   ? Colors.green.withValues(alpha: tintFraction * 0.25)
                                   : Colors.red.withValues(alpha: tintFraction.abs() * 0.25),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: AppRadius.mdBR,
                             ),
                           ),
                         ),
@@ -1205,7 +1206,7 @@ class _FanDeckState extends State<_FanDeck> with TickerProviderStateMixin {
                               ? const Color(0xFF19CBD6)
                               : const Color(0xFF19CBD6)
                                   .withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(3),
+                          borderRadius: AppRadius.xsBR,
                         ),
                       ),
                   ],
@@ -1278,7 +1279,7 @@ class _FanDeckState extends State<_FanDeck> with TickerProviderStateMixin {
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
                 color: const Color(0xFF19CBD6),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: AppRadius.pillBR,
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFF19CBD6).withValues(alpha: 0.3),
@@ -1474,7 +1475,7 @@ class _ExpandedCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: cs.backgroundSecondary,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
         border: Border.all(color: cs.borderDefault),
         boxShadow: [
           BoxShadow(
@@ -1545,7 +1546,7 @@ class _ExpandedCard extends StatelessWidget {
                 style: _sectionHeader),
             const SizedBox(height: 8),
             ClipRRect(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: AppRadius.xsBR,
               child: LinearProgressIndicator(
                 value: effectiveConf / 10,
                 minHeight: 6,
@@ -1575,7 +1576,7 @@ class _ExpandedCard extends StatelessWidget {
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         border: Border.all(color: cs.borderDefault),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: AppRadius.smBR,
                       ),
                       child: Text(
                         tag,
@@ -1602,7 +1603,7 @@ class _ExpandedCard extends StatelessWidget {
                       horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     color: cs.backgroundElevated,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: AppRadius.smBR,
                   ),
                   child: Row(
                     children: [

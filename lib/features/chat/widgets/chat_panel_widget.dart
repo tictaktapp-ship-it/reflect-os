@@ -18,6 +18,7 @@ import 'package:reflect_os/features/team/data/models/workspace_membership.dart';
 import 'package:reflect_os/features/team/data/team_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class ChatPanelWidget extends ConsumerStatefulWidget {
   const ChatPanelWidget({
@@ -384,11 +385,11 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
   Widget _buildPanel(BuildContext context) {
     return Material(
       elevation: 8,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: AppRadius.lgBR,
       child: Container(
         decoration: BoxDecoration(
           color: context.cs.backgroundSecondary,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.lgBR,
           border:
               Border.all(color: AppColorScheme.accent, width: 1.5),
           boxShadow: const [
@@ -400,7 +401,7 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.lgBR,
           child: Column(
             children: [
               _buildHeader(context),
@@ -421,8 +422,8 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
       decoration: const BoxDecoration(
         color: Color(0xFF19CBD6),
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
+          topLeft: Radius.circular(AppRadius.lg),
+          topRight: Radius.circular(AppRadius.lg),
         ),
       ),
       child: Row(
@@ -567,7 +568,7 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
             const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
           color: cs.backgroundElevated,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.mdBR,
         ),
         child: Text(
           _dateFmt.format(date),
@@ -676,7 +677,7 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
     final neutralColor = context.cs.textSecondary;
     if (mime.startsWith('image/')) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: AppRadius.xsBR,
         child: Image.memory(attachment.bytes,
             width: 40, height: 40, fit: BoxFit.cover),
       );
@@ -754,15 +755,15 @@ class _ChatPanelWidgetState extends ConsumerState<ChatPanelWidget> {
                 hintStyle: TextStyle(
                     fontSize: 13, color: context.cs.textTertiary),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: AppRadius.xlBR,
                   borderSide: BorderSide(color: context.cs.borderDefault),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: AppRadius.xlBR,
                   borderSide: BorderSide(color: context.cs.borderDefault),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: AppRadius.xlBR,
                   borderSide: const BorderSide(color: AppColorScheme.accent),
                 ),
                 contentPadding: const EdgeInsets.symmetric(

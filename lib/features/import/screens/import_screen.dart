@@ -9,6 +9,7 @@ import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/models/category.dart';
 import 'package:reflect_os/features/decisions/data/models/create_decision_input.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 // ── Column mapping targets ─────────────────────────────────────────────────────
 
@@ -327,7 +328,7 @@ class _UploadStep extends StatelessWidget {
                     width: 2,
                     strokeAlign: BorderSide.strokeAlignInside,
                   ),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: AppRadius.lgBR,
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -607,7 +608,7 @@ class _ImportingStep extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             ClipRRect(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: AppRadius.xsBR,
               child: LinearProgressIndicator(
                 value: total > 0 ? progress / total : 0,
                 minHeight: 6,

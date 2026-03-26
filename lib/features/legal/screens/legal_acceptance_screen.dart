@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/constants/legal_versions.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/features/legal/providers/legal_consent_provider.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 /// /legal-acceptance — shown between account creation and subscription.
 /// When [allowBack] is true (accessed from Settings) the back button works.
@@ -193,7 +194,7 @@ class _LegalAcceptanceScreenState
                           Colors.white.withValues(alpha: 0.4),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: AppRadius.smBR,
                       ),
                     ),
                     onPressed: _canActivate && !_isSubmitting ? _activate : null,
@@ -258,7 +259,7 @@ class _LegalDocTabState extends State<_LegalDocTab>
           margin: const EdgeInsets.only(top: 8),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: AppRadius.smBR,
             border: Border.all(
               color: Colors.white.withValues(alpha: 0.08),
             ),
@@ -302,7 +303,7 @@ class _ConsentCheckbox extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () => onChanged(!value),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: AppRadius.smBR,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(

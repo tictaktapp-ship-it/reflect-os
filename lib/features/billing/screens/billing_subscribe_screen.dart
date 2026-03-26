@@ -6,6 +6,7 @@ import 'package:reflect_os/core/providers/subscription_status_provider.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
 import 'package:reflect_os/features/billing/providers/billing_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 const _individualMonthly =
     String.fromEnvironment('STRIPE_INDIVIDUAL_MONTHLY_PRICE_ID');
@@ -132,7 +133,7 @@ class _BillingSubscribeScreenState
                         horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppColors.success.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: AppRadius.xsBR,
                     ),
                     child: Text(
                       'Save ~17%',
@@ -223,7 +224,7 @@ class _PricingCard extends StatelessWidget {
     return Card(
       color: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
         side: isHighlighted
             ? const BorderSide(color: AppColors.accentPrimary, width: 2)
             : BorderSide.none,
@@ -248,7 +249,7 @@ class _PricingCard extends StatelessWidget {
                         horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppColors.accentPrimary.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: AppRadius.smBR,
                     ),
                     child: Text(
                       'Popular',

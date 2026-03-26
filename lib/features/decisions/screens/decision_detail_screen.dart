@@ -42,6 +42,7 @@ import 'package:reflect_os/features/toolkit/data/models/tool_run.dart';
 import 'package:reflect_os/features/toolkit/providers/toolkit_providers.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:reflect_os/features/decisions/widgets/decision_lens/decision_lens_tab.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class DecisionDetailScreen extends ConsumerWidget {
   const DecisionDetailScreen({required this.id, super.key});
@@ -537,7 +538,7 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
                     InkWell(
                       onTap: () => setState(
                           () => _outcomesExpanded = !_outcomesExpanded),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: AppRadius.smBR,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                             vertical: 6, horizontal: 4),
@@ -756,8 +757,8 @@ class _FilingCabinetTabBar extends StatelessWidget {
               ),
             ),
             borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(6),
-              topRight: Radius.circular(6),
+              topLeft: Radius.circular(AppRadius.sm),
+              topRight: Radius.circular(AppRadius.sm),
             ),
           ),
           child: label,
@@ -909,7 +910,7 @@ class _SummaryPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1009,7 +1010,7 @@ class _OutcomeStateBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: _background,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
       ),
       child: Text(
         state.replaceAll('_', ' '),
@@ -1092,7 +1093,7 @@ class _CollapsibleSectionState extends State<_CollapsibleSection> {
           children: [
             InkWell(
               onTap: () => setState(() => _expanded = !_expanded),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: AppRadius.smBR,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Row(
@@ -1436,7 +1437,7 @@ class _StateBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: _background,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
       ),
       child: Text(
         state,
@@ -1460,7 +1461,7 @@ class _ContinuousBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.accentPrimary.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1492,7 +1493,7 @@ class _PendingApprovalBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.warning.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1540,7 +1541,7 @@ class _HealthBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: _background,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
       ),
       child: Text(
         healthState.replaceAll('_', ' '),
@@ -1625,8 +1626,8 @@ class _InitiativesSectionState extends ConsumerState<_InitiativesSection> {
 
     await showModalBottomSheet<void>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.sheetTop,
         side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (context) => Column(
@@ -1781,8 +1782,8 @@ class _TagsSectionState extends ConsumerState<_TagsSection> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.sheetTop,
         side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (sheetContext) {
@@ -2248,7 +2249,7 @@ class _CheckpointRow extends ConsumerWidget {
             decoration: BoxDecoration(
               // ignore: deprecated_member_use
               color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: AppRadius.smBR,
             ),
             child: Text(
               checkpoint.status,
@@ -2708,8 +2709,8 @@ class _StakeholdersSectionState extends ConsumerState<_StakeholdersSection> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.sheetTop,
         side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (_) => _AddStakeholderSheet(
@@ -3290,8 +3291,8 @@ class _RelatedDecisionsSectionState
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.sheetTop,
         side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (_) {
@@ -3568,8 +3569,8 @@ class _ApprovalsSectionState extends ConsumerState<_ApprovalsSection> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.sheetTop,
         side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (ctx) {
@@ -3767,7 +3768,7 @@ class _ApprovalRecordRow extends StatelessWidget {
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: AppRadius.smBR,
               ),
               child: Text(
                 record.status,
@@ -3914,7 +3915,7 @@ class _RiskAssessmentSection extends ConsumerWidget {
           final adjustment = adjustmentAsync.valueOrNull ?? 0;
 
           return InkWell(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: AppRadius.mdBR,
             onTap: () => context.push(
               '/decisions/$decisionId/risk-assessment',
               extra: assessment,
@@ -3923,7 +3924,7 @@ class _RiskAssessmentSection extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: AppRadius.mdBR,
                 border: Border.all(color: color.withValues(alpha: 0.25)),
               ),
               child: Row(
@@ -3941,7 +3942,7 @@ class _RiskAssessmentSection extends ConsumerWidget {
                                   horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
                                 color: color.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(6),
+                                borderRadius: AppRadius.smBR,
                               ),
                               child: Text(
                                 level.toUpperCase(),
@@ -4195,7 +4196,7 @@ class _DebriefBody extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: vColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: AppRadius.mdBR,
                 ),
                 child: Text(
                   verdict,
@@ -4212,7 +4213,7 @@ class _DebriefBody extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: trajectoryColor(debrief.qualityTrajectory)
                       .withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: AppRadius.mdBR,
                 ),
                 child: Text(
                   debrief.qualityTrajectory!,
@@ -4231,7 +4232,7 @@ class _DebriefBody extends StatelessWidget {
                       .colorScheme
                       .onSurface
                       .withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: AppRadius.mdBR,
                 ),
                 child: Text(
                   debrief.confidenceCalibration!,
@@ -4730,8 +4731,8 @@ class _LinkedAssetsSectionState extends ConsumerState<_LinkedAssetsSection> {
 
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.sheetTop,
         side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
       ),
       builder: (ctx) => Column(
@@ -5007,7 +5008,7 @@ class _VoteBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
       ),
       child: Text(
         '$label $count',
@@ -5057,7 +5058,7 @@ class _IcVoteRow extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: _colorForVote(vote.vote).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: AppRadius.smBR,
                 ),
                 child: Text(
                   vote.vote,
@@ -5336,7 +5337,7 @@ class _ArtifactRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.smBR,
         side: BorderSide(
             color: Theme.of(context)
                 .colorScheme
@@ -5344,7 +5345,7 @@ class _ArtifactRow extends StatelessWidget {
                 .withValues(alpha: 0.08)),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.smBR,
         onTap: () => launchUrl(Uri.parse(artifact.url),
             mode: LaunchMode.externalApplication).ignore(),
         child: Padding(

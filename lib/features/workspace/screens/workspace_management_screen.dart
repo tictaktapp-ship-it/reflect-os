@@ -7,6 +7,7 @@ import 'package:reflect_os/widgets/dialog_shell.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/features/workspace/data/models/workspace_model.dart';
 import 'package:reflect_os/features/workspace/providers/workspace_providers.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class WorkspaceManagementScreen extends ConsumerStatefulWidget {
   const WorkspaceManagementScreen({super.key});
@@ -373,7 +374,7 @@ class _WorkspaceManagementScreenState
                     clipBehavior: Clip.hardEdge,
                     color: Theme.of(context).colorScheme.surface,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: AppRadius.mdBR,
                       side: isActive
                           ? const BorderSide(
                               color: Color(0xFF19CBD6), width: 2)
@@ -556,7 +557,7 @@ class _Badge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: AppRadius.mdBR,
       ),
       child: Text(
         label,

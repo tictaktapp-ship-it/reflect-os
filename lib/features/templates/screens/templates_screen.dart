@@ -10,6 +10,7 @@ import 'package:reflect_os/features/templates/providers/templates_provider.dart'
 import 'package:reflect_os/features/toolkit/data/models/tool_definition.dart';
 import 'package:reflect_os/features/toolkit/providers/toolkit_providers.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class TemplatesScreen extends ConsumerStatefulWidget {
   const TemplatesScreen({super.key});
@@ -625,7 +626,7 @@ class _StakesBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: _bg(stakes),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: AppRadius.mdBR,
       ),
       child: Text(
         stakes,
@@ -651,7 +652,7 @@ class _SmallChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: AppRadius.smBR,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

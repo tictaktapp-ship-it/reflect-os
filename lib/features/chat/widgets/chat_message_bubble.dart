@@ -7,6 +7,7 @@ import 'package:reflect_os/features/chat/data/models/chat_attachment_model.dart'
 import 'package:reflect_os/features/chat/data/models/chat_message_model.dart';
 import 'package:reflect_os/features/chat/data/models/chat_reaction_model.dart';
 import 'package:reflect_os/features/chat/widgets/emoji_picker_sheet.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 enum MessageDeliveryStatus { sent, delivered, read }
 
@@ -59,8 +60,8 @@ class ChatMessageBubble extends StatelessWidget {
         DateTime.now().difference(message.createdAt).inMinutes < 5;
     showModalBottomSheet<void>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.sheetTop,
       ),
       builder: (ctx) => SafeArea(
         child: Column(
@@ -181,7 +182,7 @@ class ChatMessageBubble extends StatelessWidget {
                 color: iReacted
                     ? AppColorScheme.accent.withValues(alpha: 0.15)
                     : context.cs.backgroundElevated,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: AppRadius.mdBR,
                 border: Border.all(
                   color: iReacted
                       ? AppColorScheme.accent
@@ -235,7 +236,7 @@ class ChatMessageBubble extends StatelessWidget {
           left: BorderSide(color: Color(0xFF19CBD6), width: 3),
         ),
         color: Colors.black.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: AppRadius.xsBR,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,10 +285,10 @@ class _MyBubble extends StatelessWidget {
                 decoration: const BoxDecoration(
                   color: Color(0xFF19CBD6),
                   borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(16),
+                    topLeft: Radius.circular(AppRadius.lg),
                     topRight: Radius.zero,
-                    bottomLeft: Radius.circular(16),
-                    bottomRight: Radius.circular(16),
+                    bottomLeft: Radius.circular(AppRadius.lg),
+                    bottomRight: Radius.circular(AppRadius.lg),
                   ),
                 ),
                 child: Column(
@@ -373,9 +374,9 @@ class _TheirBubble extends StatelessWidget {
                   color: context.cs.backgroundElevated,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.zero,
-                    topRight: Radius.circular(16),
-                    bottomLeft: Radius.circular(16),
-                    bottomRight: Radius.circular(16),
+                    topRight: Radius.circular(AppRadius.lg),
+                    bottomLeft: Radius.circular(AppRadius.lg),
+                    bottomRight: Radius.circular(AppRadius.lg),
                   ),
                 ),
                 child: Column(
@@ -487,7 +488,7 @@ class _AttachmentDisplayState extends State<_AttachmentDisplay> {
     final placeholderBg = context.cs.backgroundElevated;
     if (_signedUrl == null) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.smBR,
         child: Container(
           width: 220,
           height: 160,
@@ -502,7 +503,7 @@ class _AttachmentDisplayState extends State<_AttachmentDisplay> {
     return GestureDetector(
       onTap: () => _showFullScreen(context),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.smBR,
         child: Image.network(
           _signedUrl!,
           width: 220,
@@ -571,7 +572,7 @@ class _AttachmentDisplayState extends State<_AttachmentDisplay> {
           color: widget.isMine
               ? Colors.white.withValues(alpha: 0.15)
               : context.cs.backgroundElevated,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.smBR,
           border: Border.all(
             color: widget.isMine
                 ? Colors.white.withValues(alpha: 0.3)

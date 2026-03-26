@@ -15,6 +15,7 @@ import 'package:reflect_os/features/decisions/data/models/create_decision_input.
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class MeetingCaptureScreen extends ConsumerStatefulWidget {
   const MeetingCaptureScreen({super.key, this.mode, this.source});
@@ -615,7 +616,7 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
                     color: Colors.white,
                     margin: const EdgeInsets.only(bottom: 8),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: AppRadius.mdBR,
                       side: selected
                           ? const BorderSide(
                               color: Color(0xFF19CBD6), width: 1.5)
@@ -911,7 +912,7 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
               color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadius.mdBR,
               border: Border.all(
                 color: _uploadedFileName != null
                     ? const Color(0xFF19CBD6)
@@ -1094,7 +1095,7 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: AppRadius.smBR,
                       border: Border.all(
                         color: _audioFileName != null
                             ? const Color(0xFF19CBD6)
@@ -1143,7 +1144,7 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
                         horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFEF9C3),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: AppRadius.smBR,
                     ),
                     child: const Row(
                       children: [
@@ -1322,7 +1323,7 @@ class _CategoryBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: const Color(0xFFE0F7FA),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: AppRadius.xsBR,
       ),
       child: Text(
         label,
@@ -1369,7 +1370,7 @@ class _StakesBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: c.bg,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: AppRadius.xsBR,
       ),
       child: Text(
         label,

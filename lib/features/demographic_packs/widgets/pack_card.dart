@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import '../data/models/demographic_pack.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class PackCard extends StatelessWidget {
   const PackCard({
@@ -44,7 +45,7 @@ class PackCard extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: AppColors.success.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: AppRadius.mdBR,
                     ),
                     child: Text(
                       'Default',

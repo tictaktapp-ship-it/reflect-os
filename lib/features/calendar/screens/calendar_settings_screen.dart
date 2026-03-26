@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
 import 'calendar_platform_stub.dart'
     if (dart.library.html) 'calendar_platform_web.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class CalendarSettingsScreen extends ConsumerStatefulWidget {
   const CalendarSettingsScreen({super.key});
@@ -389,7 +390,7 @@ class _ProviderCard extends StatelessWidget {
               height: 44,
               decoration: BoxDecoration(
                 color: iconColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: AppRadius.mdBR,
               ),
               child: Icon(icon, color: iconColor, size: 22),
             ),
@@ -484,7 +485,7 @@ class _StatusChip extends StatelessWidget {
                 .colorScheme
                 .onSurface
                 .withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.smBR,
       ),
       child: Text(
         connected ? 'Connected' : 'Not connected',

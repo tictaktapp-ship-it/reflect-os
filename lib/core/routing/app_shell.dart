@@ -10,6 +10,7 @@ import 'package:reflect_os/features/chat/providers/chat_providers.dart';
 import 'package:reflect_os/features/chat/widgets/chat_panel_widget.dart';
 import 'package:reflect_os/features/settings/providers/profile_provider.dart';
 import 'package:reflect_os/widgets/reflect_logo.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({required this.navigationShell, super.key});
@@ -148,10 +149,10 @@ class _ChatFab extends StatelessWidget {
     return Material(
       elevation: 4,
       shadowColor: const Color(0xFF19CBD6).withValues(alpha: 0.3),
-      borderRadius: BorderRadius.circular(28),
+      borderRadius: AppRadius.pillBR,
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: AppRadius.pillBR,
         onTap: onPressed,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -165,7 +166,7 @@ class _ChatFab extends StatelessWidget {
                   ? const [Color(0xFF10A4AF), Color(0xFF0D8A94)]
                   : const [Color(0xFF19CBD6), Color(0xFF10A4AF)],
             ),
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: AppRadius.pillBR,
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF19CBD6).withValues(alpha: 0.35),
@@ -233,17 +234,17 @@ class _NewDecisionFab extends StatelessWidget {
     return Material(
       elevation: 3,
       shadowColor: Colors.black.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: AppRadius.pillBR,
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppRadius.pillBR,
         onTap: onTap,
         child: Container(
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 20),
           decoration: BoxDecoration(
             color: cs.backgroundSecondary,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: AppRadius.pillBR,
             border: Border.all(
               color: const Color(0xFF19CBD6).withValues(alpha: 0.4),
             ),
@@ -447,7 +448,7 @@ class _NavPaneItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.smBR,
         child: Material(
           color: isSelected
               ? _teal.withValues(alpha: 0.12)
@@ -512,7 +513,7 @@ class _ChatNavItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.smBR,
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -568,7 +569,7 @@ class _ToolkitNavItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.smBR,
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -616,7 +617,7 @@ class _NavPaneSettingsItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.smBR,
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -715,11 +716,11 @@ class _NarrowShellState extends State<_NarrowShell> {
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: AppRadius.smBR,
               borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: AppRadius.smBR,
               borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
           ),

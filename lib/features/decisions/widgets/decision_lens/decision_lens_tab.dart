@@ -10,6 +10,7 @@ import 'package:reflect_os/features/decisions/widgets/decision_lens/influence_no
 import 'package:reflect_os/features/decisions/widgets/decision_lens/info_strip.dart';
 import 'package:reflect_os/features/decisions/widgets/decision_lens/score_breakdown.dart';
 import 'package:reflect_os/features/decisions/widgets/decision_lens/trigger_info_panel.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class DecisionLensTab extends ConsumerStatefulWidget {
   const DecisionLensTab({required this.decision, super.key});
@@ -277,7 +278,7 @@ class _GaugeCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBR,
         border: Border.all(color: Colors.black12, width: 0.5),
       ),
       child: child,
@@ -327,7 +328,7 @@ class _ToggleChip extends StatelessWidget {
           color: active
               ? AppColors.accentPrimary.withValues(alpha: 0.15)
               : Colors.white,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: AppRadius.smBR,
           border: Border.all(
             color: active ? AppColors.accentPrimary : AppColors.borderSubtle,
           ),

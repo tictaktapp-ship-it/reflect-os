@@ -5,6 +5,7 @@ import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/features/settings/data/models/vertical_config.dart';
 import 'package:reflect_os/features/settings/providers/vertical_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class VerticalSettingsScreen extends ConsumerStatefulWidget {
   const VerticalSettingsScreen({super.key});
@@ -192,7 +193,7 @@ class _VerticalCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.mdBR,
           border: Border.all(
             color: isSelected
                 ? Colors.teal
@@ -264,7 +265,7 @@ class _VerticalCard extends StatelessWidget {
                                           .colorScheme
                                           .onSurface
                                           .withValues(alpha: 0.06),
-                                  borderRadius: BorderRadius.circular(6),
+                                  borderRadius: AppRadius.smBR,
                                 ),
                                 child: Text(
                                   cat,

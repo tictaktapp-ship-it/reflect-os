@@ -23,6 +23,7 @@ import 'package:reflect_os/features/workspace/data/models/workspace_model.dart';
 import 'package:reflect_os/features/workspace/providers/workspace_providers.dart';
 import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
+import 'package:reflect_os/core/theme/app_radius.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -176,7 +177,7 @@ void _showAboutSheet(BuildContext context) {
               height: 8,
               decoration: BoxDecoration(
                 color: AppColors.accentPrimary,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: AppRadius.xsBR,
               ),
             ),
             const SizedBox(width: 10),
@@ -842,7 +843,7 @@ class _SettingsTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.smBR,
         side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
       ),
       color: Colors.white,
