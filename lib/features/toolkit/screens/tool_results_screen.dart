@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, compute;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +11,7 @@ import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
+import 'package:reflect_os/core/utils/pdf_downloader.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
 import 'package:intl/intl.dart';
@@ -51,9 +52,11 @@ class ToolResultsScreen extends ConsumerStatefulWidget {
 class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
   late final TextEditingController _descCtrl =
       TextEditingController(text: widget.result.narrative);
-  bool _attachAudit  = false;
-  bool _isInjecting  = false;
-  bool _isDownloading = false;
+  bool _attachAudit    = false;
+  bool _isInjecting    = false;
+  bool _isDownloading  = false;
+  bool _isSaving       = false;
+  bool _isSharingChat  = false;
   Uint8List? _pdfBytes;
   String? _attachedDecisionId;
   String? _generatedDocumentId;
@@ -144,13 +147,18 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
           await ref.read(workspaceNameProvider.future) ?? '';
 
       Uint8List bytes = _pdfBytes ??
-          await PdfDocumentService().generateToolOutputPdf(
-            decisionTitle: decisionTitle,
-            toolName: widget.tool.name,
-            toolOutput: widget.result.narrative,
-            toolData: Map<String, dynamic>.from(widget.result.summaryOutputs),
-            workspaceName: workspaceName,
-          );
+          await compute(generatePdfBackground, {
+            'decisionTitle':     decisionTitle,
+            'toolName':          widget.tool.name,
+            'toolKey':           widget.tool.key,
+            'toolOutput':        widget.result.narrative,
+            'outputs':           widget.result.summaryOutputs,
+            'inputs':            widget.run.inputsJsonb,
+            'projections':       widget.result.annualProjections,
+            'projectionColumns': widget.tool.annualProjectionColumns,
+            'currencyCode':      widget.run.currencyCode,
+            'workspaceName':     workspaceName,
+          });
       _pdfBytes = bytes;
 
       final fileName =
@@ -308,6 +316,111 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
     );
   }
 
+  // ── Save to device ────────────────────────────────────────────────────────
+
+  Future<void> _saveToDevice() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+    try {
+      if (_pdfBytes == null) await _downloadPdf();
+      final bytes = _pdfBytes;
+      if (bytes == null || !mounted) return;
+
+      final toolName = widget.tool.name.replaceAll(RegExp(r'[^a-zA-Z0-9 ]'), '');
+      final fileName = '${toolName}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+
+      if (kIsWeb) {
+        downloadPdfBlob(bytes, fileName);
+      } else {
+        // On mobile/desktop: use Printing to trigger OS save dialog.
+        await Printing.sharePdf(bytes: bytes, filename: fileName);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  // ── Share to Chat ─────────────────────────────────────────────────────────
+
+  Future<void> _shareToChat() async {
+    if (_isSharingChat) return;
+    setState(() => _isSharingChat = true);
+    try {
+      if (_pdfBytes == null) await _downloadPdf();
+      final bytes = _pdfBytes;
+      if (bytes == null || !mounted) return;
+
+      final workspaceId = ref.read(currentWorkspaceProvider).valueOrNull;
+      final userId = supabase.auth.currentUser?.id;
+      if (workspaceId == null || userId == null) return;
+
+      final toolName = widget.tool.name.replaceAll(RegExp(r'[^a-zA-Z0-9 ]'), '');
+      final fileName = '$toolName.pdf';
+      final storagePath = '$workspaceId/$userId/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+
+      // Upload PDF to chat-attachments bucket.
+      await supabase.storage
+          .from('chat-attachments')
+          .uploadBinary(
+            storagePath,
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'application/pdf',
+              upsert: false,
+            ),
+          );
+
+      // Insert chat message.
+      final messageRow = await supabase
+          .from('chat_messages')
+          .insert({
+            'workspace_id':   workspaceId,
+            'sender_user_id': userId,
+            'content':        'Shared toolkit report: ${widget.tool.name}',
+            'has_attachment': true,
+          })
+          .select('id')
+          .single();
+
+      final messageId = messageRow['id'] as String;
+
+      // Insert attachment row.
+      await supabase.from('chat_attachments').insert({
+        'message_id':      messageId,
+        'workspace_id':    workspaceId,
+        'uploaded_by':     userId,
+        'file_name':       fileName,
+        'file_size_bytes': bytes.length,
+        'mime_type':       'application/pdf',
+        'storage_path':    storagePath,
+        'is_image':        false,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Shared to team chat'),
+            backgroundColor: Color(0xFF2EA073),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to share to chat: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSharingChat = false);
+    }
+  }
+
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -413,11 +526,15 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
             workspaceId:
                 ref.watch(currentWorkspaceProvider).valueOrNull ?? '',
             attachedDecisionId: _attachedDecisionId,
-            isDownloading: _isDownloading,
+            isDownloading:   _isDownloading,
+            isSaving:        _isSaving,
+            isSharingChat:   _isSharingChat,
             onDecisionSelected: _attachToDecision,
-            onShareEmail: _shareViaEmail,
-            onShareSystem: _shareViaSystem,
-            onDownloadPdf: _downloadPdf,
+            onShareEmail:    _shareViaEmail,
+            onShareSystem:   _shareViaSystem,
+            onDownloadPdf:   _downloadPdf,
+            onSaveToDevice:  _saveToDevice,
+            onShareToChat:   _shareToChat,
           ),
           const SizedBox(height: 20),
 
@@ -1717,23 +1834,35 @@ class _ResultsActionBar extends StatelessWidget {
     required this.workspaceId,
     required this.attachedDecisionId,
     required this.isDownloading,
+    required this.isSaving,
+    required this.isSharingChat,
     required this.onDecisionSelected,
     required this.onShareEmail,
     required this.onShareSystem,
     required this.onDownloadPdf,
+    required this.onSaveToDevice,
+    required this.onShareToChat,
   });
 
   final String workspaceId;
   final String? attachedDecisionId;
   final bool isDownloading;
+  final bool isSaving;
+  final bool isSharingChat;
   final Future<void> Function(String decisionId) onDecisionSelected;
   final Future<void> Function() onShareEmail;
   final Future<void> Function() onShareSystem;
   final Future<void> Function() onDownloadPdf;
+  final Future<void> Function() onSaveToDevice;
+  final Future<void> Function() onShareToChat;
+
+  static const _teal = Color(0xFF19CBD6);
 
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final busy = isDownloading || isSaving || isSharingChat;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1747,7 +1876,7 @@ class _ResultsActionBar extends StatelessWidget {
           // Attach to decision
           Row(
             children: [
-              const Icon(Icons.link, color: Color(0xFF19CBD6), size: 16),
+              const Icon(Icons.link, color: _teal, size: 16),
               const SizedBox(width: 8),
               Text(
                 'Attach to a decision:',
@@ -1768,18 +1897,19 @@ class _ResultsActionBar extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          // Share / download row
+
+          // Row 1: Email | Share | Download PDF
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.email_outlined, size: 15),
-                  label: const Text('Share via Email'),
+                  label: const Text('Email'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF19CBD6),
+                    foregroundColor: _teal,
                     side: BorderSide(color: cs.borderDefault),
                   ),
-                  onPressed: onShareEmail,
+                  onPressed: busy ? null : onShareEmail,
                 ),
               ),
               const SizedBox(width: 8),
@@ -1788,27 +1918,73 @@ class _ResultsActionBar extends StatelessWidget {
                   icon: const Icon(Icons.share_outlined, size: 15),
                   label: const Text('Share'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF19CBD6),
+                    foregroundColor: _teal,
                     side: BorderSide(color: cs.borderDefault),
                   ),
-                  onPressed: onShareSystem,
+                  onPressed: busy ? null : onShareSystem,
                 ),
               ),
               const SizedBox(width: 8),
-              FilledButton.icon(
-                icon: isDownloading
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.download, size: 15),
-                label:
-                    Text(isDownloading ? 'Generating…' : 'Download PDF'),
-                style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF19CBD6)),
-                onPressed: isDownloading ? null : onDownloadPdf,
+              Expanded(
+                child: FilledButton.icon(
+                  icon: isDownloading
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.picture_as_pdf, size: 15),
+                  label: Text(isDownloading ? 'Building…' : 'Download PDF'),
+                  style: FilledButton.styleFrom(backgroundColor: _teal),
+                  onPressed: busy ? null : onDownloadPdf,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Row 2: Save to Device | Share to Chat
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: isSaving
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: _teal),
+                        )
+                      : const Icon(Icons.save_alt, size: 15),
+                  label: Text(isSaving ? 'Saving…' : 'Save to Device'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _teal,
+                    side: BorderSide(color: cs.borderDefault),
+                  ),
+                  onPressed: busy ? null : onSaveToDevice,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: isSharingChat
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: _teal),
+                        )
+                      : const Icon(Icons.chat_bubble_outline, size: 15),
+                  label: Text(isSharingChat ? 'Sharing…' : 'Share to Chat'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _teal,
+                    side: BorderSide(color: cs.borderDefault),
+                  ),
+                  onPressed: busy ? null : onShareToChat,
+                ),
               ),
             ],
           ),
