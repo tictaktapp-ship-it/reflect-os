@@ -43,6 +43,7 @@ class _ToolDetailScreenState extends ConsumerState<ToolDetailScreen> {
   bool   _isRunning           = false;
   String? _validationError;
   List<ToolPreset> _presets   = [];
+  ToolPreset? _defaultPreset;
 
   ToolDefinition? get _tool => widget.tool;
 
@@ -83,8 +84,21 @@ class _ToolDetailScreenState extends ConsumerState<ToolDetailScreen> {
         workspaceId: workspaceId,
         toolDefinitionId: tool.id,
       );
-      if (mounted) setState(() => _presets = presets);
+      if (mounted) {
+        setState(() {
+          _presets = presets;
+          _defaultPreset = presets.where((p) => p.isWorkspaceDefault).firstOrNull;
+        });
+      }
     } catch (_) {}
+  }
+
+  void _prefillForm(Map<String, dynamic> inputs) {
+    setState(() {
+      inputs.forEach((k, v) {
+        _inputs[k] = v.toString();
+      });
+    });
   }
 
   void _addObjectRow(String fieldId, Map<String, dynamic> schema) {
@@ -242,6 +256,214 @@ class _ToolDetailScreenState extends ConsumerState<ToolDetailScreen> {
     return inputs;
   }
 
+  // ── Example preset ───────────────────────────────────────────────────────
+
+  void _showExample(ToolPreset preset) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        minChildSize: 0.5,
+        builder: (_, controller) => Container(
+          decoration: BoxDecoration(
+            color: context.cs.backgroundSecondary,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(16)),
+            border: Border.all(
+                color: const Color(0xFF19CBD6).withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.cs.borderDefault,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD97D24).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: const Color(0xFFD97D24)
+                                .withValues(alpha: 0.3)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.visibility_outlined,
+                              size: 13, color: Color(0xFFD97D24)),
+                          SizedBox(width: 5),
+                          Text(
+                            'EXAMPLE ONLY — Read only',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFFD97D24),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      preset.name,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: context.cs.textPrimary,
+                      ),
+                    ),
+                    if (preset.description != null)
+                      Text(
+                        preset.description!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: context.cs.textTertiary,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              // Read-only form
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: controller,
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  child: _buildReadOnlyForm(preset.inputsJsonb),
+                ),
+              ),
+              // Use as starting point
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                    label: const Text('Use as starting point'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF19CBD6),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _prefillForm(preset.inputsJsonb);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyForm(Map<String, dynamic> inputs) {
+    final tool = _tool;
+    if (tool == null) return const SizedBox.shrink();
+
+    // Build a lookup map: field_id → field schema
+    final fieldInfo = <String, Map<String, dynamic>>{};
+    for (final section in tool.sections) {
+      final fields =
+          (section as Map<String, dynamic>)['fields'] as List<dynamic>? ?? [];
+      for (final f in fields) {
+        final field = f as Map<String, dynamic>;
+        final id = field['id'] as String;
+        fieldInfo[id] = field;
+      }
+    }
+
+    final cs = context.cs;
+    final entries = inputs.entries
+        .where((e) => !e.key.startsWith('__'))
+        .toList();
+
+    return Column(
+      children: entries.map((e) {
+        final info = fieldInfo[e.key];
+        final label = info?['label'] as String? ?? e.key;
+        final unit = info?['unit'] as String?;
+        final type = info?['type'] as String? ?? 'text';
+        final displayLabel = unit != null ? '$label ($unit)' : label;
+
+        String displayValue;
+        if (e.value is List) {
+          displayValue = (e.value as List)
+              .map((row) => row is Map
+                  ? (row as Map<String, dynamic>)
+                      .entries
+                      .map((kv) => '${kv.key}: ${kv.value}')
+                      .join(', ')
+                  : row.toString())
+              .join('\n');
+        } else if (type == 'number' && e.value != null) {
+          final n = num.tryParse(e.value.toString());
+          displayValue = n != null ? n.toStringAsFixed(2) : e.value.toString();
+        } else {
+          displayValue = e.value?.toString() ?? '—';
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 2,
+                child: Text(
+                  displayLabel,
+                  style: TextStyle(fontSize: 13, color: cs.textSecondary),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 3,
+                child: Text(
+                  displayValue,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: cs.textPrimary,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   // ── Save preset ──────────────────────────────────────────────────────────
 
   Future<void> _showSavePresetSheet() async {
@@ -329,6 +551,23 @@ class _ToolDetailScreenState extends ConsumerState<ToolDetailScreen> {
       appBar: AppBar(
         title: Text(tool.name),
         actions: [
+          if (_defaultPreset != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.visibility_outlined, size: 15),
+                label: const Text('See example'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF19CBD6),
+                  side: const BorderSide(
+                      color: Color(0xFF19CBD6), width: 0.4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
+                  textStyle: const TextStyle(fontSize: 12),
+                ),
+                onPressed: () => _showExample(_defaultPreset!),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.bookmark_add_outlined),
             tooltip: 'Save preset',
@@ -611,6 +850,7 @@ class _SectionWidget extends StatelessWidget {
     final unit    = field['unit'] as String?;
     final hint    = field['hint'] as String?;
     final tooltip = field['tooltip'] as String?;
+    final typicalRange = field['typical_range'] as String?;
     final required = field['required'] as bool? ?? false;
     final min      = (field['min'] as num?)?.toDouble();
     final max      = (field['max'] as num?)?.toDouble();
@@ -619,21 +859,25 @@ class _SectionWidget extends StatelessWidget {
         .toList();
     final confidenceEnabled = field['confidence_enabled'] as bool? ?? false;
 
-    // Build label with optional tooltip icon
+    // Build label with optional ⓘ icon that shows a help dialog
     Widget labelWidget = Text(
       unit != null ? '$label ($unit)' : label,
       style: Theme.of(context).textTheme.labelMedium,
     );
-    if (tooltip != null && tooltip.isNotEmpty) {
+    if (tooltip != null || hint != null || typicalRange != null) {
       labelWidget = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           labelWidget,
           const SizedBox(width: 4),
-          Tooltip(
-            message: tooltip,
-            child: const Icon(Icons.info_outline, size: 14,
-                color: AppColors.textSecondary),
+          GestureDetector(
+            onTap: () => _showFieldHelpDialog(
+                context, label, tooltip, hint, typicalRange),
+            child: Icon(
+              Icons.info_outline,
+              size: 15,
+              color: const Color(0xFF19CBD6).withValues(alpha: 0.7),
+            ),
           ),
         ],
       );
@@ -662,7 +906,6 @@ class _SectionWidget extends StatelessWidget {
         decoration: InputDecoration(
           label: labelWidget,
           hintText: hint,
-          helperText: (field['typical_range'] as String?),
           border: const OutlineInputBorder(),
           enabledBorder: border,
         ),
@@ -817,4 +1060,117 @@ class _ArrayField extends StatelessWidget {
       ],
     );
   }
+}
+
+// ── Field help dialog ─────────────────────────────────────────────────────────
+
+void _showFieldHelpDialog(
+  BuildContext context,
+  String label,
+  String? tooltip,
+  String? hint,
+  String? typicalRange,
+) {
+  showDialog<void>(
+    context: context,
+    builder: (_) => Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 380),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: context.cs.backgroundSecondary,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: const Color(0xFF19CBD6).withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.info_outline,
+                    color: Color(0xFF19CBD6), size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: context.cs.textPrimary,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            if (tooltip != null && tooltip.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                tooltip,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: context.cs.textSecondary,
+                  height: 1.5,
+                ),
+              ),
+            ],
+            if (hint != null && hint.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.lightbulb_outline,
+                      size: 14, color: Color(0xFFD97D24)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      hint,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.cs.textTertiary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (typicalRange != null && typicalRange.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF19CBD6).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.straighten,
+                        size: 13, color: Color(0xFF19CBD6)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Typical range: $typicalRange',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF19CBD6),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ),
+  );
 }

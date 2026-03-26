@@ -406,6 +406,7 @@ class _NavPane extends StatelessWidget {
               unreadCount: chatUnreadCount,
               onTap: onChatTap ?? () {},
             ),
+          const _ToolkitNavItem(),
           const Spacer(),
           const _NavPaneSettingsItem(),
           const SizedBox(height: 12),
@@ -538,6 +539,54 @@ class _ChatNavItem extends StatelessWidget {
                           const SizedBox(width: 12),
                           Text(
                             'Chat',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              color: grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToolkitNavItem extends StatelessWidget {
+  const _ToolkitNavItem();
+
+  @override
+  Widget build(BuildContext context) {
+    final grey = context.cs.textSecondary;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => context.push(Routes.toolkit),
+            child: SizedBox(
+              height: 44,
+              child: Row(
+                children: [
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 9),
+                      child: Row(
+                        children: [
+                          Icon(Icons.construction_outlined, size: 20, color: grey),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Toolkit',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w400,

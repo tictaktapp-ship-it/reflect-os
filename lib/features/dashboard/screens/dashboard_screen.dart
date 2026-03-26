@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/features/dashboard/providers/dashboard_provider.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
@@ -387,6 +388,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       recentFive.map((d) => _RecentDecisionTile(decision: d)).toList(),
                 ),
 
+              const SizedBox(height: 12),
+              const _ToolkitCard(),
               const SizedBox(height: 24),
             ],
           );
@@ -1318,6 +1321,131 @@ class _RecentDecisionTile extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Toolkit shortcut card ─────────────────────────────────────────────────────
+
+class _ToolkitCard extends StatelessWidget {
+  const _ToolkitCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.cs;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.backgroundSecondary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.borderDefault),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.construction_rounded,
+                  color: Color(0xFF19CBD6), size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'DECISION TOOLKIT',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: cs.textTertiary,
+                  letterSpacing: 0.6,
+                ),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () => context.push(Routes.toolkit),
+                child: const Text(
+                  'View all',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF19CBD6)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _ToolChip(
+                name: 'ROI Calculator',
+                icon: Icons.trending_up,
+                onTap: () => context.push(Routes.toolkit),
+              ),
+              _ToolChip(
+                name: 'Risk Matrix',
+                icon: Icons.warning_amber,
+                onTap: () => context.push(Routes.toolkit),
+              ),
+              _ToolChip(
+                name: 'Scenario Builder',
+                icon: Icons.fork_right,
+                onTap: () => context.push(Routes.toolkit),
+              ),
+              _ToolChip(
+                name: 'Break-Even',
+                icon: Icons.show_chart,
+                onTap: () => context.push(Routes.toolkit),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolChip extends StatelessWidget {
+  const _ToolChip({
+    required this.name,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String name;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFF19CBD6).withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: const Color(0xFF19CBD6).withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: const Color(0xFF19CBD6)),
+            const SizedBox(width: 6),
+            Text(
+              name,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF19CBD6),
+              ),
+            ),
+          ],
         ),
       ),
     );

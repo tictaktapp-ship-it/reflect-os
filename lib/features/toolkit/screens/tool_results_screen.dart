@@ -13,6 +13,8 @@ import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/toolkit_providers.dart';
 import '../data/models/tool_definition.dart';
@@ -52,6 +54,8 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
   bool _isInjecting  = false;
   bool _isDownloading = false;
   Uint8List? _pdfBytes;
+  String? _attachedDecisionId;
+  String? _generatedDocumentId;
 
   /// Builds the text returned to the caller in picker mode.
   /// Prefers the narrative; falls back to formatted summary outputs.
@@ -182,6 +186,7 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
                 userId: userId,
                 decisionId: decisionId,
               );
+              if (mounted) setState(() => _generatedDocumentId = docId);
               await repo.updateDocumentStoragePath(
                 documentId: docId,
                 storageBucket: 'generated-documents',
@@ -220,6 +225,86 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
     } finally {
       if (mounted) setState(() => _isDownloading = false);
     }
+  }
+
+  // ── Attach to decision ────────────────────────────────────────────────────
+
+  Future<void> _attachToDecision(String decisionId) async {
+    try {
+      // Link the run to the decision (no-op if already linked).
+      await supabase
+          .from('tool_runs')
+          .update({'decision_id': decisionId})
+          .eq('id', widget.run.id);
+
+      // Also update generated_documents if a PDF was produced.
+      if (_generatedDocumentId != null) {
+        await supabase
+            .from('generated_documents')
+            .update({'subject_entity_id': decisionId})
+            .eq('id', _generatedDocumentId!);
+      }
+
+      if (!mounted) return;
+      setState(() => _attachedDecisionId = decisionId);
+
+      // Invalidate provider so the decision detail reloads.
+      ref.invalidate(decisionToolRunsProvider(decisionId));
+
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Toolkit output attached to decision'),
+        backgroundColor: Color(0xFF2EA073),
+      ));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to attach: $e')),
+        );
+      }
+    }
+  }
+
+  // ── Share methods ─────────────────────────────────────────────────────────
+
+  Future<void> _shareViaEmail() async {
+    final toolName = widget.tool.name;
+    final subject = Uri.encodeComponent('$toolName — Analysis');
+    final body = Uri.encodeComponent(
+      'Please find the $toolName analysis from Reflect OS below.\n\n'
+      'Generated: ${DateFormat("d MMM yyyy").format(widget.run.createdAt)}\n\n'
+      'This report was generated using Reflect OS Decision Intelligence.',
+    );
+    final emailUri = Uri.parse('mailto:?subject=$subject&body=$body');
+    await launchUrl(emailUri);
+
+    if (_pdfBytes != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Download the PDF to attach it to your email'),
+        action: SnackBarAction(
+          label: 'Download',
+          onPressed: _downloadPdf,
+        ),
+      ));
+    }
+  }
+
+  Future<void> _shareViaSystem() async {
+    if (kIsWeb) {
+      // Web: fall back to PDF download.
+      await _downloadPdf();
+      return;
+    }
+    // Generate PDF bytes if not already cached.
+    if (_pdfBytes == null) {
+      await _downloadPdf();
+    }
+    final bytes = _pdfBytes;
+    if (bytes == null || !mounted) return;
+    final toolName = widget.tool.name.replaceAll(RegExp(r'[^a-zA-Z0-9 ]'), '');
+    await Share.shareXFiles(
+      [XFile.fromData(bytes, name: '$toolName.pdf', mimeType: 'application/pdf')],
+      subject: widget.tool.name,
+    );
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -322,24 +407,16 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
             const SizedBox(height: 20),
           ],
 
-          // Section 6 — Download PDF
-          _SectionHeader(title: 'Export'),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              icon: _isDownloading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.download, size: 16),
-              label: Text(_isDownloading ? 'Generating PDF…' : 'Download PDF'),
-              style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF19CBD6)),
-              onPressed: _isDownloading ? null : _downloadPdf,
-            ),
+          // Section 6 — Action bar: attach, share, download
+          _ResultsActionBar(
+            workspaceId:
+                ref.watch(currentWorkspaceProvider).valueOrNull ?? '',
+            attachedDecisionId: _attachedDecisionId,
+            isDownloading: _isDownloading,
+            onDecisionSelected: _attachToDecision,
+            onShareEmail: _shareViaEmail,
+            onShareSystem: _shareViaSystem,
+            onDownloadPdf: _downloadPdf,
           ),
           const SizedBox(height: 20),
 
@@ -1630,5 +1707,193 @@ String _fmtCurrency(double v) {
   if (v.abs() >= 1000000) return '£${(v / 1000000).toStringAsFixed(1)}m';
   if (v.abs() >= 1000)    return '£${(v / 1000).toStringAsFixed(0)}k';
   return '£${v.toStringAsFixed(0)}';
+}
+
+// ── Results action bar ────────────────────────────────────────────────────────
+
+class _ResultsActionBar extends StatelessWidget {
+  const _ResultsActionBar({
+    required this.workspaceId,
+    required this.attachedDecisionId,
+    required this.isDownloading,
+    required this.onDecisionSelected,
+    required this.onShareEmail,
+    required this.onShareSystem,
+    required this.onDownloadPdf,
+  });
+
+  final String workspaceId;
+  final String? attachedDecisionId;
+  final bool isDownloading;
+  final Future<void> Function(String decisionId) onDecisionSelected;
+  final Future<void> Function() onShareEmail;
+  final Future<void> Function() onShareSystem;
+  final Future<void> Function() onDownloadPdf;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.cs;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.backgroundSecondary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.borderDefault),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Attach to decision
+          Row(
+            children: [
+              const Icon(Icons.link, color: Color(0xFF19CBD6), size: 16),
+              const SizedBox(width: 8),
+              Text(
+                'Attach to a decision:',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: cs.textPrimary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _DecisionPickerDropdown(
+                  workspaceId: workspaceId,
+                  attachedDecisionId: attachedDecisionId,
+                  onDecisionSelected: onDecisionSelected,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Share / download row
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.email_outlined, size: 15),
+                  label: const Text('Share via Email'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF19CBD6),
+                    side: BorderSide(color: cs.borderDefault),
+                  ),
+                  onPressed: onShareEmail,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.share_outlined, size: 15),
+                  label: const Text('Share'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF19CBD6),
+                    side: BorderSide(color: cs.borderDefault),
+                  ),
+                  onPressed: onShareSystem,
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                icon: isDownloading
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.download, size: 15),
+                label:
+                    Text(isDownloading ? 'Generating…' : 'Download PDF'),
+                style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF19CBD6)),
+                onPressed: isDownloading ? null : onDownloadPdf,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Decision picker dropdown ───────────────────────────────────────────────────
+
+class _DecisionPickerDropdown extends ConsumerWidget {
+  const _DecisionPickerDropdown({
+    required this.workspaceId,
+    required this.attachedDecisionId,
+    required this.onDecisionSelected,
+  });
+
+  final String workspaceId;
+  final String? attachedDecisionId;
+  final Future<void> Function(String decisionId) onDecisionSelected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final decisionsAsync = ref.watch(decisionsProvider);
+    final decisions = decisionsAsync.valueOrNull
+            ?.where((d) => d.state != 'Archived')
+            .toList() ??
+        [];
+
+    return DropdownButtonFormField<String>(
+      initialValue: attachedDecisionId,
+      isDense: true,
+      decoration: InputDecoration(
+        hintText: 'Select a decision…',
+        hintStyle:
+            TextStyle(fontSize: 12, color: context.cs.textTertiary),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: context.cs.borderDefault),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: context.cs.borderDefault),
+        ),
+        isDense: true,
+      ),
+      items: decisions.map((d) {
+        return DropdownMenuItem<String>(
+          value: d.id,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  d.title,
+                  style: const TextStyle(fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF19CBD6).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  d.state,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFF19CBD6),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+      onChanged: (id) {
+        if (id != null) onDecisionSelected(id);
+      },
+    );
+  }
 }
 
