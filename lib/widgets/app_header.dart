@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,13 +10,12 @@ import 'package:reflect_os/widgets/reflect_logo.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/auth_state_provider.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
-import 'package:reflect_os/core/providers/theme_provider.dart';
 import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/core/widgets/workspace_switcher_chip.dart';
-import 'package:reflect_os/core/widgets/change_password_dialog.dart';
 import 'package:reflect_os/features/settings/providers/profile_provider.dart';
 import 'package:reflect_os/features/team/data/models/workspace_membership.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 
 /// Brand app bar used by every screen in Reflect OS.
 ///
@@ -658,148 +658,358 @@ class _UserAvatarButton extends ConsumerWidget {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     final avatarUrl = profile?.avatarUrl;
 
+    Widget avatar;
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      avatar = Image.network(
+        avatarUrl,
+        fit: BoxFit.cover,
+        width: 32,
+        height: 32,
+        errorBuilder: (ctx, obj, st) => _initialsCircle(initial),
+      );
+    } else {
+      avatar = _initialsCircle(initial);
+    }
+
     return GestureDetector(
-      onTap: () =>
-          _showUserProfileSheet(context, ref, profile?.displayName, email),
+      onTap: () => _showUserProfileDialog(context),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: CircleAvatar(
-          radius: 16,
-          backgroundColor: const Color(0xFF19CBD6),
-          backgroundImage:
-              avatarUrl != null ? NetworkImage(avatarUrl) : null,
-          child: avatarUrl == null
-              ? Text(
-                  initial,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                )
-              : null,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.fromBorderSide(
+              BorderSide(color: Color(0xFF19CBD6), width: 2.0),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(2),
+            child: ClipOval(child: avatar),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _initialsCircle(String initial) {
+    return Container(
+      color: const Color(0xFF19CBD6),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
   }
 }
 
-// ── User profile sheet ────────────────────────────────────────────────────────
+// ── User profile dialog ───────────────────────────────────────────────────────
 
-void _showUserProfileSheet(
-    BuildContext context, WidgetRef ref, String? displayName, String email) {
-  showModalBottomSheet<void>(
+void _showUserProfileDialog(BuildContext context) {
+  showDialog<void>(
     context: context,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      side: BorderSide(color: Color(0xFF19CBD6), width: 1.5),
-    ),
-    builder: (ctx) => _UserProfileSheetBody(
-      displayName: displayName,
-      email: email,
+    barrierDismissible: true,
+    builder: (ctx) => Dialog(
+      backgroundColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: _ProfileDialogContent(
+        onClose: () => Navigator.of(ctx).pop(),
+      ),
     ),
   );
 }
 
-class _UserProfileSheetBody extends ConsumerWidget {
-  const _UserProfileSheetBody({
-    required this.displayName,
-    required this.email,
-  });
+class _ProfileDialogContent extends ConsumerStatefulWidget {
+  const _ProfileDialogContent({required this.onClose});
 
-  final String? displayName;
-  final String email;
+  final VoidCallback onClose;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
+  ConsumerState<_ProfileDialogContent> createState() =>
+      _ProfileDialogContentState();
+}
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Brand icon
-            Center(
-              child: SvgPicture.asset('assets/branding/icon.svg', height: 36),
-            ),
-            const SizedBox(height: 14),
-            // Name
-            Center(
-              child: Text(
-                displayName?.isNotEmpty == true ? displayName! : email,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: context.cs.textPrimary,
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            // Email
-            Center(
-              child: Text(
-                email,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: context.cs.textSecondary,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
-            // Change password
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.lock_outline, color: Color(0xFF19CBD6)),
-              title: const Text('Change password'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.of(context).pop();
-                showChangePasswordDialog(context);
-              },
-            ),
-            // Notifications
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.notifications_outlined,
-                  color: Color(0xFF19CBD6)),
-              title: const Text('Notifications'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.of(context).pop();
-                context.push(Routes.settingsPrivacy);
-              },
-            ),
-            // Appearance
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.brightness_6_outlined,
-                  color: Color(0xFF19CBD6)),
-              title: const Text('Appearance'),
-              subtitle: Text(themeMode == ThemeMode.light ? 'Light' : 'Dark'),
-              trailing: Switch(
-                value: themeMode == ThemeMode.light,
-                onChanged: (_) =>
-                    ref.read(themeModeProvider.notifier).toggle(),
-              ),
-            ),
-            const Divider(),
-            const SizedBox(height: 4),
-            Center(
-              child: TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  context.push(Routes.settings);
-                },
-                child: const Text('Manage profile'),
-              ),
-            ),
-          ],
+class _ProfileDialogContentState extends ConsumerState<_ProfileDialogContent> {
+  bool _isUploading = false;
+
+  Future<void> _pickAndUploadAvatar() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.first;
+    if (file.bytes == null) return;
+
+    if (file.bytes!.length > 2 * 1024 * 1024) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Image must be under 2MB'),
+          backgroundColor: Color(0xFFDC4444),
+        ));
+      }
+      return;
+    }
+
+    setState(() => _isUploading = true);
+
+    try {
+      final userId = supabase.auth.currentUser!.id;
+
+      // Remove any existing avatar files for this user
+      for (final ext in ['jpg', 'jpeg', 'png', 'webp']) {
+        try {
+          await supabase.storage
+              .from('avatars')
+              .remove(['$userId/avatar.$ext']);
+        } catch (_) {}
+      }
+
+      final rawExt = file.extension?.toLowerCase() ?? 'jpg';
+      final ext = rawExt == 'jpeg' ? 'jpg' : rawExt;
+      const mimeTypes = {
+        'jpg': 'image/jpeg',
+        'png': 'image/png',
+        'webp': 'image/webp',
+        'gif': 'image/gif',
+      };
+      final mimeType = mimeTypes[ext] ?? 'image/jpeg';
+      final storagePath = '$userId/avatar.$ext';
+
+      await supabase.storage.from('avatars').uploadBinary(
+            storagePath,
+            file.bytes!,
+            fileOptions: FileOptions(contentType: mimeType, upsert: true),
+          );
+
+      final publicUrl =
+          supabase.storage.from('avatars').getPublicUrl(storagePath);
+      final avatarUrl =
+          '$publicUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+
+      await supabase
+          .from('profiles')
+          .update({'avatar_url': avatarUrl}).eq('user_id', userId);
+
+      ref.invalidate(profileProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Avatar updated'),
+          backgroundColor: Color(0xFF2EA073),
+        ));
+      }
+    } catch (e) {
+      debugPrint('Avatar upload error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Upload failed: ${e.toString()}'),
+          backgroundColor: const Color(0xFFDC4444),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  Widget _avatarImage(String? url, String? displayName, String? email) {
+    if (url != null && url.isNotEmpty) {
+      return Image.network(
+        url,
+        fit: BoxFit.cover,
+        width: 80,
+        height: 80,
+        errorBuilder: (ctx, obj, st) => _initialsAvatar(displayName, email),
+      );
+    }
+    return _initialsAvatar(displayName, email);
+  }
+
+  Widget _initialsAvatar(String? displayName, String? email) {
+    final name = displayName ?? email ?? '?';
+    final initials = name
+        .trim()
+        .split(' ')
+        .take(2)
+        .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
+        .join();
+    return Container(
+      color: const Color(0xFF19CBD6).withValues(alpha: 0.15),
+      child: Center(
+        child: Text(
+          initials.isEmpty ? '?' : initials,
+          style: const TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF19CBD6),
+          ),
         ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = ref.watch(profileProvider).valueOrNull;
+    final currentUser = supabase.auth.currentUser;
+    final email = currentUser?.email ?? '';
+    final cs = context.cs;
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 400),
+      decoration: BoxDecoration(
+        color: cs.backgroundSecondary,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF19CBD6), width: 1.5),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Brand mark + close
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 12, 0),
+            child: Row(
+              children: [
+                SvgPicture.asset('assets/branding/icon.svg',
+                    width: 24, height: 24),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  color: cs.textTertiary,
+                  onPressed: widget.onClose,
+                ),
+              ],
+            ),
+          ),
+
+          // Avatar with edit button
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 88,
+                  height: 88,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.fromBorderSide(
+                      BorderSide(color: Color(0xFF19CBD6), width: 2.5),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(3),
+                    child: ClipOval(
+                      child: _avatarImage(
+                          profile?.avatarUrl, profile?.displayName, email),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: _pickAndUploadAvatar,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF19CBD6),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: cs.backgroundSecondary, width: 2),
+                      ),
+                      child: const Icon(Icons.edit,
+                          color: Colors.white, size: 14),
+                    ),
+                  ),
+                ),
+                if (_isUploading)
+                  Container(
+                    width: 88,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black.withValues(alpha: 0.4),
+                    ),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // Display name
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              profile?.displayName?.isNotEmpty == true
+                  ? profile!.displayName!
+                  : email,
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: cs.textPrimary),
+              textAlign: TextAlign.center,
+            ),
+          ),
+
+          // Email
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 20),
+            child: Text(
+              email,
+              style: TextStyle(fontSize: 13, color: cs.textTertiary),
+            ),
+          ),
+
+          Divider(color: cs.borderSubtle, height: 1),
+
+          // Edit profile
+          ListTile(
+            leading: Icon(Icons.person_outline,
+                color: cs.textSecondary, size: 20),
+            title: Text('Edit profile',
+                style: TextStyle(fontSize: 14, color: cs.textPrimary)),
+            trailing:
+                Icon(Icons.chevron_right, color: cs.textTertiary, size: 18),
+            onTap: () {
+              Navigator.pop(context);
+              context.push(Routes.settings);
+            },
+          ),
+
+          Divider(color: cs.borderSubtle, height: 1),
+
+          // Sign out
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await supabase.auth.signOut();
+              },
+              child: Text(
+                'Sign out',
+                style: TextStyle(fontSize: 13, color: Colors.red.shade400),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
