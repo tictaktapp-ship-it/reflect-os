@@ -73,6 +73,7 @@ dev_dependencies:
   freezed: ^3.0.0
   json_serializable: ^6.9.3
   flutter_launcher_icons: ^0.13.1
+  image: ^4.1.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -113,10 +114,10 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/branding/icon-1024.png"
+  image_path: "assets/branding/icon-1024-padded.png"
   min_sdk_android: 21
-  adaptive_icon_background: "#0A0F1E"
-  adaptive_icon_foreground: "assets/branding/icon-fg-1024.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/branding/icon-1024-padded.png"
   web:
     generate: true
     image_path: "assets/branding/icon-web-1024.png"

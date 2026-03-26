@@ -965,10 +965,6 @@ class _FanDeckState extends State<_FanDeck> with TickerProviderStateMixin {
   // ── Snap-back animation (cancelled drag) ──────────────────────────────────
   AnimationController? _snapController;
 
-  // ── Double-tap tracking ───────────────────────────────────────────────────
-  DateTime? _lastTapTime;
-  int _lastTappedIndex = -1;
-
   // ── Hint text persistence ─────────────────────────────────────────────────
   bool _hasInteracted = false;
 
@@ -1364,24 +1360,11 @@ class _FanDeckState extends State<_FanDeck> with TickerProviderStateMixin {
     );
   }
 
-  // ── Card builder (double-tap detection only) ──────────────────────────────
+  // ── Card builder ──────────────────────────────────────────────────────────
 
   Widget _buildCard(Decision decision, bool isFront, int stackDepth, double cardW) {
     return GestureDetector(
-      onTap: () {
-        final now = DateTime.now();
-        if (_lastTappedIndex == stackDepth &&
-            _lastTapTime != null &&
-            now.difference(_lastTapTime!) < const Duration(milliseconds: 350)) {
-          _expandCard(stackDepth);
-          _lastTapTime = null;
-          _lastTappedIndex = -1;
-        } else {
-          _lastTapTime = now;
-          _lastTappedIndex = stackDepth;
-          if (!isFront) _retreatCard();
-        }
-      },
+      onTap: () => _expandCard(stackDepth),
       child: _CollapsedCard(
         decision: decision,
         fixedWidth: cardW,

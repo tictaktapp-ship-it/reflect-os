@@ -265,31 +265,43 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
           .update({'decision_id': decisionId})
           .eq('id', widget.run.id);
 
-      // Also update generated_documents if a PDF was produced.
+      // Insert evidence_items row if the PDF was uploaded to storage.
+      // Must happen AFTER tool_runs is linked so can_read_decision() returns true.
+      if (_storagePath != null && _pdfBytes != null) {
+        final pdfTitle = widget.tool.pdfTitle;
+        final filename = '${pdfTitle}_'
+            '${DateFormat('yyyyMMdd').format(widget.run.createdAt)}.pdf';
+        try {
+          await supabase.from('evidence_items').insert({
+            'decision_id':        decisionId,
+            'type':               'file',
+            'label':              '$pdfTitle — Toolkit Output',
+            'storage_bucket':     'generated-documents',
+            'storage_path':       _storagePath!,
+            'original_filename':  filename,
+            'mime_type':          'application/pdf',
+            'file_size_bytes':    _pdfBytes!.length,
+            'created_by_user_id': userId,
+          });
+          ref.invalidate(evidenceProvider(decisionId));
+        } catch (e) {
+          debugPrint('EVIDENCE INSERT ERROR: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Failed to attach evidence: ${e.toString()}'),
+              backgroundColor: const Color(0xFFDC4444),
+            ));
+          }
+          return;
+        }
+      }
+
+      // Update generated_documents with the decision linkage.
       if (_generatedDocumentId != null) {
         await supabase
             .from('generated_documents')
             .update({'subject_entity_id': decisionId})
             .eq('id', _generatedDocumentId!);
-      }
-
-      // Insert evidence_items row if the PDF was uploaded to storage.
-      if (_storagePath != null && _pdfBytes != null) {
-        final pdfTitle = widget.tool.pdfTitle;
-        final filename = '${pdfTitle}_'
-            '${DateFormat('yyyyMMdd').format(widget.run.createdAt)}.pdf';
-        await supabase.from('evidence_items').insert({
-          'decision_id':       decisionId,
-          'type':              'file',
-          'label':             '$pdfTitle — Toolkit Output',
-          'storage_bucket':    'generated-documents',
-          'storage_path':      _storagePath!,
-          'original_filename': filename,
-          'mime_type':         'application/pdf',
-          'file_size_bytes':   _pdfBytes!.length,
-          'created_by_user_id': userId,
-        });
-        ref.invalidate(evidenceProvider(decisionId));
       }
 
       // ── Fix 4: Risk Matrix tool → feed risk assessment ──────────────────────
@@ -2043,23 +2055,23 @@ class _ResultsActionBar extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Row 1: Email | Share | Download PDF
-          Row(
+          // Sharing buttons — platform-aware
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.email_outlined, size: 15),
-                  label: const Text('Email'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _teal,
-                    side: BorderSide(color: cs.borderDefault),
-                  ),
-                  onPressed: busy ? null : onShareEmail,
+              OutlinedButton.icon(
+                icon: const Icon(Icons.email_outlined, size: 15),
+                label: const Text('Email'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _teal,
+                  side: BorderSide(color: cs.borderDefault),
                 ),
+                onPressed: busy ? null : onShareEmail,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
+              // Share (native share sheet) — mobile only
+              if (!kIsWeb)
+                OutlinedButton.icon(
                   icon: const Icon(Icons.share_outlined, size: 15),
                   label: const Text('Share'),
                   style: OutlinedButton.styleFrom(
@@ -2068,39 +2080,28 @@ class _ResultsActionBar extends StatelessWidget {
                   ),
                   onPressed: busy ? null : onShareSystem,
                 ),
+              FilledButton.icon(
+                icon: isDownloading
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.picture_as_pdf, size: 15),
+                label: Text(isDownloading ? 'Building…' : 'Download PDF'),
+                style: FilledButton.styleFrom(backgroundColor: _teal),
+                onPressed: busy ? null : onDownloadPdf,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton.icon(
-                  icon: isDownloading
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Icon(Icons.picture_as_pdf, size: 15),
-                  label: Text(isDownloading ? 'Building…' : 'Download PDF'),
-                  style: FilledButton.styleFrom(backgroundColor: _teal),
-                  onPressed: busy ? null : onDownloadPdf,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Row 2: Save to Device | Share to Chat
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
+              // Save to Device — mobile only (web uses Download PDF)
+              if (!kIsWeb)
+                OutlinedButton.icon(
                   icon: isSaving
                       ? const SizedBox(
                           width: 14,
                           height: 14,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: _teal),
+                              strokeWidth: 2, color: _teal),
                         )
                       : const Icon(Icons.save_alt, size: 15),
                   label: Text(isSaving ? 'Saving…' : 'Save to Device'),
@@ -2110,26 +2111,21 @@ class _ResultsActionBar extends StatelessWidget {
                   ),
                   onPressed: busy ? null : onSaveToDevice,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: isSharingChat
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: _teal),
-                        )
-                      : const Icon(Icons.chat_bubble_outline, size: 15),
-                  label: Text(isSharingChat ? 'Sharing…' : 'Share to Chat'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _teal,
-                    side: BorderSide(color: cs.borderDefault),
-                  ),
-                  onPressed: busy ? null : onShareToChat,
+              OutlinedButton.icon(
+                icon: isSharingChat
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: _teal),
+                      )
+                    : const Icon(Icons.chat_bubble_outline, size: 15),
+                label: Text(isSharingChat ? 'Sharing…' : 'Share to Chat'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _teal,
+                  side: BorderSide(color: cs.borderDefault),
                 ),
+                onPressed: busy ? null : onShareToChat,
               ),
             ],
           ),
