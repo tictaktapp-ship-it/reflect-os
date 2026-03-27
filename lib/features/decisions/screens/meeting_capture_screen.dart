@@ -321,9 +321,14 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
       _handleDecisions(decisions);
     } catch (e) {
       if (!mounted) return;
+      final msg = e.toString();
       setState(() {
         _isExtracting = false;
-        _errorMessage = 'Failed to extract decisions: $e';
+        _errorMessage = msg.contains('Server error')
+            ? 'The AI service returned an error. Please try again.'
+            : msg.contains('No decisions')
+                ? 'No decisions could be found in your notes. Try adding more detail.'
+                : 'Could not extract decisions. Check your connection and try again.';
       });
     }
   }
@@ -338,6 +343,19 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
     );
     if (result == null || result.files.isEmpty) return;
     final file = result.files.first;
+
+    const maxBytes = 10 * 1024 * 1024; // 10 MB
+    if ((file.size) > maxBytes) {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'File is too large (${(file.size / (1024 * 1024)).toStringAsFixed(1)} MB). '
+              'Maximum size is 10 MB.';
+        });
+      }
+      return;
+    }
+
     final bytes = file.bytes;
     if (bytes == null) return;
     final content = const Utf8Decoder(allowMalformed: true).convert(bytes);
@@ -368,9 +386,14 @@ class _MeetingCaptureScreenState extends ConsumerState<MeetingCaptureScreen>
       _handleDecisions(decisions);
     } catch (e) {
       if (!mounted) return;
+      final msg = e.toString();
       setState(() {
         _isExtracting = false;
-        _errorMessage = 'Failed to extract decisions: $e';
+        _errorMessage = msg.contains('Server error')
+            ? 'The AI service returned an error. Please try again.'
+            : msg.contains('No decisions')
+                ? 'No decisions could be found in this file. Try a different document.'
+                : 'Could not extract decisions. Check your connection and try again.';
       });
     }
   }

@@ -4,7 +4,7 @@ Version 3.0 | Effective date: [Insert date]
 1. ABOUT US AND HOW TO CONTACT US
 These Terms and Conditions ("Terms") are a legally binding agreement between you and Euan Pallister trading as Reflect OS, or any successor entity operating the Service ("Reflect OS", "we", "us", "our").
 Contact us at: contact@reflect-os.com
-Support: [Insert support URL or email]
+Support: contact@reflect-os.com
 
 2. ACCEPTANCE
 You accept these Terms by ticking the "I agree to the Terms and Conditions" checkbox during account registration, or by otherwise accessing or using the Service after these Terms have been presented to you. If you do not agree, do not create an account or use the Service.
@@ -166,7 +166,7 @@ You shall indemnify Reflect OS against claims arising from your breach of these 
 We will not be liable for failure or delay caused by events beyond our reasonable control. If a force majeure event continues for more than 30 days, either party may terminate on written notice with a refund of prepaid fees for the unused period.
 
 26. COMPLAINTS AND DISPUTE RESOLUTION
-Support: [Insert support URL or email]
+Support: contact@reflect-os.com
 Complaints: contact@reflect-os.com
 We aim to acknowledge complaints within 5 business days and provide a final response within 28 days. If we cannot resolve your complaint within 8 weeks, you may be entitled to refer it to an Alternative Dispute Resolution (ADR) provider.
 

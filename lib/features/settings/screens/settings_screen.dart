@@ -24,6 +24,7 @@ import 'package:reflect_os/features/workspace/providers/workspace_providers.dart
 import 'package:reflect_os/widgets/app_header.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
 import 'package:reflect_os/core/theme/app_radius.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -637,9 +638,13 @@ class _LegalPrivacySection extends ConsumerWidget {
       );
     }
 
-    void showCookieSheet() {
-      bool current = consent?.cookieConsent ?? false;
-      showDialog<void>(
+    Future<void> showCookieSheet() async {
+      final prefs = await SharedPreferences.getInstance();
+      final initial = prefs.getBool('functional_cookies_enabled') ?? true;
+      if (!context.mounted) return;
+
+      bool current = initial;
+      await showDialog<void>(
         context: context,
         barrierDismissible: true,
         builder: (ctx) => StatefulBuilder(
@@ -665,13 +670,21 @@ class _LegalPrivacySection extends ConsumerWidget {
                   title: const Text('Functional cookies'),
                   subtitle: const Text('Theme and workspace memory'),
                   value: current,
-                  onChanged: (v) => setSheet(() => current = v),
+                  onChanged: (v) async {
+                    setSheet(() => current = v);
+                    final p = await SharedPreferences.getInstance();
+                    await p.setBool('functional_cookies_enabled', v);
+                  },
                 ),
               ],
             ),
             actions: [
               FilledButton(
-                onPressed: () => Navigator.pop(ctx),
+                onPressed: () async {
+                  final p = await SharedPreferences.getInstance();
+                  await p.setBool('functional_cookies_enabled', current);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
                 child: const Text('Done'),
               ),
             ],
