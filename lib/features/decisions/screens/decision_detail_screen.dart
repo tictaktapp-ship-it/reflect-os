@@ -4530,10 +4530,10 @@ class _CoachNotesSectionState extends ConsumerState<_CoachNotesSection> {
                         try {
                           await ref
                               .read(coachingRepositoryProvider)
-                              .addNote(
-                                widget.decisionId,
-                                selectedClientId!,
-                                text,
+                              .addCoachNote(
+                                clientUserId: selectedClientId!,
+                                noteText: text,
+                                decisionId: widget.decisionId,
                               );
                           ref.invalidate(coachNotesForDecisionProvider(
                               widget.decisionId));
@@ -4585,7 +4585,8 @@ class _CoachNotesSectionState extends ConsumerState<_CoachNotesSection> {
     if (clients.isEmpty && coaches.isEmpty) return const SizedBox.shrink();
 
     final isCoach = clients.isNotEmpty;
-    final clientUserIds = clients.map((c) => c.clientUserId).toList();
+    final clientUserIds =
+        clients.map((c) => c.clientUserId).whereType<String>().toList();
 
     final notesAsync =
         ref.watch(coachNotesForDecisionProvider(widget.decisionId));
