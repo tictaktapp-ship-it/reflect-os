@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/coaching/data/models/coach_client_relationship.dart';
 import 'package:reflect_os/features/coaching/data/models/coach_note.dart';
+import 'package:reflect_os/features/coaching/data/models/coach_shared_decision.dart';
+import 'package:reflect_os/features/coaching/data/models/cross_client_dashboard.dart';
 import 'package:reflect_os/features/decisions/data/confidence_triggers_service.dart';
 import 'package:reflect_os/features/coaching/data/models/coaching_action_item.dart';
 import 'package:reflect_os/features/coaching/data/models/coaching_session.dart';
@@ -9,6 +11,8 @@ import 'package:reflect_os/features/coaching/data/models/coaching_session_note.d
 
 class CoachingRepository {
   const CoachingRepository();
+
+  // ── Relationships ──────────────────────────────────────────────────────────
 
   Future<List<CoachClientRelationship>> getMyClients() async {
     final uid = supabase.auth.currentUser?.id;
@@ -36,7 +40,6 @@ class CoachingRepository {
     return rows.map((r) => CoachClientRelationship.fromJson(r)).toList();
   }
 
-  // Get all relationships (both pending and active) as coach
   Future<List<CoachClientRelationship>> getMyClientsAll() async {
     final uid = supabase.auth.currentUser?.id;
     if (uid == null) return [];
@@ -49,7 +52,6 @@ class CoachingRepository {
     return rows.map((r) => CoachClientRelationship.fromJson(r)).toList();
   }
 
-  // Get all relationships (both pending and active) as client
   Future<List<CoachClientRelationship>> getMyCoachesAll() async {
     final uid = supabase.auth.currentUser?.id;
     if (uid == null) return [];
@@ -62,17 +64,27 @@ class CoachingRepository {
     return rows.map((r) => CoachClientRelationship.fromJson(r)).toList();
   }
 
-  Future<void> inviteClient(String clientEmail, String workspaceId) async {
-    final currentUserId = supabase.auth.currentUser?.id;
-    if (currentUserId == null) throw Exception('Not authenticated');
-    final expiresAt =
-        DateTime.now().toUtc().add(const Duration(days: 7));
-    await supabase.from('workspace_invites').insert({
-      'workspace_id': workspaceId,
-      'email': clientEmail,
-      'role': 'Editor',
-      'expires_at': expiresAt.toIso8601String(),
-      'created_by_user_id': currentUserId,
+  /// Coach invites a client by email. Inserts into coach_client_relationships.
+  Future<void> inviteClient(String clientEmail) async {
+    final uid = supabase.auth.currentUser?.id;
+    if (uid == null) throw Exception('Not authenticated');
+    await supabase.from('coach_client_relationships').insert({
+      'coach_user_id': uid,
+      'invited_email': clientEmail,
+      'status': 'Active',
+      'granted_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  /// Client invites a coach by email. Inserts into coach_client_relationships.
+  Future<void> inviteCoach(String coachEmail) async {
+    final uid = supabase.auth.currentUser?.id;
+    if (uid == null) throw Exception('Not authenticated');
+    await supabase.from('coach_client_relationships').insert({
+      'client_user_id': uid,
+      'invited_email': coachEmail,
+      'status': 'Active',
+      'granted_at': DateTime.now().toUtc().toIso8601String(),
     });
   }
 
@@ -80,11 +92,10 @@ class CoachingRepository {
     final now = DateTime.now().toUtc().toIso8601String();
     await supabase
         .from('coach_client_relationships')
-        .update({'revoked_at': now, 'deleted_at': now})
+        .update({'status': 'Revoked', 'revoked_at': now, 'deleted_at': now})
         .eq('id', relationshipId);
   }
 
-  // Update relationship focus/goals/notes (encrypted fields stored as plaintext for now)
   Future<void> updateRelationshipFields(
     String relationshipId, {
     String? focusAreas,
@@ -102,6 +113,162 @@ class CoachingRepository {
         .eq('id', relationshipId);
   }
 
+  // ── Shared Decisions ───────────────────────────────────────────────────────
+
+  static const _sharedDecisionSelect =
+      'id, coach_user_id, client_user_id, decision_id, shared_at, revoked_at, created_at, '
+      'decisions(id, title, state, stakes, initial_confidence, health_state, category_name, created_at)';
+
+  /// Coach: get decisions a specific client has shared with this coach.
+  Future<List<CoachSharedDecision>> getSharedDecisionsForClient(
+      String clientUserId) async {
+    final uid = supabase.auth.currentUser?.id;
+    if (uid == null) return [];
+    final rows = await supabase
+        .from('coach_shared_decisions')
+        .select(_sharedDecisionSelect)
+        .eq('coach_user_id', uid)
+        .eq('client_user_id', clientUserId)
+        .isFilter('revoked_at', null)
+        .order('created_at', ascending: false);
+    return rows.map((r) => CoachSharedDecision.fromJson(r)).toList();
+  }
+
+  /// Client: get all decisions this user has shared with any coach.
+  Future<List<CoachSharedDecision>> getMySharedDecisions() async {
+    final uid = supabase.auth.currentUser?.id;
+    if (uid == null) return [];
+    final rows = await supabase
+        .from('coach_shared_decisions')
+        .select(_sharedDecisionSelect)
+        .eq('client_user_id', uid)
+        .isFilter('revoked_at', null)
+        .order('created_at', ascending: false);
+    return rows.map((r) => CoachSharedDecision.fromJson(r)).toList();
+  }
+
+  /// Client: share a decision with a coach (upserts to handle re-sharing).
+  Future<void> shareDecisionWithCoach({
+    required String coachUserId,
+    required String decisionId,
+  }) async {
+    final uid = supabase.auth.currentUser?.id;
+    if (uid == null) throw Exception('Not authenticated');
+    await supabase.from('coach_shared_decisions').upsert(
+      {
+        'coach_user_id': coachUserId,
+        'client_user_id': uid,
+        'decision_id': decisionId,
+        'shared_at': DateTime.now().toUtc().toIso8601String(),
+        'revoked_at': null,
+      },
+      onConflict: 'coach_user_id,client_user_id,decision_id',
+    );
+  }
+
+  /// Client: revoke a previously shared decision.
+  Future<void> revokeSharedDecision(String id) async {
+    await supabase
+        .from('coach_shared_decisions')
+        .update({'revoked_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
+  // ── Cross-client Dashboard ─────────────────────────────────────────────────
+
+  Future<CrossClientDashboard> getCrossClientDashboard() async {
+    final uid = supabase.auth.currentUser?.id;
+    if (uid == null) return const CrossClientDashboard.empty();
+
+    // All shared decisions across all clients
+    final List<dynamic> sharedRows = await supabase
+        .from('coach_shared_decisions')
+        .select(
+            'decision_id, client_user_id, decisions(title, state, health_state)')
+        .eq('coach_user_id', uid)
+        .isFilter('revoked_at', null);
+
+    // Build client name map from relationships
+    final List<dynamic> clientRows = await supabase
+        .from('coach_client_relationships')
+        .select('client_user_id, invited_email')
+        .eq('coach_user_id', uid)
+        .eq('status', 'Active')
+        .isFilter('deleted_at', null);
+
+    final clientNames = <String, String>{};
+    for (final r in clientRows) {
+      final cid = r['client_user_id'] as String?;
+      if (cid != null) {
+        clientNames[cid] =
+            r['invited_email'] as String? ?? 'Client ${cid.substring(0, 6)}';
+      }
+    }
+
+    int totalActive = 0;
+    int overdueCount = 0;
+    final attentionItems = <AttentionDecision>[];
+
+    for (final row in sharedRows) {
+      final d = row['decisions'] as Map<String, dynamic>?;
+      if (d == null) continue;
+      final state = d['state'] as String? ?? '';
+      final healthState = d['health_state'] as String? ?? '';
+      if (state != 'Archived') {
+        totalActive++;
+        if (healthState == 'overdue' || healthState == 'needs_attention') {
+          overdueCount++;
+          final cid = row['client_user_id'] as String;
+          attentionItems.add(AttentionDecision(
+            clientUserId: cid,
+            clientName:
+                clientNames[cid] ?? 'Client ${cid.substring(0, 6)}',
+            decisionId: row['decision_id'] as String,
+            decisionTitle: d['title'] as String? ?? 'Untitled',
+            healthState: healthState,
+          ));
+        }
+      }
+    }
+
+    // Sessions this month
+    final now = DateTime.now();
+    final startOfMonth =
+        DateTime(now.year, now.month, 1).toUtc().toIso8601String();
+    final endOfMonth =
+        DateTime(now.year, now.month + 1, 1).toUtc().toIso8601String();
+
+    final List<dynamic> sessionsThisMonthRows = await supabase
+        .from('coaching_sessions')
+        .select('id')
+        .eq('coach_user_id', uid)
+        .gte('scheduled_at', startOfMonth)
+        .lt('scheduled_at', endOfMonth)
+        .isFilter('deleted_at', null);
+
+    // Upcoming sessions (next 5)
+    final List<dynamic> upcomingRows = await supabase
+        .from('coaching_sessions')
+        .select()
+        .eq('coach_user_id', uid)
+        .eq('status', 'scheduled')
+        .gt('scheduled_at', DateTime.now().toUtc().toIso8601String())
+        .isFilter('deleted_at', null)
+        .order('scheduled_at')
+        .limit(5);
+
+    return CrossClientDashboard(
+      totalActiveDecisions: totalActive,
+      overdueReviews: overdueCount,
+      sessionsThisMonth: sessionsThisMonthRows.length,
+      attentionNeeded: attentionItems,
+      upcomingSessions:
+          upcomingRows.map((r) => CoachingSession.fromJson(r)).toList(),
+    );
+  }
+
+  // ── Coach Notes ────────────────────────────────────────────────────────────
+
   Future<List<CoachNote>> getNotesForDecision(String decisionId) async {
     final uid = supabase.auth.currentUser?.id;
     if (uid == null) return [];
@@ -114,31 +281,6 @@ class CoachingRepository {
     return rows.map((r) => CoachNote.fromJson(r)).toList();
   }
 
-  Future<CoachNote> addNote(
-      String decisionId, String clientUserId, String noteText) async {
-    final uid = supabase.auth.currentUser?.id;
-    if (uid == null) throw Exception('Not authenticated');
-    final row = await supabase
-        .from('coach_notes')
-        .insert({
-          'coach_user_id': uid,
-          'client_user_id': clientUserId,
-          'decision_id': decisionId,
-          'note_encrypted': noteText,
-        })
-        .select()
-        .single();
-    return CoachNote.fromJson(row);
-  }
-
-  Future<void> deleteNote(String id) async {
-    await supabase
-        .from('coach_notes')
-        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
-        .eq('id', id);
-  }
-
-  // Get coach notes for a specific client (all decisions)
   Future<List<CoachNote>> getNotesForClient(String clientUserId) async {
     final uid = supabase.auth.currentUser?.id;
     if (uid == null) return [];
@@ -148,11 +290,24 @@ class CoachingRepository {
         .eq('coach_user_id', uid)
         .eq('client_user_id', clientUserId)
         .isFilter('deleted_at', null)
-        .order('created_at');
+        .order('created_at', ascending: false);
     return rows.map((r) => CoachNote.fromJson(r)).toList();
   }
 
-  // Add note with all fields
+  /// Client: notes shared with this user by any coach.
+  Future<List<CoachNote>> getNotesSharedWithMe() async {
+    final uid = supabase.auth.currentUser?.id;
+    if (uid == null) return [];
+    final rows = await supabase
+        .from('coach_notes')
+        .select()
+        .eq('client_user_id', uid)
+        .eq('visibility', 'shared_with_client')
+        .isFilter('deleted_at', null)
+        .order('created_at', ascending: false);
+    return rows.map((r) => CoachNote.fromJson(r)).toList();
+  }
+
   Future<CoachNote> addCoachNote({
     required String clientUserId,
     required String noteText,
@@ -175,14 +330,20 @@ class CoachingRepository {
     final row =
         await supabase.from('coach_notes').insert(data).select().single();
     final note = CoachNote.fromJson(row);
-    if (decisionId != null && (confidenceAdjustment != 0)) {
+    if (decisionId != null && confidenceAdjustment != 0) {
       unawaited(const ConfidenceTriggersService()
           .insertCoachNoteTrigger(note, decisionId));
     }
     return note;
   }
 
-  // Get confidence adjustments for a decision (for all coaches)
+  Future<void> deleteNote(String id) async {
+    await supabase
+        .from('coach_notes')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
   Future<int> getConfidenceAdjustmentSum(String decisionId) async {
     final rows = await supabase
         .from('coach_notes')
@@ -197,49 +358,38 @@ class CoachingRepository {
     return sum;
   }
 
+  // Backwards-compat alias used by confidence triggers
+  Future<CoachNote> addNoteWithAdjustment({
+    required String decisionId,
+    required String clientUserId,
+    required String noteText,
+    int? confidenceAdjustment,
+  }) =>
+      addCoachNote(
+        clientUserId: clientUserId,
+        noteText: noteText,
+        decisionId: decisionId,
+        confidenceAdjustment: confidenceAdjustment ?? 0,
+      );
+
+  // ── Sessions ───────────────────────────────────────────────────────────────
+
   Future<List<CoachingSession>> getSessions({String? clientUserId}) async {
     final uid = supabase.auth.currentUser?.id;
     if (uid == null) return [];
-    List<Map<String, dynamic>> rows;
+    var query = supabase
+        .from('coaching_sessions')
+        .select()
+        .isFilter('deleted_at', null);
     if (clientUserId != null) {
-      rows = await supabase
-          .from('coaching_sessions')
-          .select()
-          .isFilter('deleted_at', null)
+      query = query
           .eq('client_user_id', clientUserId)
-          .eq('coach_user_id', uid)
-          .order('scheduled_at');
-    } else {
-      rows = await supabase
-          .from('coaching_sessions')
-          .select()
-          .isFilter('deleted_at', null)
-          .order('scheduled_at');
+          .eq('coach_user_id', uid);
     }
+    final rows = await query.order('scheduled_at');
     return rows.map((r) => CoachingSession.fromJson(r)).toList();
   }
 
-  Future<CoachingSession> createSession({
-    required String clientUserId,
-    required DateTime scheduledAt,
-    String? title,
-    int durationMinutes = 60,
-    String? workspaceId,
-  }) async {
-    final uid = supabase.auth.currentUser?.id;
-    if (uid == null) throw Exception('Not authenticated');
-    final row = await supabase.from('coaching_sessions').insert({
-      'coach_user_id': uid,
-      'client_user_id': clientUserId,
-      'scheduled_at': scheduledAt.toUtc().toIso8601String(),
-      'title': title,
-      'duration_minutes': durationMinutes,
-      if (workspaceId != null) 'workspace_id': workspaceId,
-    }).select().single();
-    return CoachingSession.fromJson(row);
-  }
-
-  // Create session with resource link
   Future<CoachingSession> createSessionFull({
     required String clientUserId,
     required DateTime scheduledAt,
@@ -255,8 +405,8 @@ class CoachingRepository {
       'coach_user_id': uid,
       'client_user_id': clientUserId,
       'scheduled_at': scheduledAt.toUtc().toIso8601String(),
-      'title': title,
       'duration_minutes': durationMinutes,
+      if (title != null && title.isNotEmpty) 'title': title,
       if (workspaceId != null) 'workspace_id': workspaceId,
       if (resourceUrl != null && resourceUrl.isNotEmpty)
         'resource_url': resourceUrl,
@@ -275,7 +425,10 @@ class CoachingRepository {
         .eq('id', sessionId);
   }
 
-  Future<List<CoachingSessionNote>> getSessionNotes(String clientUserId) async {
+  // ── Session Notes ──────────────────────────────────────────────────────────
+
+  Future<List<CoachingSessionNote>> getSessionNotes(
+      String clientUserId) async {
     final uid = supabase.auth.currentUser?.id;
     if (uid == null) return [];
     final rows = await supabase
@@ -288,23 +441,20 @@ class CoachingRepository {
     return rows.map((r) => CoachingSessionNote.fromJson(r)).toList();
   }
 
-  Future<CoachingSessionNote> addSessionNote({
-    required String clientUserId,
-    required String body,
-    String? workspaceId,
-  }) async {
+  /// Client: fetch session notes where they are the client (latest 10).
+  Future<List<CoachingSessionNote>> getMySessionNotes() async {
     final uid = supabase.auth.currentUser?.id;
-    if (uid == null) throw Exception('Not authenticated');
-    final row = await supabase.from('coaching_session_notes').insert({
-      'coach_user_id': uid,
-      'client_user_id': clientUserId,
-      'body_encrypted': body,
-      if (workspaceId != null) 'workspace_id': workspaceId,
-    }).select().single();
-    return CoachingSessionNote.fromJson(row);
+    if (uid == null) return [];
+    final rows = await supabase
+        .from('coaching_session_notes')
+        .select()
+        .eq('client_user_id', uid)
+        .isFilter('deleted_at', null)
+        .order('created_at', ascending: false)
+        .limit(10);
+    return rows.map((r) => CoachingSessionNote.fromJson(r)).toList();
   }
 
-  // Add session note (for past sessions)
   Future<CoachingSessionNote> addSessionNoteForSession({
     required String clientUserId,
     required String body,
@@ -328,45 +478,8 @@ class CoachingRepository {
     return CoachingSessionNote.fromJson(row);
   }
 
-  Future<CoachNote> addNoteWithAdjustment({
-    required String decisionId,
-    required String clientUserId,
-    required String noteText,
-    int? confidenceAdjustment,
-  }) async {
-    final uid = supabase.auth.currentUser?.id;
-    if (uid == null) throw Exception('Not authenticated');
-    final row = await supabase.from('coach_notes').insert({
-      'coach_user_id': uid,
-      'client_user_id': clientUserId,
-      'decision_id': decisionId,
-      'note_encrypted': noteText,
-      if (confidenceAdjustment != null)
-        'coach_confidence_adjustment': confidenceAdjustment,
-    }).select().single();
-    final note = CoachNote.fromJson(row);
-    if (confidenceAdjustment != null && confidenceAdjustment != 0) {
-      unawaited(const ConfidenceTriggersService()
-          .insertCoachNoteTrigger(note, decisionId));
-    }
-    return note;
-  }
+  // ── Action Items ───────────────────────────────────────────────────────────
 
-  Future<void> inviteCoach(String coachEmail, String workspaceId) async {
-    final currentUserId = supabase.auth.currentUser?.id;
-    if (currentUserId == null) throw Exception('Not authenticated');
-    final expiresAt =
-        DateTime.now().toUtc().add(const Duration(days: 7));
-    await supabase.from('workspace_invites').insert({
-      'workspace_id': workspaceId,
-      'email': coachEmail,
-      'role': 'Editor',
-      'expires_at': expiresAt.toIso8601String(),
-      'created_by_user_id': currentUserId,
-    });
-  }
-
-  // Action items
   Future<List<CoachingActionItem>> getActionItems(String clientUserId) async {
     final uid = supabase.auth.currentUser?.id;
     if (uid == null) return [];

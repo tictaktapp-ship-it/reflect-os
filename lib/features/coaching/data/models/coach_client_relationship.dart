@@ -5,7 +5,7 @@ class CoachClientRelationship {
   const CoachClientRelationship({
     required this.id,
     required this.coachUserId,
-    required this.clientUserId,
+    this.clientUserId,
     required this.status,
     required this.grantedAt,
     this.revokedAt,
@@ -13,11 +13,14 @@ class CoachClientRelationship {
     this.focusAreasEncrypted,
     this.goalsEncrypted,
     this.notesEncrypted,
+    this.clientDisplayName,
+    this.coachDisplayName,
   });
 
   final String id;
   final String coachUserId;
-  final String clientUserId;
+  // Nullable: pending relationships where the client has not yet signed up.
+  final String? clientUserId;
   final String status;
   final DateTime grantedAt;
   final DateTime? revokedAt;
@@ -26,14 +29,26 @@ class CoachClientRelationship {
   final String? goalsEncrypted;
   final String? notesEncrypted;
 
+  // Enriched from profiles join (optional, populated by repository when joining)
+  final String? clientDisplayName;
+  final String? coachDisplayName;
+
   bool get isActive => status.toLowerCase() == 'active' && revokedAt == null;
-  bool get isPending => status.toLowerCase() == 'pending';
+  bool get isPending => clientUserId == null && invitedEmail != null;
+
+  /// Label to show when the other party is the client.
+  String get clientLabel =>
+      clientDisplayName ?? invitedEmail ?? 'Client ${id.substring(0, 6)}';
+
+  /// Label to show when the other party is the coach.
+  String get coachLabel =>
+      coachDisplayName ?? invitedEmail ?? 'Coach ${id.substring(0, 6)}';
 
   factory CoachClientRelationship.fromJson(Map<String, dynamic> json) =>
       CoachClientRelationship(
         id: json['id'] as String,
         coachUserId: json['coach_user_id'] as String,
-        clientUserId: json['client_user_id'] as String,
+        clientUserId: json['client_user_id'] as String?,
         status: json['status'] as String,
         grantedAt: DateTime.parse(json['granted_at'] as String),
         revokedAt: json['revoked_at'] != null
