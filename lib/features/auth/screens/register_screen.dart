@@ -7,7 +7,6 @@ import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
 import 'package:reflect_os/features/auth/widgets/auth_logo.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:reflect_os/core/services/uppercut_tracking.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -110,9 +109,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
 
-    // Affiliate tracking — fire immediately after confirmed signup success
-    UppercutTracking.trackSignup(email);
-
     // Handle invite token — accept invitation and skip onboarding
     if (_inviteToken != null) {
       try {
@@ -148,9 +144,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
     // If session is not null, authStateProvider picks up the new session
     // and the router redirect handles navigation automatically.
-
-    // TODO: fire UppercutTracking.trackSignup(email) here
-    // when OAuth signup is added (currently OAuth is calendar-only, not user auth)
   }
 
   @override
