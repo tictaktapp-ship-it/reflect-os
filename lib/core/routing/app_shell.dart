@@ -80,27 +80,15 @@ class _AppShellState extends ConsumerState<AppShell> {
         // New Decision FAB — shown on the Decisions tab (index 1)
         if (widget.navigationShell.currentIndex == 1)
           Positioned(
-            bottom: isTeamWorkspace ? 88 : 20,
+            bottom: 20,
             right: 20,
             child: _NewDecisionFab(
               onTap: () => context.push(Routes.decisionsCreate),
             ),
           ),
-        // Chat FAB — team workspaces only
-        if (isTeamWorkspace && workspaceId != null) ...[
-          if (_chatOpen)
-            _buildChatPanel(context, workspaceId),
-          Positioned(
-            bottom: 20,
-            right: 20,
-            child: _ChatFab(
-              isOpen: _chatOpen,
-              unreadCount: unreadCount,
-              onPressed: () =>
-                  setState(() => _chatOpen = !_chatOpen),
-            ),
-          ),
-        ],
+        // Chat panel — team workspaces only, toggled from nav pane
+        if (isTeamWorkspace && workspaceId != null && _chatOpen)
+          _buildChatPanel(context, workspaceId),
       ],
     );
   }
@@ -125,96 +113,6 @@ class _AppShellState extends ConsumerState<AppShell> {
         child: ChatPanelWidget(
           workspaceId: workspaceId,
           onClose: _closeChat,
-        ),
-      ),
-    );
-  }
-}
-
-// ── Chat FAB ───────────────────────────────────────────────────────────────────
-
-class _ChatFab extends StatelessWidget {
-  const _ChatFab({
-    required this.isOpen,
-    required this.unreadCount,
-    required this.onPressed,
-  });
-
-  final bool isOpen;
-  final int unreadCount;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      elevation: 4,
-      shadowColor: const Color(0xFF19CBD6).withValues(alpha: 0.3),
-      borderRadius: AppRadius.pillBR,
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: AppRadius.pillBR,
-        onTap: onPressed,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: isOpen
-                  ? const [Color(0xFF10A4AF), Color(0xFF0D8A94)]
-                  : const [Color(0xFF19CBD6), Color(0xFF10A4AF)],
-            ),
-            borderRadius: AppRadius.pillBR,
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF19CBD6).withValues(alpha: 0.35),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: Icon(
-                  isOpen
-                      ? Icons.close_rounded
-                      : Icons.chat_bubble_rounded,
-                  key: ValueKey(isOpen),
-                  color: Colors.white,
-                  size: 22,
-                ),
-              ),
-              if (!isOpen && unreadCount > 0)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    width: 16,
-                    height: 16,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFDC4444),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        unreadCount > 9 ? '9+' : '$unreadCount',
-                        style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
         ),
       ),
     );
@@ -339,7 +237,30 @@ class _WideShell extends StatelessWidget {
   }
 }
 
-// ── Nav pane (80px wide) ───────────────────────────────────────────────────────
+// ── Nav pane (240px wide) ──────────────────────────────────────────────────────
+
+BoxDecoration _navTooltipDecoration() => BoxDecoration(
+      color: const Color(0xFF1E293B),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(
+        color: const Color(0xFF19CBD6).withValues(alpha: 0.4),
+        width: 1,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.25),
+          blurRadius: 10,
+          offset: const Offset(4, 0),
+        ),
+      ],
+    );
+
+const TextStyle _navTooltipTextStyle = TextStyle(
+  color: Color(0xFFF4F5F7),
+  fontSize: 12,
+  fontFamily: 'DMSans',
+  height: 1.5,
+);
 
 class _NavPane extends StatelessWidget {
   const _NavPane({
@@ -357,19 +278,41 @@ class _NavPane extends StatelessWidget {
   final VoidCallback? onChatTap;
 
   static const _items = [
-    _NavItem(icon: Icons.home_outlined, selectedIcon: Icons.home, label: 'Home'),
     _NavItem(
-        icon: Icons.task_alt_outlined,
-        selectedIcon: Icons.task_alt,
-        label: 'Decisions'),
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home,
+      label: 'Home',
+      tooltipMessage:
+          'Dashboard — decision health overview,\ncalibration scores and recent activity',
+    ),
     _NavItem(
-        icon: Icons.flag_outlined, selectedIcon: Icons.flag, label: 'Initiatives'),
+      icon: Icons.task_alt_outlined,
+      selectedIcon: Icons.task_alt,
+      label: 'Decisions',
+      tooltipMessage:
+          'Log, review and manage decisions.\nBrowse by status, category or stakes.',
+    ),
     _NavItem(
-        icon: Icons.group_outlined, selectedIcon: Icons.group, label: 'Team'),
+      icon: Icons.flag_outlined,
+      selectedIcon: Icons.flag,
+      label: 'Initiatives',
+      tooltipMessage:
+          'Group related decisions into strategic\nprogrammes and track collective progress.',
+    ),
     _NavItem(
-        icon: Icons.psychology_outlined,
-        selectedIcon: Icons.psychology,
-        label: 'Coach'),
+      icon: Icons.group_outlined,
+      selectedIcon: Icons.group,
+      label: 'Team',
+      tooltipMessage:
+          'Manage workspace members, roles\nand pending invitations.',
+    ),
+    _NavItem(
+      icon: Icons.psychology_outlined,
+      selectedIcon: Icons.psychology,
+      label: 'Coach',
+      tooltipMessage:
+          'Connect with your coach or manage clients.\nView shared decisions and session notes.',
+    ),
   ];
 
   @override
@@ -422,11 +365,13 @@ class _NavItem {
     required this.icon,
     required this.selectedIcon,
     required this.label,
+    required this.tooltipMessage,
   });
 
   final IconData icon;
   final IconData selectedIcon;
   final String label;
+  final String tooltipMessage;
 }
 
 class _NavPaneItem extends StatelessWidget {
@@ -445,50 +390,57 @@ class _NavPaneItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final grey = context.cs.textSecondary;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      child: ClipRRect(
-        borderRadius: AppRadius.smBR,
-        child: Material(
-          color: isSelected
-              ? _teal.withValues(alpha: 0.12)
-              : Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            child: SizedBox(
-              height: 44,
-              child: Row(
-                children: [
-                  Container(
-                    width: 3,
-                    color: isSelected ? _teal : Colors.transparent,
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 9),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isSelected ? item.selectedIcon : item.icon,
-                            color: isSelected ? _teal : grey,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            item.label,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: isSelected
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
+    return Tooltip(
+      message: item.tooltipMessage,
+      waitDuration: const Duration(milliseconds: 500),
+      preferBelow: false,
+      decoration: _navTooltipDecoration(),
+      textStyle: _navTooltipTextStyle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        child: ClipRRect(
+          borderRadius: AppRadius.smBR,
+          child: Material(
+            color: isSelected
+                ? _teal.withValues(alpha: 0.12)
+                : Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              child: SizedBox(
+                height: 44,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 3,
+                      color: isSelected ? _teal : Colors.transparent,
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 9),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isSelected ? item.selectedIcon : item.icon,
                               color: isSelected ? _teal : grey,
+                              size: 20,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 12),
+                            Text(
+                              item.label,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: isSelected ? _teal : grey,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -510,47 +462,54 @@ class _ChatNavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final grey = context.cs.textSecondary;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      child: ClipRRect(
-        borderRadius: AppRadius.smBR,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            child: SizedBox(
-              height: 44,
-              child: Row(
-                children: [
-                  Container(width: 3, color: Colors.transparent),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 9),
-                      child: Row(
-                        children: [
-                          Badge(
-                            isLabelVisible: unreadCount > 0,
-                            label: Text(
-                              unreadCount > 99 ? '99+' : '$unreadCount',
-                              style: const TextStyle(fontSize: 9),
+    return Tooltip(
+      message: 'Team messaging — real-time chat\nwith your workspace members.',
+      waitDuration: const Duration(milliseconds: 500),
+      preferBelow: false,
+      decoration: _navTooltipDecoration(),
+      textStyle: _navTooltipTextStyle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        child: ClipRRect(
+          borderRadius: AppRadius.smBR,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              child: SizedBox(
+                height: 44,
+                child: Row(
+                  children: [
+                    Container(width: 3, color: Colors.transparent),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 9),
+                        child: Row(
+                          children: [
+                            Badge(
+                              isLabelVisible: unreadCount > 0,
+                              label: Text(
+                                unreadCount > 99 ? '99+' : '$unreadCount',
+                                style: const TextStyle(fontSize: 9),
+                              ),
+                              child: Icon(Icons.chat_bubble_outline,
+                                  size: 20, color: grey),
                             ),
-                            child: Icon(Icons.chat_bubble_outline,
-                                size: 20, color: grey),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Chat',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: grey,
+                            const SizedBox(width: 12),
+                            Text(
+                              'Chat',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                color: grey,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -566,39 +525,47 @@ class _ToolkitNavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final grey = context.cs.textSecondary;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      child: ClipRRect(
-        borderRadius: AppRadius.smBR,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => context.push(Routes.toolkit),
-            child: SizedBox(
-              height: 44,
-              child: Row(
-                children: [
-                  const SizedBox(width: 3),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 9),
-                      child: Row(
-                        children: [
-                          Icon(Icons.construction_outlined, size: 20, color: grey),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Toolkit',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: grey,
+    return Tooltip(
+      message:
+          'Analysis tools — run financial models,\ngenerate reports and attach to decisions.',
+      waitDuration: const Duration(milliseconds: 500),
+      preferBelow: false,
+      decoration: _navTooltipDecoration(),
+      textStyle: _navTooltipTextStyle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        child: ClipRRect(
+          borderRadius: AppRadius.smBR,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => context.push(Routes.toolkit),
+              child: SizedBox(
+                height: 44,
+                child: Row(
+                  children: [
+                    const SizedBox(width: 3),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 9),
+                        child: Row(
+                          children: [
+                            Icon(Icons.construction_outlined, size: 20, color: grey),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Toolkit',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                color: grey,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -614,39 +581,46 @@ class _NavPaneSettingsItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final grey = context.cs.textSecondary;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      child: ClipRRect(
-        borderRadius: AppRadius.smBR,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => context.push(Routes.settings),
-            child: SizedBox(
-              height: 44,
-              child: Row(
-                children: [
-                  const SizedBox(width: 3),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 9),
-                      child: Row(
-                        children: [
-                          Icon(Icons.settings_outlined, size: 20, color: grey),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Settings',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: grey,
+    return Tooltip(
+      message: 'App settings, security,\ndata and privacy management.',
+      waitDuration: const Duration(milliseconds: 500),
+      preferBelow: false,
+      decoration: _navTooltipDecoration(),
+      textStyle: _navTooltipTextStyle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        child: ClipRRect(
+          borderRadius: AppRadius.smBR,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => context.push(Routes.settings),
+              child: SizedBox(
+                height: 44,
+                child: Row(
+                  children: [
+                    const SizedBox(width: 3),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 9),
+                        child: Row(
+                          children: [
+                            Icon(Icons.settings_outlined, size: 20, color: grey),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Settings',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                color: grey,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
