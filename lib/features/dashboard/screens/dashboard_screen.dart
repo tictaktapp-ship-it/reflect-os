@@ -227,7 +227,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Expanded(child: _QualityDial(quality: avgQuality)),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 16),
                               Expanded(
                                 child: _HealthDonut(
                                   onTrack: onTrack,
@@ -432,6 +432,7 @@ class _QualityDial extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             'DECISION QUALITY',
@@ -439,7 +440,7 @@ class _QualityDial extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: cs.textTertiary,
-              letterSpacing: 0.5,
+              letterSpacing: 0.8,
             ),
           ),
           const SizedBox(height: 8),
@@ -676,8 +677,8 @@ class _DonutPainter extends CustomPainter {
         text: TextSpan(
           text: seg.label,
           style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
             color: Colors.white,
           ),
         ),
@@ -722,8 +723,8 @@ class _StatusBarChart extends StatelessWidget {
           x: x,
           barRods: [
             BarChartRodData(
-              toY: math.max(value.toDouble(), maxVal * 0.04),
-              color: color,
+              toY: value == 0 ? maxVal * 0.04 : value.toDouble(),
+              color: value == 0 ? const Color(0xFFE5E7EB) : color,
               width: 22,
               borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(AppRadius.sm)),
@@ -755,12 +756,12 @@ class _StatusBarChart extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: cs.textTertiary,
-              letterSpacing: 0.5,
+              letterSpacing: 0.8,
             ),
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 120,
+            height: 100,
             child: BarChart(
               BarChartData(
                 maxY: maxVal * 1.25,
@@ -802,7 +803,7 @@ class _StatusBarChart extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, _) {
-                        final labels = ['Draft', 'Active', 'Closed', 'Arch.'];
+                        final labels = ['Draft', 'Active', 'Closed', 'Archived'];
                         final i = value.toInt();
                         if (i < 0 || i >= labels.length) {
                           return const SizedBox.shrink();
@@ -812,7 +813,7 @@ class _StatusBarChart extends StatelessWidget {
                           child: Text(
                             labels[i],
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 11,
                               color: cs.textSecondary,
                             ),
                           ),
@@ -886,7 +887,7 @@ class _HealthDonut extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: cs.textTertiary,
-              letterSpacing: 0.5,
+              letterSpacing: 0.8,
             ),
           ),
           const SizedBox(height: 8),
@@ -897,7 +898,7 @@ class _HealthDonut extends StatelessWidget {
               child: hasData
                   ? GradientDonutChart(
                       size: 200,
-                      strokeWidth: 44,
+                      strokeWidth: 36,
                       separatorColor: cs.backgroundSecondary,
                       segments: [
                         GradientDonutSegment(
@@ -914,8 +915,10 @@ class _HealthDonut extends StatelessWidget {
                         ),
                         GradientDonutSegment(
                           value: (overdue ?? 0).toDouble(),
-                          startColor: AppColorScheme.destructive,
-                          endColor: AppColorScheme.destructive,
+                          startColor: AppColorScheme.destructive
+                              .withValues(alpha: 0.85),
+                          endColor: AppColorScheme.destructive
+                              .withValues(alpha: 0.85),
                           label: '${overdue ?? 0}',
                         ),
                       ],
@@ -934,18 +937,16 @@ class _HealthDonut extends StatelessWidget {
           const SizedBox(height: 12),
           if (hasData)
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _LegendItem(
                     color: const Color(0xFF2EA073),
                     label: 'On track',
                     count: onTrack),
-                const SizedBox(width: 16),
                 _LegendItem(
                     color: const Color(0xFFD97D24),
                     label: 'Needs attn',
                     count: needsAttention),
-                const SizedBox(width: 16),
                 _LegendItem(
                     color: const Color(0xFFDC4444),
                     label: 'Overdue',
@@ -967,29 +968,37 @@ class _LegendItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-            width: 8,
-            height: 8,
-            decoration:
-                BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 4),
-        if (count != null) ...[
-          Text(
-            '$count',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: context.cs.textPrimary,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+                width: 8,
+                height: 8,
+                decoration:
+                    BoxDecoration(color: color, shape: BoxShape.circle)),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontFamily: 'DMSans',
+                color: Color(0xFF7D8494),
+              ),
             ),
-          ),
-          const SizedBox(width: 2),
-        ],
+          ],
+        ),
+        const SizedBox(height: 4),
         Text(
-          label,
-          style: TextStyle(fontSize: 11, color: context.cs.textTertiary),
+          '${count ?? 0}',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            fontFamily: 'JetBrainsMono',
+            color: context.cs.textPrimary,
+          ),
         ),
       ],
     );
@@ -1025,14 +1034,14 @@ class _CalibrationMetricTiles extends StatelessWidget {
       calibUnit = '';
       calibSublabel = 'No data yet';
     } else {
-      if (d > 1.0) {
-        calibColor = AppColorScheme.warning;
+      if (d > 0) {
+        calibColor = const Color(0xFFD97D24);
         calibSublabel = 'Overconfident';
-      } else if (d < -1.0) {
-        calibColor = AppColorScheme.accent;
+      } else if (d < 0) {
+        calibColor = const Color(0xFF19CBD6);
         calibSublabel = 'Underconfident';
       } else {
-        calibColor = AppColorScheme.success;
+        calibColor = const Color(0xFF2EA073);
         calibSublabel = 'Well calibrated';
       }
       final sign = d >= 0 ? '+' : '';
@@ -1128,7 +1137,7 @@ class _MetricTile extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: cs.textTertiary,
-              letterSpacing: 0.5,
+              letterSpacing: 0.8,
             ),
           ),
           const SizedBox(height: 12),
