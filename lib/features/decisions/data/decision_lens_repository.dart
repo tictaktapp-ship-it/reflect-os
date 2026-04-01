@@ -116,8 +116,16 @@ class DecisionLensRepository {
         .order('arc_position', ascending: true);
 
     return response
-        .map((j) => ConfidenceTrigger.fromJson(j))
+        .map((dynamic j) => _parseTrigger(j))
         .toList();
+  }
+
+  /// Safe parser: handles cached model objects, raw Maps, and
+  /// dart2js Map types that are not strictly [Map] of String to dynamic.
+  static ConfidenceTrigger _parseTrigger(dynamic item) {
+    if (item is ConfidenceTrigger) return item;
+    if (item is Map<String, dynamic>) return ConfidenceTrigger.fromJson(item);
+    return ConfidenceTrigger.fromJson(Map<String, dynamic>.from(item as Map));
   }
 
   double _riskScore(RiskAssessment? assessment) {
