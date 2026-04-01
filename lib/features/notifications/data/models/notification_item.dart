@@ -8,8 +8,11 @@ part 'notification_item.g.dart';
 abstract class NotificationItem with _$NotificationItem {
   const factory NotificationItem({
     required String id,
-    @JsonKey(name: 'workspace_id') required String workspaceId,
+    // Nullable: activation-sequence notifications are user-scoped, not workspace-scoped.
+    @JsonKey(name: 'workspace_id') String? workspaceId,
     required String type,
+    String? title,
+    String? body,
     @JsonKey(name: 'related_entity_type') String? relatedEntityType,
     @JsonKey(name: 'related_entity_id') String? relatedEntityId,
     @JsonKey(name: 'scheduled_for') required DateTime scheduledFor,

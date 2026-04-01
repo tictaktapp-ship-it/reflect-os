@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reflect_os/core/design_system/tokens.dart';
 import 'package:reflect_os/core/providers/current_workspace_provider.dart';
+import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/core/theme/app_radius.dart';
 import 'package:reflect_os/features/decisions/data/models/create_decision_input.dart';
 import 'package:reflect_os/features/decisions/providers/decisions_provider.dart';
+import 'package:reflect_os/services/activation_sequence_service.dart';
 
 /// Quick Decision Mode — 4-field fast log.
 ///
@@ -146,6 +148,12 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
       );
 
       ref.invalidate(decisionsProvider);
+
+      // Track in activation sequence (fire-and-forget).
+      final userId = supabase.auth.currentUser?.id;
+      if (userId != null) {
+        ActivationSequenceService.trackDecisionLogged(userId).ignore();
+      }
 
       widget.onSaved?.call();
 

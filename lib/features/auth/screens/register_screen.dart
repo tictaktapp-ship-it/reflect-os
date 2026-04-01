@@ -6,6 +6,7 @@ import 'package:reflect_os/core/routing/routes.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
 import 'package:reflect_os/features/auth/widgets/auth_logo.dart';
+import 'package:reflect_os/services/activation_sequence_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
 
@@ -107,6 +108,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         SnackBar(content: Text(result.error.toString())),
       );
       return;
+    }
+
+    // Seed 30-day activation sequence for all new users (fire-and-forget).
+    // Works for both email-confirmation and direct-login flows since the
+    // AuthResponse always contains the created user record.
+    final newUserId = result.valueOrNull?.user?.id;
+    if (newUserId != null) {
+      ActivationSequenceService.seedSequence(
+        newUserId,
+        DateTime.now(),
+      ).ignore();
     }
 
     // Handle invite token — accept invitation and skip onboarding

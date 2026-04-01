@@ -15,7 +15,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$NotificationItem {
 
- String get id;@JsonKey(name: 'workspace_id') String get workspaceId; String get type;@JsonKey(name: 'related_entity_type') String? get relatedEntityType;@JsonKey(name: 'related_entity_id') String? get relatedEntityId;@JsonKey(name: 'scheduled_for') DateTime get scheduledFor; String get status;
+ String get id;// Nullable: activation-sequence notifications are user-scoped, not workspace-scoped.
+@JsonKey(name: 'workspace_id') String? get workspaceId; String get type; String? get title; String? get body;@JsonKey(name: 'related_entity_type') String? get relatedEntityType;@JsonKey(name: 'related_entity_id') String? get relatedEntityId;@JsonKey(name: 'scheduled_for') DateTime get scheduledFor; String get status;
 /// Create a copy of NotificationItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +29,16 @@ $NotificationItemCopyWith<NotificationItem> get copyWith => _$NotificationItemCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is NotificationItem&&(identical(other.id, id) || other.id == id)&&(identical(other.workspaceId, workspaceId) || other.workspaceId == workspaceId)&&(identical(other.type, type) || other.type == type)&&(identical(other.relatedEntityType, relatedEntityType) || other.relatedEntityType == relatedEntityType)&&(identical(other.relatedEntityId, relatedEntityId) || other.relatedEntityId == relatedEntityId)&&(identical(other.scheduledFor, scheduledFor) || other.scheduledFor == scheduledFor)&&(identical(other.status, status) || other.status == status));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is NotificationItem&&(identical(other.id, id) || other.id == id)&&(identical(other.workspaceId, workspaceId) || other.workspaceId == workspaceId)&&(identical(other.type, type) || other.type == type)&&(identical(other.title, title) || other.title == title)&&(identical(other.body, body) || other.body == body)&&(identical(other.relatedEntityType, relatedEntityType) || other.relatedEntityType == relatedEntityType)&&(identical(other.relatedEntityId, relatedEntityId) || other.relatedEntityId == relatedEntityId)&&(identical(other.scheduledFor, scheduledFor) || other.scheduledFor == scheduledFor)&&(identical(other.status, status) || other.status == status));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,workspaceId,type,relatedEntityType,relatedEntityId,scheduledFor,status);
+int get hashCode => Object.hash(runtimeType,id,workspaceId,type,title,body,relatedEntityType,relatedEntityId,scheduledFor,status);
 
 @override
 String toString() {
-  return 'NotificationItem(id: $id, workspaceId: $workspaceId, type: $type, relatedEntityType: $relatedEntityType, relatedEntityId: $relatedEntityId, scheduledFor: $scheduledFor, status: $status)';
+  return 'NotificationItem(id: $id, workspaceId: $workspaceId, type: $type, title: $title, body: $body, relatedEntityType: $relatedEntityType, relatedEntityId: $relatedEntityId, scheduledFor: $scheduledFor, status: $status)';
 }
 
 
@@ -48,7 +49,7 @@ abstract mixin class $NotificationItemCopyWith<$Res>  {
   factory $NotificationItemCopyWith(NotificationItem value, $Res Function(NotificationItem) _then) = _$NotificationItemCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'workspace_id') String workspaceId, String type,@JsonKey(name: 'related_entity_type') String? relatedEntityType,@JsonKey(name: 'related_entity_id') String? relatedEntityId,@JsonKey(name: 'scheduled_for') DateTime scheduledFor, String status
+ String id,@JsonKey(name: 'workspace_id') String? workspaceId, String type, String? title, String? body,@JsonKey(name: 'related_entity_type') String? relatedEntityType,@JsonKey(name: 'related_entity_id') String? relatedEntityId,@JsonKey(name: 'scheduled_for') DateTime scheduledFor, String status
 });
 
 
@@ -65,12 +66,14 @@ class _$NotificationItemCopyWithImpl<$Res>
 
 /// Create a copy of NotificationItem
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? workspaceId = null,Object? type = null,Object? relatedEntityType = freezed,Object? relatedEntityId = freezed,Object? scheduledFor = null,Object? status = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? workspaceId = freezed,Object? type = null,Object? title = freezed,Object? body = freezed,Object? relatedEntityType = freezed,Object? relatedEntityId = freezed,Object? scheduledFor = null,Object? status = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,workspaceId: null == workspaceId ? _self.workspaceId : workspaceId // ignore: cast_nullable_to_non_nullable
-as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
-as String,relatedEntityType: freezed == relatedEntityType ? _self.relatedEntityType : relatedEntityType // ignore: cast_nullable_to_non_nullable
+as String,workspaceId: freezed == workspaceId ? _self.workspaceId : workspaceId // ignore: cast_nullable_to_non_nullable
+as String?,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String,title: freezed == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String?,body: freezed == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String?,relatedEntityType: freezed == relatedEntityType ? _self.relatedEntityType : relatedEntityType // ignore: cast_nullable_to_non_nullable
 as String?,relatedEntityId: freezed == relatedEntityId ? _self.relatedEntityId : relatedEntityId // ignore: cast_nullable_to_non_nullable
 as String?,scheduledFor: null == scheduledFor ? _self.scheduledFor : scheduledFor // ignore: cast_nullable_to_non_nullable
 as DateTime,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
@@ -159,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'workspace_id')  String workspaceId,  String type, @JsonKey(name: 'related_entity_type')  String? relatedEntityType, @JsonKey(name: 'related_entity_id')  String? relatedEntityId, @JsonKey(name: 'scheduled_for')  DateTime scheduledFor,  String status)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'workspace_id')  String? workspaceId,  String type,  String? title,  String? body, @JsonKey(name: 'related_entity_type')  String? relatedEntityType, @JsonKey(name: 'related_entity_id')  String? relatedEntityId, @JsonKey(name: 'scheduled_for')  DateTime scheduledFor,  String status)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _NotificationItem() when $default != null:
-return $default(_that.id,_that.workspaceId,_that.type,_that.relatedEntityType,_that.relatedEntityId,_that.scheduledFor,_that.status);case _:
+return $default(_that.id,_that.workspaceId,_that.type,_that.title,_that.body,_that.relatedEntityType,_that.relatedEntityId,_that.scheduledFor,_that.status);case _:
   return orElse();
 
 }
@@ -180,10 +183,10 @@ return $default(_that.id,_that.workspaceId,_that.type,_that.relatedEntityType,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'workspace_id')  String workspaceId,  String type, @JsonKey(name: 'related_entity_type')  String? relatedEntityType, @JsonKey(name: 'related_entity_id')  String? relatedEntityId, @JsonKey(name: 'scheduled_for')  DateTime scheduledFor,  String status)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'workspace_id')  String? workspaceId,  String type,  String? title,  String? body, @JsonKey(name: 'related_entity_type')  String? relatedEntityType, @JsonKey(name: 'related_entity_id')  String? relatedEntityId, @JsonKey(name: 'scheduled_for')  DateTime scheduledFor,  String status)  $default,) {final _that = this;
 switch (_that) {
 case _NotificationItem():
-return $default(_that.id,_that.workspaceId,_that.type,_that.relatedEntityType,_that.relatedEntityId,_that.scheduledFor,_that.status);case _:
+return $default(_that.id,_that.workspaceId,_that.type,_that.title,_that.body,_that.relatedEntityType,_that.relatedEntityId,_that.scheduledFor,_that.status);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -200,10 +203,10 @@ return $default(_that.id,_that.workspaceId,_that.type,_that.relatedEntityType,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'workspace_id')  String workspaceId,  String type, @JsonKey(name: 'related_entity_type')  String? relatedEntityType, @JsonKey(name: 'related_entity_id')  String? relatedEntityId, @JsonKey(name: 'scheduled_for')  DateTime scheduledFor,  String status)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'workspace_id')  String? workspaceId,  String type,  String? title,  String? body, @JsonKey(name: 'related_entity_type')  String? relatedEntityType, @JsonKey(name: 'related_entity_id')  String? relatedEntityId, @JsonKey(name: 'scheduled_for')  DateTime scheduledFor,  String status)?  $default,) {final _that = this;
 switch (_that) {
 case _NotificationItem() when $default != null:
-return $default(_that.id,_that.workspaceId,_that.type,_that.relatedEntityType,_that.relatedEntityId,_that.scheduledFor,_that.status);case _:
+return $default(_that.id,_that.workspaceId,_that.type,_that.title,_that.body,_that.relatedEntityType,_that.relatedEntityId,_that.scheduledFor,_that.status);case _:
   return null;
 
 }
@@ -215,12 +218,15 @@ return $default(_that.id,_that.workspaceId,_that.type,_that.relatedEntityType,_t
 @JsonSerializable()
 
 class _NotificationItem implements NotificationItem {
-  const _NotificationItem({required this.id, @JsonKey(name: 'workspace_id') required this.workspaceId, required this.type, @JsonKey(name: 'related_entity_type') this.relatedEntityType, @JsonKey(name: 'related_entity_id') this.relatedEntityId, @JsonKey(name: 'scheduled_for') required this.scheduledFor, required this.status});
+  const _NotificationItem({required this.id, @JsonKey(name: 'workspace_id') this.workspaceId, required this.type, this.title, this.body, @JsonKey(name: 'related_entity_type') this.relatedEntityType, @JsonKey(name: 'related_entity_id') this.relatedEntityId, @JsonKey(name: 'scheduled_for') required this.scheduledFor, required this.status});
   factory _NotificationItem.fromJson(Map<String, dynamic> json) => _$NotificationItemFromJson(json);
 
 @override final  String id;
-@override@JsonKey(name: 'workspace_id') final  String workspaceId;
+// Nullable: activation-sequence notifications are user-scoped, not workspace-scoped.
+@override@JsonKey(name: 'workspace_id') final  String? workspaceId;
 @override final  String type;
+@override final  String? title;
+@override final  String? body;
 @override@JsonKey(name: 'related_entity_type') final  String? relatedEntityType;
 @override@JsonKey(name: 'related_entity_id') final  String? relatedEntityId;
 @override@JsonKey(name: 'scheduled_for') final  DateTime scheduledFor;
@@ -239,16 +245,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _NotificationItem&&(identical(other.id, id) || other.id == id)&&(identical(other.workspaceId, workspaceId) || other.workspaceId == workspaceId)&&(identical(other.type, type) || other.type == type)&&(identical(other.relatedEntityType, relatedEntityType) || other.relatedEntityType == relatedEntityType)&&(identical(other.relatedEntityId, relatedEntityId) || other.relatedEntityId == relatedEntityId)&&(identical(other.scheduledFor, scheduledFor) || other.scheduledFor == scheduledFor)&&(identical(other.status, status) || other.status == status));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _NotificationItem&&(identical(other.id, id) || other.id == id)&&(identical(other.workspaceId, workspaceId) || other.workspaceId == workspaceId)&&(identical(other.type, type) || other.type == type)&&(identical(other.title, title) || other.title == title)&&(identical(other.body, body) || other.body == body)&&(identical(other.relatedEntityType, relatedEntityType) || other.relatedEntityType == relatedEntityType)&&(identical(other.relatedEntityId, relatedEntityId) || other.relatedEntityId == relatedEntityId)&&(identical(other.scheduledFor, scheduledFor) || other.scheduledFor == scheduledFor)&&(identical(other.status, status) || other.status == status));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,workspaceId,type,relatedEntityType,relatedEntityId,scheduledFor,status);
+int get hashCode => Object.hash(runtimeType,id,workspaceId,type,title,body,relatedEntityType,relatedEntityId,scheduledFor,status);
 
 @override
 String toString() {
-  return 'NotificationItem(id: $id, workspaceId: $workspaceId, type: $type, relatedEntityType: $relatedEntityType, relatedEntityId: $relatedEntityId, scheduledFor: $scheduledFor, status: $status)';
+  return 'NotificationItem(id: $id, workspaceId: $workspaceId, type: $type, title: $title, body: $body, relatedEntityType: $relatedEntityType, relatedEntityId: $relatedEntityId, scheduledFor: $scheduledFor, status: $status)';
 }
 
 
@@ -259,7 +265,7 @@ abstract mixin class _$NotificationItemCopyWith<$Res> implements $NotificationIt
   factory _$NotificationItemCopyWith(_NotificationItem value, $Res Function(_NotificationItem) _then) = __$NotificationItemCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'workspace_id') String workspaceId, String type,@JsonKey(name: 'related_entity_type') String? relatedEntityType,@JsonKey(name: 'related_entity_id') String? relatedEntityId,@JsonKey(name: 'scheduled_for') DateTime scheduledFor, String status
+ String id,@JsonKey(name: 'workspace_id') String? workspaceId, String type, String? title, String? body,@JsonKey(name: 'related_entity_type') String? relatedEntityType,@JsonKey(name: 'related_entity_id') String? relatedEntityId,@JsonKey(name: 'scheduled_for') DateTime scheduledFor, String status
 });
 
 
@@ -276,12 +282,14 @@ class __$NotificationItemCopyWithImpl<$Res>
 
 /// Create a copy of NotificationItem
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? workspaceId = null,Object? type = null,Object? relatedEntityType = freezed,Object? relatedEntityId = freezed,Object? scheduledFor = null,Object? status = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? workspaceId = freezed,Object? type = null,Object? title = freezed,Object? body = freezed,Object? relatedEntityType = freezed,Object? relatedEntityId = freezed,Object? scheduledFor = null,Object? status = null,}) {
   return _then(_NotificationItem(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,workspaceId: null == workspaceId ? _self.workspaceId : workspaceId // ignore: cast_nullable_to_non_nullable
-as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
-as String,relatedEntityType: freezed == relatedEntityType ? _self.relatedEntityType : relatedEntityType // ignore: cast_nullable_to_non_nullable
+as String,workspaceId: freezed == workspaceId ? _self.workspaceId : workspaceId // ignore: cast_nullable_to_non_nullable
+as String?,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String,title: freezed == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String?,body: freezed == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String?,relatedEntityType: freezed == relatedEntityType ? _self.relatedEntityType : relatedEntityType // ignore: cast_nullable_to_non_nullable
 as String?,relatedEntityId: freezed == relatedEntityId ? _self.relatedEntityId : relatedEntityId // ignore: cast_nullable_to_non_nullable
 as String?,scheduledFor: null == scheduledFor ? _self.scheduledFor : scheduledFor // ignore: cast_nullable_to_non_nullable
 as DateTime,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
