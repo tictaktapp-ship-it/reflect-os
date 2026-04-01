@@ -82,10 +82,12 @@ class RiskAssessment {
       provider: json['provider'] as String? ?? '',
       model: json['model'] as String? ?? '',
       status: json['status'] as String? ?? '',
-      outputJsonb: (json['output_jsonb'] as Map<String, dynamic>?) ?? {},
+      outputJsonb: _safeMap(json['output_jsonb']),
       createdAt: DateTime.parse(json['created_at'] as String),
       methodology: json['methodology'] as String?,
-      manualRisksJsonb: json['manual_risks_jsonb'] as Map<String, dynamic>?,
+      manualRisksJsonb: json['manual_risks_jsonb'] != null
+          ? _safeMap(json['manual_risks_jsonb'])
+          : null,
       overallRiskLevelColumn: json['overall_risk_level'] as String?,
       confidenceImpact: (json['confidence_impact'] as num?)?.toInt() ?? 0,
       approvedAt: json['approved_at'] != null
@@ -93,5 +95,14 @@ class RiskAssessment {
           : null,
       approvedByUserId: json['approved_by_user_id'] as String?,
     );
+  }
+
+  /// Safe JSONB decoder: handles dart2js type-erased Maps and unexpected
+  /// non-Map values (e.g. a JSON array stored in a JSONB column).
+  static Map<String, dynamic> _safeMap(dynamic value) {
+    if (value == null) return {};
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return {};
   }
 }

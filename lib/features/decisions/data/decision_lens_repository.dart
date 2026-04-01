@@ -116,16 +116,25 @@ class DecisionLensRepository {
         .order('arc_position', ascending: true);
 
     return response
-        .map((dynamic j) => _parseTrigger(j))
+        .map((dynamic j) => _safeParse(
+              j,
+              ConfidenceTrigger.fromJson,
+              (x) => x is ConfidenceTrigger,
+            ))
         .toList();
   }
 
-  /// Safe parser: handles cached model objects, raw Maps, and
-  /// dart2js Map types that are not strictly [Map] of String to dynamic.
-  static ConfidenceTrigger _parseTrigger(dynamic item) {
-    if (item is ConfidenceTrigger) return item;
-    if (item is Map<String, dynamic>) return ConfidenceTrigger.fromJson(item);
-    return ConfidenceTrigger.fromJson(Map<String, dynamic>.from(item as Map));
+  /// Safe parser: handles already-parsed model objects, raw Maps, and
+  /// dart2js Map types whose type parameters are erased at runtime.
+  static T _safeParse<T>(
+    dynamic item,
+    T Function(Map<String, dynamic>) fromJson,
+    bool Function(dynamic) isModel,
+  ) {
+    if (isModel(item)) return item as T;
+    if (item is Map<String, dynamic>) return fromJson(item);
+    if (item is Map) return fromJson(Map<String, dynamic>.from(item));
+    throw StateError('Cannot parse ${item.runtimeType} as $T');
   }
 
   double _riskScore(RiskAssessment? assessment) {
