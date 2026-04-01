@@ -169,14 +169,22 @@ class ConfidenceTriggersService {
 
   /// Safe parser: handles already-parsed model objects, raw Maps, and
   /// dart2js Map types whose type parameters are erased at runtime.
+  ///
+  /// Always materialises a concrete [Map<String, dynamic>] local variable
+  /// before calling [fromJson] so that dart2js never inserts an implicit
+  /// cast from [dynamic] to [Map<String, dynamic>] at the call site.
   static T _safeParse<T>(
     dynamic item,
     T Function(Map<String, dynamic>) fromJson,
     bool Function(dynamic) isModel,
   ) {
     if (isModel(item)) return item as T;
-    if (item is Map<String, dynamic>) return fromJson(item);
-    if (item is Map) return fromJson(Map<String, dynamic>.from(item));
+    if (item is Map) {
+      final Map<String, dynamic> map = item is Map<String, dynamic>
+          ? item
+          : Map<String, dynamic>.from(item);
+      return fromJson(map);
+    }
     throw StateError('Cannot parse ${item.runtimeType} as $T');
   }
 

@@ -34,7 +34,7 @@ class RiskRepository {
   // ── AI generation ─────────────────────────────────────────────────────────
 
   /// Invokes the assess-risk Edge Function (Gemini). Returns the saved
-  /// RiskAssessment (status = 'pending_approval').
+  /// RiskAssessment (status = 'Pending').
   Future<RiskAssessment> generateRiskAssessment(String decisionId) async {
     final response = await supabase.functions.invoke(
       'assess-risk',
@@ -65,7 +65,7 @@ class RiskRepository {
           'output_jsonb': <String, dynamic>{},
           'provider': 'manual',
           'model': 'manual',
-          'status': 'pending_approval',
+          'status': 'Pending',
         })
         .select()
         .single();
