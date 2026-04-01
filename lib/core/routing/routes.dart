@@ -94,4 +94,7 @@ abstract final class Routes {
   // Legal
   static const String legalAcceptance = '/legal-acceptance';
   static const String settingsLegal = '/settings/legal';
+
+  // Onboarding
+  static const String welcome = '/welcome';
 }

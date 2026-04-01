@@ -50,6 +50,8 @@ import 'package:reflect_os/features/demographic_packs/screens/packs_screen.dart'
 import 'package:reflect_os/features/settings/screens/encryption_status_screen.dart';
 import 'package:reflect_os/features/legal/providers/legal_consent_provider.dart';
 import 'package:reflect_os/features/legal/screens/legal_acceptance_screen.dart';
+import 'package:reflect_os/features/onboarding/first_run_provider.dart';
+import 'package:reflect_os/features/onboarding/first_run_screen.dart';
 import 'package:reflect_os/features/workspace/screens/workspace_management_screen.dart';
 import 'package:reflect_os/features/workspace/screens/workspace_wizard_screen.dart';
 import 'routes.dart';
@@ -88,6 +90,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         final isBillingRoute = state.matchedLocation.startsWith('/billing/');
         if (!isBillingRoute && !isPublicRoute) {
           return Routes.billingSubscribe;
+        }
+      }
+
+      // First-run gate — show welcome screen to brand new users.
+      if (isAuthenticated && hasAcceptedLegal && isSubscribed) {
+        final isFirstRun = ref.read(firstRunProvider);
+        final isWelcomeRoute = state.matchedLocation == Routes.welcome;
+        if (isFirstRun && !isWelcomeRoute && !isPublicRoute) {
+          return Routes.welcome;
         }
       }
 
@@ -298,6 +309,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.legalAcceptance,
         builder: (context, state) => const LegalAcceptanceScreen(),
+      ),
+
+      // First-run onboarding — outside the shell
+      GoRoute(
+        path: Routes.welcome,
+        builder: (context, state) => const FirstRunScreen(),
       ),
 
       // Billing gate — outside the shell

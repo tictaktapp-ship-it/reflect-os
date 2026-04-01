@@ -15,7 +15,12 @@ import 'package:reflect_os/features/decisions/providers/decisions_provider.dart'
 ///
 /// Callers are responsible for opening/closing via [Navigator.pop].
 class QuickLogSheet extends ConsumerStatefulWidget {
-  const QuickLogSheet({super.key});
+  const QuickLogSheet({super.key, this.onSaved});
+
+  /// Called immediately after a decision is saved (before the confirmation
+  /// view is shown). Use this to trigger side-effects such as marking
+  /// first-run onboarding as complete.
+  final VoidCallback? onSaved;
 
   @override
   ConsumerState<QuickLogSheet> createState() => _QuickLogSheetState();
@@ -141,6 +146,8 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
       );
 
       ref.invalidate(decisionsProvider);
+
+      widget.onSaved?.call();
 
       if (!mounted) return;
       setState(() {
