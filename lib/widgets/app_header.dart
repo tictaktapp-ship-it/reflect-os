@@ -121,7 +121,6 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
 
     final rightActions = [
       ...?actions,
-      const _QuickLogButton(),
       const _UserAvatarButton(),
       const SizedBox(width: 8),
     ];
