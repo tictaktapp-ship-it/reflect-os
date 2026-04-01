@@ -17,6 +17,7 @@ import 'package:reflect_os/features/settings/providers/profile_provider.dart';
 import 'package:reflect_os/features/team/data/models/workspace_membership.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import 'package:reflect_os/core/theme/app_radius.dart';
+import 'package:reflect_os/features/decisions/widgets/quick_log_sheet.dart';
 
 /// Brand app bar used by every screen in Reflect OS.
 ///
@@ -113,6 +114,7 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
 
     final rightActions = [
       ...?actions,
+      const _QuickLogButton(),
       const _UserAvatarButton(),
       const SizedBox(width: 8),
     ];
@@ -637,6 +639,79 @@ class _MemberTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// ── Quick Log button ──────────────────────────────────────────────────────────
+
+class _QuickLogButton extends StatelessWidget {
+  const _QuickLogButton();
+
+  void _open(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width >= 600;
+    if (isWide) {
+      showDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        builder: (_) => Dialog(
+          backgroundColor: Colors.transparent,
+          shape:
+              RoundedRectangleBorder(borderRadius: AppRadius.lgBR),
+          child: ConstrainedBox(
+            constraints:
+                const BoxConstraints(maxWidth: 480, maxHeight: 700),
+            child: ClipRRect(
+              borderRadius: AppRadius.lgBR,
+              child: const QuickLogSheet(),
+            ),
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+            borderRadius: AppRadius.sheetTop),
+        builder: (_) => const QuickLogSheet(),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width >= 600;
+    if (isWide) {
+      return Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: FilledButton.icon(
+          onPressed: () => _open(context),
+          icon: const Icon(Icons.add_rounded, size: 16),
+          label: const Text('Log Decision'),
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFF19CBD6),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 10),
+            textStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'DMSans',
+            ),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+      );
+    } else {
+      return IconButton(
+        icon: const Icon(Icons.add_circle_rounded),
+        color: const Color(0xFF19CBD6),
+        onPressed: () => _open(context),
+        tooltip: 'Log Decision',
+      );
+    }
   }
 }
 
