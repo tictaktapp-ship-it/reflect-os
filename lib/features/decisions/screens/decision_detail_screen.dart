@@ -348,10 +348,20 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/outcomes/create/${decision.id}'),
-        tooltip: 'Add outcome',
-        child: const Icon(Icons.add_chart_outlined),
+        backgroundColor: const Color(0xFF19CBD6),
+        foregroundColor: Colors.white,
+        elevation: 4,
+        icon: const Icon(Icons.add_chart_rounded, size: 20),
+        label: const Text(
+          'Record Outcome',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'DMSans',
+          ),
+        ),
       ),
       body: Column(
         children: [

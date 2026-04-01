@@ -115,8 +115,8 @@ class DecisionLensRepository {
         .eq('decision_id', decisionId)
         .order('arc_position', ascending: true);
 
-    return (response as List)
-        .map((j) => ConfidenceTrigger.fromJson(j as Map<String, dynamic>))
+    return response
+        .map((j) => ConfidenceTrigger.fromJson(j))
         .toList();
   }
 

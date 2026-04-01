@@ -419,7 +419,7 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
                 _DecisionGroup(
                   state: entry.key,
                   decisions: entry.value,
-                  initiallyExpanded: entry.key == 'Active',
+                  initiallyExpanded: groups.length == 1,
                 ),
             ],
           );
@@ -644,7 +644,7 @@ class _DecisionGroupState extends State<_DecisionGroup> {
                           padding: const EdgeInsets.only(bottom: 8),
                           child: _CollapsedCard(
                             decision: d,
-                            onTap: () => _openDetail(d.id),
+                            onTap: () => context.push('/decisions/detail/${d.id}'),
                           ),
                         ),
                     ],
