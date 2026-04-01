@@ -337,8 +337,19 @@ class _WorkspaceManagementScreenState
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _isWorking ? null : _showCreateSheet,
-        icon: const Icon(Icons.add),
-        label: const Text('New Workspace'),
+        backgroundColor: const Color(0xFF19CBD6),
+        foregroundColor: Colors.white,
+        elevation: 4,
+        icon: const Icon(Icons.add_rounded, size: 20),
+        label: const Text(
+          'New Workspace',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'DMSans',
+            letterSpacing: 0.3,
+          ),
+        ),
       ),
       body: workspacesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

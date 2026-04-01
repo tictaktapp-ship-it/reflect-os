@@ -416,11 +416,20 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showInviteDialog(context),
         backgroundColor: const Color(0xFF19CBD6),
         foregroundColor: Colors.white,
-        onPressed: () => _showInviteDialog(context),
-        icon: const Icon(Icons.person_add_outlined),
-        label: const Text('Invite Member'),
+        elevation: 4,
+        icon: const Icon(Icons.person_add_outlined, size: 20),
+        label: const Text(
+          'Invite Member',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'DMSans',
+            letterSpacing: 0.3,
+          ),
+        ),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

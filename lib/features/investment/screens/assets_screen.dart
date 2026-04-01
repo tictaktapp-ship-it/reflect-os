@@ -15,10 +15,21 @@ class AssetsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: const AppHeader(title: 'Portfolio'),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddAssetSheet(context, ref),
-        tooltip: 'Add asset',
-        child: const Icon(Icons.add),
+        backgroundColor: const Color(0xFF19CBD6),
+        foregroundColor: Colors.white,
+        elevation: 4,
+        icon: const Icon(Icons.add_rounded, size: 20),
+        label: const Text(
+          'Add Asset',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'DMSans',
+            letterSpacing: 0.3,
+          ),
+        ),
       ),
       body: assetsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

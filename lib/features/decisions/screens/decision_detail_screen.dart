@@ -360,6 +360,7 @@ class _DecisionDetailState extends ConsumerState<_DecisionDetail> {
             fontSize: 13,
             fontWeight: FontWeight.w600,
             fontFamily: 'DMSans',
+            letterSpacing: 0.3,
           ),
         ),
       ),

@@ -1597,10 +1597,21 @@ class _ActionItemsTabState extends ConsumerState<_ActionItemsTab> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.small(
-        backgroundColor: AppColors.accentPrimary,
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddDialog(context, clientUserId),
-        child: const Icon(Icons.add),
+        backgroundColor: const Color(0xFF19CBD6),
+        foregroundColor: Colors.white,
+        elevation: 4,
+        icon: const Icon(Icons.add_task_rounded, size: 20),
+        label: const Text(
+          'Add Action Item',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'DMSans',
+            letterSpacing: 0.3,
+          ),
+        ),
       ),
     );
   }

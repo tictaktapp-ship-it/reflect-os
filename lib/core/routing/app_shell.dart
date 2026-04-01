@@ -128,48 +128,19 @@ class _NewDecisionFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.cs;
-    return Material(
-      elevation: 3,
-      shadowColor: Colors.black.withValues(alpha: 0.12),
-      borderRadius: AppRadius.pillBR,
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: AppRadius.pillBR,
-        onTap: onTap,
-        child: Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(
-            color: cs.backgroundSecondary,
-            borderRadius: AppRadius.pillBR,
-            border: Border.all(
-              color: const Color(0xFF19CBD6).withValues(alpha: 0.4),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.add_rounded,
-                  color: Color(0xFF19CBD6), size: 18),
-              const SizedBox(width: 6),
-              Text(
-                'New Decision',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: cs.textPrimary,
-                ),
-              ),
-            ],
-          ),
+    return FloatingActionButton.extended(
+      onPressed: onTap,
+      backgroundColor: const Color(0xFF19CBD6),
+      foregroundColor: Colors.white,
+      elevation: 4,
+      icon: const Icon(Icons.add_rounded, size: 20),
+      label: const Text(
+        'New Decision',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          fontFamily: 'DMSans',
+          letterSpacing: 0.3,
         ),
       ),
     );

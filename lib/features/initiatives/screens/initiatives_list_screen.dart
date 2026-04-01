@@ -69,11 +69,21 @@ class InitiativesListScreen extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push(Routes.initiativesCreate),
         backgroundColor: AppColors.accentPrimary,
         foregroundColor: Colors.white,
-        onPressed: () => context.push(Routes.initiativesCreate),
-        child: const Icon(Icons.add),
+        elevation: 4,
+        icon: const Icon(Icons.flag_outlined, size: 20),
+        label: const Text(
+          'New Initiative',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'DMSans',
+            letterSpacing: 0.3,
+          ),
+        ),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
