@@ -2,17 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 /// Two-line brand logo: teal hexagon mark + "REFLECT" wordmark + "DECISION
-/// INTELLIGENCE OS" tagline spanning the full combined width.
+/// INTELLIGENCE OS" tagline centred under the full combined lockup.
 ///
 /// Layout:
 ///   ┌──────┐  REFLECT
-///   │ mark │  DECISION INTELLIGENCE OS
+///   │ mark │  DECISION INTELLIGENCE OS  ← centred under both
 ///   └──────┘
 ///
-/// [CrossAxisAlignment.stretch] on the outer Column forces the tagline widget
-/// to be exactly as wide as the Row above it. [letterSpacing] is proportional
-/// to [iconSize] so the rendered text width ≈ icon + gap + wordmark width at
-/// every size, making the tagline visually span edge-to-edge.
+/// A [FittedBox] keeps the logo compact (no parent-width bleed).
+/// [CrossAxisAlignment.center] centres the tagline under the Row.
+/// [textAlign: TextAlign.center] centres the text within its own widget.
 class ReflectLogo extends StatelessWidget {
   const ReflectLogo({
     super.key,
@@ -54,6 +53,7 @@ class ReflectLogo extends StatelessWidget {
 
     final taglineWidget = Text(
       'DECISION INTELLIGENCE OS',
+      textAlign: TextAlign.center,
       style: TextStyle(
         fontSize: iconSize * 0.21,
         fontWeight: FontWeight.w300,
@@ -64,22 +64,26 @@ class ReflectLogo extends StatelessWidget {
       ),
     );
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            iconWidget,
-            SizedBox(width: iconSize * 0.18),
-            wordmarkWidget,
-          ],
-        ),
-        SizedBox(height: iconSize * 0.06),
-        taglineWidget,
-      ],
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              iconWidget,
+              SizedBox(width: iconSize * 0.18),
+              wordmarkWidget,
+            ],
+          ),
+          SizedBox(height: iconSize * 0.06),
+          taglineWidget,
+        ],
+      ),
     );
   }
 }
