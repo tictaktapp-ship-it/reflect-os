@@ -1,68 +1,84 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// Two-line brand logo: teal icon mark + stacked REFLECT / DECISION INTELLIGENCE OS.
+/// Two-line brand logo: teal hexagon mark + "REFLECT" wordmark + "DECISION
+/// INTELLIGENCE OS" tagline spanning the full combined width.
 ///
-/// Scales uniformly via [iconSize]. Use [darkBackground] to force the
-/// dark text colour when rendering on a dark surface that doesn't match the
-/// current Material theme brightness (e.g. a teal splash screen).
+/// Layout:
+///   ┌──────┐  REFLECT
+///   │ mark │  DECISION INTELLIGENCE OS
+///   └──────┘
+///
+/// [CrossAxisAlignment.stretch] on the outer Column forces the tagline widget
+/// to be exactly as wide as the Row above it. [letterSpacing] is proportional
+/// to [iconSize] so the rendered text width ≈ icon + gap + wordmark width at
+/// every size, making the tagline visually span edge-to-edge.
 class ReflectLogo extends StatelessWidget {
   const ReflectLogo({
     super.key,
-    this.iconSize = 36,
-    this.darkBackground = false,
+    this.iconSize = 32,
+    this.iconColor,
+    this.textColor,
+    this.subtitleColor,
   });
 
   final double iconSize;
-
-  /// When `true`, forces light text regardless of the theme brightness.
-  /// Leave `false` (default) to auto-detect via `Theme.of(context).brightness`.
-  final bool darkBackground;
+  final Color? iconColor;
+  final Color? textColor;
+  final Color? subtitleColor;
 
   @override
   Widget build(BuildContext context) {
-    final isDark =
-        darkBackground || Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final resolvedTextColor =
+        textColor ?? (isDark ? Colors.white : const Color(0xFF0D1117));
+    final resolvedSubtitleColor = subtitleColor ?? const Color(0xFF19CBD6);
+
+    final iconWidget = SvgPicture.asset(
+      'assets/branding/icon.svg',
+      width: iconSize,
+      height: iconSize,
+    );
+
+    final wordmarkWidget = Text(
+      'REFLECT',
+      style: TextStyle(
+        fontSize: iconSize * 0.62,
+        fontWeight: FontWeight.w500,
+        fontFamily: 'DMSans',
+        color: resolvedTextColor,
+        letterSpacing: iconSize * 0.06,
+        height: 1.0,
+      ),
+    );
+
+    final taglineWidget = Text(
+      'DECISION INTELLIGENCE OS',
+      style: TextStyle(
+        fontSize: iconSize * 0.21,
+        fontWeight: FontWeight.w300,
+        fontFamily: 'DMSans',
+        color: resolvedSubtitleColor,
+        letterSpacing: iconSize * 0.05,
+        height: 1.0,
+      ),
+    );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            SvgPicture.asset(
-              'assets/branding/icon.svg',
-              width: iconSize,
-              height: iconSize,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'REFLECT',
-              style: TextStyle(
-                fontSize: iconSize * 0.65,
-                fontWeight: FontWeight.w500,
-                fontFamily: 'DMSans',
-                letterSpacing: 1.5,
-                color: isDark
-                    ? const Color(0xFFF4F5F7)
-                    : const Color(0xFF0D1117),
-              ),
-            ),
+            iconWidget,
+            SizedBox(width: iconSize * 0.18),
+            wordmarkWidget,
           ],
         ),
-        Text(
-          'DECISION INTELLIGENCE OS',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: iconSize * 0.22,
-            fontWeight: FontWeight.w300,
-            fontFamily: 'DMSans',
-            letterSpacing: 2.0,
-            color: const Color(0xFF19CBD6),
-          ),
-        ),
+        SizedBox(height: iconSize * 0.06),
+        taglineWidget,
       ],
     );
   }

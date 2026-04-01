@@ -31,7 +31,7 @@ class FirstRunScreen extends ConsumerWidget {
                   // ── Logo ────────────────────────────────────────────────
                   Align(
                     alignment: Alignment.center,
-                    child: ReflectLogo(iconSize: isWide ? 40 : 32),
+                    child: ReflectLogo(iconSize: 48),
                   ),
                   const SizedBox(height: 48),
 
