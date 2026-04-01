@@ -87,7 +87,14 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
             ),
           Padding(
             padding: EdgeInsets.only(left: canPop ? 0 : 16),
-            child: const ReflectLogo(iconSize: 28),
+            child: SizedBox(
+              height: 40,
+              child: FittedBox(
+                fit: BoxFit.contain,
+                alignment: Alignment.centerLeft,
+                child: ReflectLogo(iconSize: 28),
+              ),
+            ),
           ),
         ],
       );
