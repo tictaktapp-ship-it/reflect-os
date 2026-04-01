@@ -41,13 +41,13 @@ class ReflectLogo extends StatelessWidget {
             Text(
               'REFLECT',
               style: TextStyle(
-                fontSize: iconSize * 0.5,
-                fontWeight: FontWeight.w700,
+                fontSize: iconSize * 0.65,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'DMSans',
+                letterSpacing: 1.5,
                 color: isDark
                     ? const Color(0xFFF4F5F7)
                     : const Color(0xFF0D1117),
-                height: 1.1,
-                letterSpacing: 0,
               ),
             ),
           ],
@@ -56,11 +56,11 @@ class ReflectLogo extends StatelessWidget {
           'DECISION INTELLIGENCE OS',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: iconSize * 0.24,
-            fontWeight: FontWeight.w400,
+            fontSize: iconSize * 0.22,
+            fontWeight: FontWeight.w300,
+            fontFamily: 'DMSans',
+            letterSpacing: 2.0,
             color: const Color(0xFF19CBD6),
-            letterSpacing: 1.5,
-            height: 1.2,
           ),
         ),
       ],
