@@ -39,5 +39,5 @@
   <text x="570" y="254" font-family="Arial, sans-serif" font-size="80" font-weight="700" fill="#2C2C2C" letter-spacing="4" text-anchor="middle">REFLECT</text>
 
   <!-- DECISION INTELLIGENCE OS tagline — letter-spacing tuned to match REFLECT width -->
-  <text x="570" y="314" font-family="Arial, sans-serif" font-size="16" font-weight="500" fill="#19CBD6" letter-spacing="6.95" text-anchor="middle">DECISION INTELLIGENCE OS</text>
+  <text x="467" y="314" font-family="Arial, sans-serif" font-size="16" font-weight="500" fill="#19CBD6" letter-spacing="6.95" text-anchor="middle">DECISION INTELLIGENCE OS</text>
 </svg>

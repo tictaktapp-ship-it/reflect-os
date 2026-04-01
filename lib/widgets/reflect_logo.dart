@@ -24,20 +24,20 @@ class ReflectLogo extends StatelessWidget {
     final isDark =
         darkBackground || Theme.of(context).brightness == Brightness.dark;
 
-    return Row(
+    return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        SvgPicture.asset(
-          'assets/branding/icon.svg',
-          width: iconSize,
-          height: iconSize,
-        ),
-        const SizedBox(width: 8),
-        Column(
+        Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            SvgPicture.asset(
+              'assets/branding/icon.svg',
+              width: iconSize,
+              height: iconSize,
+            ),
+            const SizedBox(width: 8),
             Text(
               'REFLECT',
               style: TextStyle(
@@ -50,17 +50,18 @@ class ReflectLogo extends StatelessWidget {
                 letterSpacing: 0,
               ),
             ),
-            Text(
-              'DECISION INTELLIGENCE OS',
-              style: TextStyle(
-                fontSize: iconSize * 0.24,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF19CBD6),
-                letterSpacing: 1.5,
-                height: 1.2,
-              ),
-            ),
           ],
+        ),
+        Text(
+          'DECISION INTELLIGENCE OS',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: iconSize * 0.24,
+            fontWeight: FontWeight.w400,
+            color: const Color(0xFF19CBD6),
+            letterSpacing: 1.5,
+            height: 1.2,
+          ),
         ),
       ],
     );
