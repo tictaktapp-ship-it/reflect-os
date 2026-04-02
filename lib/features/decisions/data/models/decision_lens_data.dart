@@ -59,13 +59,15 @@ class ConfidenceTrigger {
 
   factory ConfidenceTrigger.fromJson(Map<String, dynamic> j) {
     return ConfidenceTrigger(
-      id: j['id'] as String,
-      decisionId: j['decision_id'] as String,
-      triggerType: TriggerType.fromString(j['trigger_type'] as String),
-      triggerDate: DateTime.parse(j['trigger_date'] as String),
-      title: j['title'] as String,
+      id: j['id'] as String? ?? '',
+      decisionId: j['decision_id'] as String? ?? '',
+      triggerType: TriggerType.fromString(j['trigger_type'] as String? ?? ''),
+      triggerDate: j['trigger_date'] != null
+          ? DateTime.parse(j['trigger_date'] as String)
+          : DateTime.now(),
+      title: j['title'] as String? ?? '',
       description: j['description'] as String?,
-      influenceStrength: j['influence_strength'] as int? ?? 3,
+      influenceStrength: (j['influence_strength'] as num?)?.toInt() ?? 3,
       confidenceDelta: (j['confidence_delta'] as num?)?.toDouble(),
       arcPosition: (j['arc_position'] as num?)?.toDouble() ?? 0.5,
     );
