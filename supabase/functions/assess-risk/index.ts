@@ -139,7 +139,7 @@ Overall risk level = highest individual severity.`;
 
     const overallLevel = parsed.overall_risk_level ?? "medium";
 
-    // ── Save to DB (pending approval) ─────────────────────────────────────
+    // ── Save to DB (awaiting user approval) ──────────────────────────────
     const { data: saved, error: saveErr } = await supabaseUser
       .from("risk_assessments")
       .insert({
@@ -149,7 +149,7 @@ Overall risk level = highest individual severity.`;
         overall_risk_level: overallLevel,
         provider: "groq",
         model: "llama-3.3-70b-versatile",
-        status: "pending_approval",
+        status: "Generating",
       })
       .select()
       .single();

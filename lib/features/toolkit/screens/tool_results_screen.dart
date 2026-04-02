@@ -339,7 +339,7 @@ class _ToolResultsScreenState extends ConsumerState<ToolResultsScreen> {
           'output_jsonb':        outputs,
           'approved_at':         now,
           'approved_by_user_id': userId,
-          'status':              'approved',
+          'status':              'Completed',
           'provider':            'toolkit',
           'model':               'risk_matrix_v2',
           'updated_at':          now,
