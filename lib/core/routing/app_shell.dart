@@ -44,6 +44,9 @@ class _AppShellState extends ConsumerState<AppShell> {
         ? ref.watch(chatUnreadCountProvider(workspaceId))
         : 0;
 
+    final showFab = widget.navigationShell.currentIndex == 1;
+    final onNewDecision = () => context.push(Routes.decisionsCreate);
+
     return Stack(
       children: [
         Positioned.fill(
@@ -63,6 +66,8 @@ class _AppShellState extends ConsumerState<AppShell> {
                         chatUnreadCount: unreadCount,
                         onChatTap: () =>
                             setState(() => _chatOpen = !_chatOpen),
+                        showFab: showFab,
+                        onNewDecision: onNewDecision,
                       );
                     }
                     return _NarrowShell(
@@ -70,6 +75,8 @@ class _AppShellState extends ConsumerState<AppShell> {
                       selectedIndex:
                           widget.navigationShell.currentIndex,
                       onDestinationSelected: _onDestinationSelected,
+                      showFab: showFab,
+                      onNewDecision: onNewDecision,
                     );
                   },
                 ),
@@ -77,15 +84,6 @@ class _AppShellState extends ConsumerState<AppShell> {
             ],
           ),
         ),
-        // New Decision FAB — shown on the Decisions tab (index 1)
-        if (widget.navigationShell.currentIndex == 1)
-          Positioned(
-            bottom: 20,
-            right: 20,
-            child: _NewDecisionFab(
-              onTap: () => context.push(Routes.decisionsCreate),
-            ),
-          ),
         // Chat panel — team workspaces only, toggled from nav pane
         if (isTeamWorkspace && workspaceId != null && _chatOpen)
           _buildChatPanel(context, workspaceId),
@@ -180,6 +178,8 @@ class _WideShell extends StatelessWidget {
     this.showChatButton = false,
     this.chatUnreadCount = 0,
     this.onChatTap,
+    this.showFab = false,
+    this.onNewDecision,
   });
 
   final StatefulNavigationShell navigationShell;
@@ -188,10 +188,16 @@ class _WideShell extends StatelessWidget {
   final bool showChatButton;
   final int chatUnreadCount;
   final VoidCallback? onChatTap;
+  final bool showFab;
+  final VoidCallback? onNewDecision;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: showFab
+          ? _NewDecisionFab(onTap: onNewDecision ?? () {})
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: Row(
         children: [
           _NavPane(
@@ -611,15 +617,23 @@ class _NarrowShell extends StatelessWidget {
     required this.navigationShell,
     required this.selectedIndex,
     required this.onDestinationSelected,
+    this.showFab = false,
+    this.onNewDecision,
   });
 
   final StatefulNavigationShell navigationShell;
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
+  final bool showFab;
+  final VoidCallback? onNewDecision;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: showFab
+          ? _NewDecisionFab(onTap: onNewDecision ?? () {})
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedIndex,
