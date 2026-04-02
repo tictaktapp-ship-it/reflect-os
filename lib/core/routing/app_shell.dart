@@ -602,8 +602,11 @@ class _NavPaneSettingsItem extends StatelessWidget {
 }
 
 // ── Narrow layout (BottomNavigationBar) ───────────────────────────────────────
+//
+// On mobile, each screen provides its own AppHeader via Scaffold.appBar.
+// The shell adds only the bottom NavigationBar — no duplicate outer header.
 
-class _NarrowShell extends StatefulWidget {
+class _NarrowShell extends StatelessWidget {
   const _NarrowShell({
     required this.navigationShell,
     required this.selectedIndex,
@@ -615,79 +618,12 @@ class _NarrowShell extends StatefulWidget {
   final ValueChanged<int> onDestinationSelected;
 
   @override
-  State<_NarrowShell> createState() => _NarrowShellState();
-}
-
-class _NarrowShellState extends State<_NarrowShell> {
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocus = FocusNode();
-  bool _searchFocused = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchFocus.addListener(() {
-      setState(() => _searchFocused = _searchFocus.hasFocus);
-    });
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _searchFocus.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: TextField(
-          controller: _searchController,
-          focusNode: _searchFocus,
-          decoration: InputDecoration(
-            hintText: 'Search…',
-            prefixIcon: const Icon(Icons.search_outlined, size: 18),
-            suffixIcon: (_searchFocused || _searchController.text.isNotEmpty)
-                ? IconButton(
-                    icon: const Icon(Icons.close, size: 16),
-                    onPressed: () {
-                      _searchController.clear();
-                      _searchFocus.unfocus();
-                    },
-                  )
-                : null,
-            isDense: true,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            border: OutlineInputBorder(
-              borderRadius: AppRadius.smBR,
-              borderSide: BorderSide(color: Theme.of(context).dividerColor),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: AppRadius.smBR,
-              borderSide: BorderSide(color: Theme.of(context).dividerColor),
-            ),
-          ),
-          onSubmitted: (value) {
-            if (value.trim().isNotEmpty) {
-              context.push(Routes.search);
-            }
-          },
-        ),
-        centerTitle: false,
-        automaticallyImplyLeading: false,
-        actions: [
-          const Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: _UserAvatarButton(),
-          ),
-        ],
-      ),
-      body: widget.navigationShell,
+      body: navigationShell,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: widget.selectedIndex,
-        onDestinationSelected: widget.onDestinationSelected,
+        selectedIndex: selectedIndex,
+        onDestinationSelected: onDestinationSelected,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
@@ -717,46 +653,5 @@ class _NarrowShellState extends State<_NarrowShell> {
         ],
       ),
     );
-  }
-}
-
-// ── User Avatar Button (narrow shell only) ────────────────────────────────────
-
-class _UserAvatarButton extends ConsumerWidget {
-  const _UserAvatarButton();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(profileProvider).valueOrNull;
-    final email = supabase.auth.currentUser?.email ?? '';
-    final avatarUrl = profile?.avatarUrl;
-    final initials = _initials(profile?.displayName ?? email);
-
-    return IconButton(
-      tooltip: 'Profile & Settings',
-      onPressed: () => context.push(Routes.settings),
-      icon: CircleAvatar(
-        radius: 14,
-        backgroundColor: AppColors.accentPrimary,
-        backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-        child: avatarUrl == null
-            ? Text(
-                initials,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              )
-            : null,
-      ),
-    );
-  }
-
-  String _initials(String name) {
-    if (name.isEmpty) return '?';
-    final parts = name.trim().split(RegExp(r'[\s@]+'));
-    if (parts.length == 1) return parts[0][0].toUpperCase();
-    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 }
