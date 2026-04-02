@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:reflect_os/core/supabase/supabase_client.dart';
 import 'package:reflect_os/features/decisions/data/confidence_triggers_service.dart';
 import 'package:reflect_os/features/decisions/data/models/decision.dart';
@@ -10,13 +11,97 @@ import 'package:reflect_os/features/risk/data/models/risk_assessment.dart';
 class DecisionLensRepository {
   const DecisionLensRepository();
 
-  Future<DecisionLensData> compute({
+  // ── Public entry-point ─────────────────────────────────────────────────────
+  //
+  // Fetches every table with a separate independent query (no JOINs).
+  // This prevents Cartesian-product row explosion when a decision has multiple
+  // outcome updates, triggers, coach notes and a risk assessment.
+
+  Future<DecisionLensData> fetchAndCompute(String decisionId) async {
+    // 1. Decision row — abort early if missing.
+    final decRow = await supabase
+        .from('user_visible_decisions')
+        .select()
+        .eq('id', decisionId)
+        .maybeSingle();
+    if (decRow == null) throw Exception('Decision not found: $decisionId');
+    final decision = Decision.fromJson(_toMap(decRow));
+
+    // 2. Remaining tables — all separate queries, run in parallel.
+    final results = await Future.wait([
+      supabase // [0] outcome_updates
+          .from('user_visible_outcome_updates')
+          .select()
+          .eq('decision_id', decisionId)
+          .order('created_at', ascending: true),
+      supabase // [1] confidence_triggers
+          .from('confidence_triggers')
+          .select()
+          .eq('decision_id', decisionId)
+          .order('arc_position', ascending: true),
+      supabase // [2] risk_assessments
+          .from('risk_assessments')
+          .select()
+          .eq('decision_id', decisionId)
+          .isFilter('deleted_at', null)
+          .order('created_at', ascending: false)
+          .limit(1),
+      supabase // [3] evidence_items
+          .from('user_visible_evidence_items')
+          .select()
+          .eq('decision_id', decisionId),
+      supabase // [4] decision_stakeholders
+          .from('decision_stakeholders')
+          .select()
+          .eq('decision_id', decisionId),
+    ]);
+
+    final outcomes = _parseList<OutcomeUpdate>(
+        results[0], (m) => OutcomeUpdate.fromJson(m));
+
+    var triggers = _parseList<ConfidenceTrigger>(
+        results[1], (m) => ConfidenceTrigger.fromJson(m));
+
+    final riskRows = results[2] as List;
+    final riskAssessment = riskRows.isNotEmpty
+        ? _safeParseOrNull(riskRows.first, RiskAssessment.fromJson)
+        : null;
+
+    final evidence = _parseList<EvidenceItem>(
+        results[3], (m) => EvidenceItem.fromJson(m));
+
+    final stakeholders = _parseList<DecisionStakeholder>(
+        results[4], (m) => DecisionStakeholder.fromJson(m));
+
+    // 3. Backfill triggers for decisions that have outcomes but no triggers yet.
+    if (triggers.isEmpty && outcomes.isNotEmpty) {
+      triggers = await const ConfidenceTriggersService().generateAndInsert(
+        decision: decision,
+        outcomes: outcomes,
+        riskAssessment: riskAssessment,
+      );
+    }
+
+    return _buildLensData(
+      decision: decision,
+      stakeholders: stakeholders,
+      riskAssessment: riskAssessment,
+      evidence: evidence,
+      outcomes: outcomes,
+      triggers: triggers,
+    );
+  }
+
+  // ── Core computation (pure — no I/O) ───────────────────────────────────────
+
+  DecisionLensData _buildLensData({
     required Decision decision,
     required List<DecisionStakeholder> stakeholders,
     required RiskAssessment? riskAssessment,
     required List<EvidenceItem> evidence,
     required List<OutcomeUpdate> outcomes,
-  }) async {
+    required List<ConfidenceTrigger> triggers,
+  }) {
     final confidenceScore = (decision.initialConfidence ?? 5).toDouble();
 
     final healthScore = switch (decision.healthState) {
@@ -87,18 +172,6 @@ class DecisionLensRepository {
       ),
     ];
 
-    var triggers = await _fetchTriggers(decision.id);
-
-    // Part A: backfill triggers for decisions that have outcome reviews but
-    // no confidence_triggers rows yet (e.g. all historical decisions).
-    if (triggers.isEmpty && outcomes.isNotEmpty) {
-      triggers = await const ConfidenceTriggersService().generateAndInsert(
-        decision: decision,
-        outcomes: outcomes,
-        riskAssessment: riskAssessment,
-      );
-    }
-
     return DecisionLensData(
       confidenceScore: confidenceScore,
       healthScore: healthScore,
@@ -108,41 +181,46 @@ class DecisionLensRepository {
     );
   }
 
-  Future<List<ConfidenceTrigger>> _fetchTriggers(String decisionId) async {
-    final response = await supabase
-        .from('confidence_triggers')
-        .select()
-        .eq('decision_id', decisionId)
-        .order('arc_position', ascending: true);
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
-    return response
-        .map((dynamic j) => _safeParse(
-              j,
-              ConfidenceTrigger.fromJson,
-              (x) => x is ConfidenceTrigger,
-            ))
-        .toList();
+  /// Materialises a concrete [Map<String, dynamic>] from any Map-like value.
+  static Map<String, dynamic> _toMap(dynamic item) {
+    if (item is Map<String, dynamic>) return item;
+    if (item is Map) return Map<String, dynamic>.from(item);
+    throw StateError('Cannot convert ${item.runtimeType} to Map<String, dynamic>');
   }
 
-  /// Safe parser: handles already-parsed model objects, raw Maps, and
-  /// dart2js Map types whose type parameters are erased at runtime.
-  ///
-  /// Always materialises a concrete [Map<String, dynamic>] local variable
-  /// before calling [fromJson] so that dart2js never inserts an implicit
-  /// cast from [dynamic] to [Map<String, dynamic>] at the call site.
-  static T _safeParse<T>(
+  /// Null-safe list parser — skips any row that fails to parse.
+  static List<T> _parseList<T>(
+    dynamic rows,
+    T Function(Map<String, dynamic>) fromJson,
+  ) {
+    if (rows is! List) return [];
+    final result = <T>[];
+    for (final item in rows) {
+      try {
+        final map = item is Map<String, dynamic>
+            ? item
+            : Map<String, dynamic>.from(item as Map);
+        result.add(fromJson(map));
+      } catch (e) {
+        debugPrint('[DecisionLensRepository] row parse error: $e\n  row: $item');
+      }
+    }
+    return result;
+  }
+
+  /// Safe single-item parser — returns null if parsing fails.
+  static T? _safeParseOrNull<T>(
     dynamic item,
     T Function(Map<String, dynamic>) fromJson,
-    bool Function(dynamic) isModel,
   ) {
-    if (isModel(item)) return item as T;
-    if (item is Map) {
-      final Map<String, dynamic> map = item is Map<String, dynamic>
-          ? item
-          : Map<String, dynamic>.from(item);
-      return fromJson(map);
+    try {
+      return fromJson(_toMap(item));
+    } catch (e) {
+      debugPrint('[DecisionLensRepository] single parse error: $e');
+      return null;
     }
-    throw StateError('Cannot parse ${item.runtimeType} as $T');
   }
 
   double _riskScore(RiskAssessment? assessment) {
