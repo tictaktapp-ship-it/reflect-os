@@ -412,16 +412,56 @@ class _DecisionsListScreenState extends ConsumerState<DecisionsListScreen> {
               .toList();
           if (other.isNotEmpty) groups['Other'] = other;
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-            children: [
-              for (final entry in groups.entries)
-                _DecisionGroup(
-                  state: entry.key,
-                  decisions: entry.value,
-                  initiallyExpanded: groups.length == 1,
-                ),
-            ],
+          final groupWidgets = [
+            for (final entry in groups.entries)
+              _DecisionGroup(
+                state: entry.key,
+                decisions: entry.value,
+                initiallyExpanded: groups.length == 1,
+              ),
+          ];
+
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth >= 800 && groupWidgets.length > 1) {
+                // 2-column layout: pair groups side-by-side
+                final rows = <Widget>[];
+                for (var i = 0; i < groupWidgets.length; i += 2) {
+                  final left = groupWidgets[i];
+                  final right =
+                      i + 1 < groupWidgets.length ? groupWidgets[i + 1] : null;
+                  rows.add(
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: left),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: right ?? const SizedBox.shrink(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                  children: [
+                    for (var i = 0; i < rows.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 16),
+                      rows[i],
+                    ],
+                  ],
+                );
+              }
+
+              // Narrow — original single-column layout
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                children: groupWidgets,
+              );
+            },
           );
         },
       ),
