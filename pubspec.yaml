@@ -118,7 +118,7 @@ flutter_launcher_icons:
   image_path: "assets/branding/icon-1024-padded.png"
   min_sdk_android: 21
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/branding/icon-1024-padded.png"
+  adaptive_icon_foreground: "assets/branding/icon-foreground-1024.png"
   web:
     generate: true
     image_path: "assets/branding/icon-1024-padded.png"

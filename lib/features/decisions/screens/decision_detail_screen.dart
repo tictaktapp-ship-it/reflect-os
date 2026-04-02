@@ -3215,33 +3215,58 @@ class _EvidenceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLink = item.type == 'link';
-    final displayText =
-        (item.label != null && item.label!.isNotEmpty) ? item.label! : (item.url ?? '');
+    final isFile = item.type == 'file';
+    final tappable = (isLink && item.url != null) ||
+        (isFile && item.storagePath != null);
+    final displayText = (item.label != null && item.label!.isNotEmpty)
+        ? item.label!
+        : (item.url ?? item.originalFilename ?? '');
 
-    return ListTile(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        isLink ? Icons.link : Icons.attach_file,
-        size: 18,
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+    Future<void> handleTap() async {
+      if (isLink && item.url != null && item.url!.isNotEmpty) {
+        final uri = Uri.parse(item.url!);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      } else if (isFile && item.storagePath != null) {
+        try {
+          final signedUrl = await supabase.storage
+              .from(item.storageBucket ?? 'generated-documents')
+              .createSignedUrl(item.storagePath!, 3600);
+          final uri = Uri.parse(signedUrl);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        } catch (e) {
+          debugPrint('Evidence open error: $e');
+        }
+      }
+    }
+
+    return MouseRegion(
+      cursor: tappable ? SystemMouseCursors.click : MouseCursor.defer,
+      child: ListTile(
+        dense: true,
+        contentPadding: EdgeInsets.zero,
+        leading: Icon(
+          isLink ? Icons.link : Icons.attach_file,
+          size: 18,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+        ),
+        title: Text(
+          displayText,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: tappable
+                    ? AppColors.accentHover
+                    : Theme.of(context).colorScheme.onSurface,
+                decoration: tappable ? TextDecoration.underline : null,
+              ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        onTap: tappable ? handleTap : null,
+        onLongPress: onDelete,
       ),
-      title: Text(
-        displayText,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: isLink ? AppColors.accentHover : Theme.of(context).colorScheme.onSurface,
-              decoration: isLink ? TextDecoration.underline : null,
-            ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      onTap: isLink && item.url != null
-          ? () {
-              // TODO: verify link opening works in production (may be blocked by corporate network in dev)
-              launchUrl(Uri.parse(item.url!), mode: LaunchMode.externalApplication).ignore();
-            }
-          : null,
-      onLongPress: onDelete,
     );
   }
 }
