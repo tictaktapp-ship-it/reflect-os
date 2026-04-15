@@ -328,6 +328,7 @@ class _NavPane extends StatelessWidget {
               onTap: onChatTap ?? () {},
             ),
           const _ToolkitNavItem(),
+          const _ReferEarnNavItem(),
           const Spacer(),
           const _NavPaneSettingsItem(),
           const SizedBox(height: 12),
@@ -531,6 +532,63 @@ class _ToolkitNavItem extends StatelessWidget {
                             const SizedBox(width: 12),
                             Text(
                               'Toolkit',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                color: grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReferEarnNavItem extends StatelessWidget {
+  const _ReferEarnNavItem();
+
+  @override
+  Widget build(BuildContext context) {
+    final grey = context.cs.textSecondary;
+    return Tooltip(
+      message:
+          'Refer & Earn — earn 25% commission\non referrals for 12 months.',
+      waitDuration: const Duration(milliseconds: 500),
+      preferBelow: false,
+      decoration: _navTooltipDecoration(),
+      textStyle: _navTooltipTextStyle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        child: ClipRRect(
+          borderRadius: AppRadius.smBR,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => context.push(Routes.referEarn),
+              child: SizedBox(
+                height: 44,
+                child: Row(
+                  children: [
+                    const SizedBox(width: 3),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 9),
+                        child: Row(
+                          children: [
+                            Icon(Icons.card_giftcard_outlined,
+                                size: 20, color: grey),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Refer & Earn',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w400,

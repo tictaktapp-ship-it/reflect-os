@@ -78,6 +78,9 @@ abstract final class Routes {
   // Share links management (authenticated)
   static const String decisionsShareLinks = '/decisions/:id/share-links';
 
+  // Refer & Earn
+  static const String referEarn = '/refer-earn';
+
   // Tool Kit
   static const String toolkit = '/toolkit';
   static const String toolkitPicker = '/toolkit-picker';

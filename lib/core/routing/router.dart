@@ -48,6 +48,7 @@ import 'package:reflect_os/features/toolkit/screens/tool_results_screen.dart';
 import 'package:reflect_os/features/toolkit/screens/toolkit_screen.dart';
 import 'package:reflect_os/features/demographic_packs/screens/packs_screen.dart';
 import 'package:reflect_os/features/settings/screens/encryption_status_screen.dart';
+import 'package:reflect_os/features/settings/screens/refer_earn_screen.dart';
 import 'package:reflect_os/features/legal/providers/legal_consent_provider.dart';
 import 'package:reflect_os/features/legal/screens/legal_acceptance_screen.dart';
 import 'package:reflect_os/features/onboarding/first_run_provider.dart';
@@ -220,6 +221,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const EncryptionStatusScreen(),
           ),
         ],
+      ),
+
+      // Refer & Earn — push above shell
+      GoRoute(
+        path: Routes.referEarn,
+        builder: (context, state) => const ReferEarnScreen(),
       ),
 
       // Tool Kit — push above shell

@@ -38,6 +38,20 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // ── GROWTH ───────────────────────────────────────────────
+          _SettingsGroup(
+            title: 'Growth',
+            initiallyExpanded: true,
+            children: [
+              _SettingsTile(
+                icon: Icons.card_giftcard_outlined,
+                title: 'Refer & Earn',
+                subtitle: 'Earn 25% commission on referrals',
+                onTap: () => context.push(Routes.referEarn),
+              ),
+            ],
+          ),
+
           // ── SECURITY & ENCRYPTION ─────────────────────────────────
           _SettingsGroup(
             title: 'Security & Encryption',
