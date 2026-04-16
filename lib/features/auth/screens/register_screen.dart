@@ -8,6 +8,7 @@ import 'package:reflect_os/features/auth/providers/auth_action_provider.dart';
 import 'package:reflect_os/features/auth/widgets/auth_logo.dart';
 import 'package:reflect_os/services/activation_sequence_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:reflect_os/core/utils/reditus_tracker.dart';
 import 'package:reflect_os/widgets/dialog_shell.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -109,6 +110,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
       return;
     }
+
+    // Fire Reditus affiliate conversion
+    trackReditusConversion(email);
 
     // Seed 30-day activation sequence for all new users (fire-and-forget).
     // Works for both email-confirmation and direct-login flows since the
